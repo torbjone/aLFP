@@ -14,9 +14,17 @@ pl.rcParams.update({'font.size' : 12,
     'figure.facecolor' : '1',
     'wspace' : 0.5, 'hspace' : 0.5})
 
+domain = 'ball_n_stick'
+
 np.random.seed(1234)
-neuron_model = join('neuron_models', 'mainen')
-LFPy.cell.neuron.load_mechanisms(neuron_model)
+#neuron_model = join('neuron_models', 'mainen')
+#neuron_model = join('neuron_models', 'hay_model', 'lfpy_version')
+#neuron_model = join('neuron_models', 'salam_retina')
+neuron_model = 'neuron_models'
+if domain == 'hay':
+    LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..', 'mod'))
+else:
+    LFPy.cell.neuron.load_mechanisms(neuron_model)
 
 def find_renormalized_Rm(cell, stim_idx):
 
@@ -38,8 +46,41 @@ def return_r_m_tilde(cell):
     return r_tilde
 
 
+def plot_all_currents(domain, cell_params, pulse_clamp):
+    pass
 
-def active_declarations(is_active = True):
+
+def active_ball_n_stick(cell_params, is_active=True):
+    #proc biophys() {
+        #forsec all {
+            #Ra = 150
+            #cm = 1
+            #insert hh
+            #gnabar_hh = 0.12
+            #gkbar_hh = 0.036
+            #gl_hh = 0.0003
+            #el_hh = -54.3
+            #insert pas
+            #g_pas = 0.001
+            #e_pas = -70
+        #    }
+        #}
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = cell_params['cm']
+        sec.Ra = cell_params['Ra']
+        sec.g_pas = 1./ cell_params['rm']
+        sec.e_pas = cell_params['e_pas']
+        if is_active:
+            sec.insert('hh')
+            sec.gnabar_hh = 0.12
+            sec.gkbar_hh = 0.036
+            sec.gl_hh = 0.0003
+            sec.el_hh = -54.3
+ 
+
+
+def active_declarations(is_active=True):
     '''set active conductances and correct for spines,
     see file active_declarations_example3.hoc'''
     spine_dens = 1
@@ -205,36 +246,74 @@ def run_simulation(cell_params, clamp_params):
     neuron.h('forall delete_section()')
     cell = LFPy.Cell(**cell_params)
     currentClamp = LFPy.StimIntElectrode(cell, **clamp_params)
-    cell.simulate(rec_isyn=True, rec_imem=True)
+    simulation_params = {'rec_isyn': True,
+                         'rec_imem': True,
+                         'rec_ipas': True,
+                         'rec_istim': True,
+                         'rec_variables' : ['ina', 'ik'],
+
+                         }
+    #for sec in neuron.h.allsec():
+    #    for seg in sec:
+    #        set_trace()
+    cell.simulate(**simulation_params)
+    #del currentClamp
     return cell
 
 def check_when_linear(domain, cell_params, clamp_params):
 
-    input_amps = np.linspace(0,.005,15)
-    do_sim = 0
+    input_amps = np.linspace(0.0,.01,2)
+    #input_amps = [0.01]
+    #input_amps[-1] = 0.01
+    #do_sim = 0
+    
     if do_sim:
         try:
             os.mkdir(join(domain, 'lin_check'))
         except OSError:
             pass
-
-        for amp in input_amps:
+        if conductances == 'renormalized':
+            renormalized_rm = np.load(join(domain, 'lin_check', 'renormalized_rm_%s.npy' % 'active'))
+        else:
+            renormalized_rm = []
+        for number, amp in enumerate(input_amps):
             pulse_clamp['amp'] = amp
+            if conductances == 'renormalized':
+                cell_params['rm'] = renormalized_rm[number][1]
             cell = run_simulation(cell_params, clamp_params)
-            cell.cellpickler(join(domain, 'lin_check', 'cell_%s_%g.cpickle' % (conductances, amp)))
+            print cell_params['e_pas']
+            print cell.somav[0]
+            if not conductances == 'renormalized':
+                renormalized_rm.append((amp, return_r_m_tilde(cell)))
+            np.save(join(domain, 'lin_check', 'somav_%s_%g.npy' % (conductances, amp)), cell.somav)
+            np.save(join(domain, 'lin_check', 'somai_%s_%g.npy' % (conductances, amp)), cell.imem[0,:])
+            np.save(join(domain, 'lin_check', 'soma_a.npy'), cell.area[0])
+            #cell.cellpickler(join(domain, 'lin_check', 'cell_%s_%g.cpickle' % (conductances, amp)))
             del cell
+        np.save(join(domain, 'lin_check', 'renormalized_rm_%s.npy' % conductances), renormalized_rm)
     else:
+        renormalized_rm = np.load(join(domain, 'lin_check', 'renormalized_rm_%s.npy' % 'active'))
         response = []
-        for amp in input_amps:
-            f = file(join(domain, 'lin_check', 'cell_%s_%g.cpickle' % (conductances, amp)))
-            cell = cPickle.load(f)
-            f.close()
-            response.append((amp, cell.somav[-1], cell.imem[0,-1]))
-            pl.subplot(121)
-            pl.plot(cell.tvec, cell.somav, label = 'I: %g, O: %g' %(amp, cell.somav[-1])) 
+        soma_a = np.load(join(domain, 'lin_check', 'soma_a.npy'))
+        for number, amp in enumerate(input_amps):    
+            #f = file(join(domain, 'lin_check', 'cell_%s_%g.cpickle' % (conductances, amp)))
+            #cell = cPickle.load(f)
+            #f.close()
+            vm = np.load(join(domain, 'lin_check', 'somav_%s_%g.npy' % (conductances, amp)))
+            im = np.load(join(domain, 'lin_check', 'somai_%s_%g.npy' % (conductances, amp)))
+
+            tvec = np.linspace(0, cell_params['tstopms'], len(im))
+            response.append((amp, vm[-1], im[-1]))
+            #pl.suptitle(domain)
+            pl.subplot(131)
+            pl.plot(tvec, vm, label = 'I: %g, O: %g' %(amp, vm[-1]))
+            pl.axis([0, cell_params['tstopms'], -65.1, -64.5])
+            pl.subplot(132)
+            pl.plot(tvec, im[:], label = 'I: %g, O: %g, $\~Rm$: %g' %(amp, im[-1]- im[0], renormalized_rm[number][1]))
+            pl.axis([0, cell_params['tstopms'], -0.00005, 0.0004])
         response = np.array(response)
         pl.legend(loc='upper left', bbox_to_anchor=(-0.2, 1.1))
-        pl.subplot(122)
+        pl.subplot(133)
 
         response[:,1] -= np.min(response[:,1])
         response[:,1] /= np.max(response[:,1])
@@ -252,8 +331,8 @@ def check_when_linear(domain, cell_params, clamp_params):
         pl.xlabel('Input amp [nA]')
         pl.ylabel('Response')
         pl.legend(loc='upper left')
-        pl.savefig(join(domain, 'response_%s.png' % conductances))
-
+        #pl.savefig(join(domain, 'response_%s.png' % conductances))
+        pl.show()
 
 
 def find_renormalized_Im(domain, cell_params, clamp_params):
@@ -376,30 +455,86 @@ def find_renormalized_passive(domain, cell_params, clamp_params):
         pl.legend(loc='upper left')
         pl.savefig(join(domain, 'compare', '_%g.png' % input_amp))
         #pl.show()
+        
 conductances = sys.argv[1]
-domain = 'step'
-input_amp = 0.0002
+
+input_amp = 0.0001
 input_delay = 100
 is_active = None
 
+## cell_params = {
+##     'morphology' : join(neuron_model, 'L5_Mainen96_wAxon_LFPy.hoc'),
+##     #'morphology' : os.path.join('neuron_models', 'example_morphology.hoc'),
+##     'rm' : 30000,               # membrane resistance
+##     'cm' : 1.0,                 # membrane capacitance
+##     'Ra' : 150,                 # axial resistance
+##     'v_init' : -65,             # initial crossmembrane potential
+##     'e_pas' : -65,              # reversal potential passive mechs
+##     'passive' : True,           # switch on passive mechs
+##     'nsegs_method' : 'lambda_f',# method for setting number of segments,
+##     'lambda_f' : 100,           # segments are isopotential at this frequency
+##     'timeres_NEURON' : 2**-4,   # dt of LFP and NEURON simulation.
+##     'timeres_python' : 2**-4,
+##     'tstartms' : -500,          #start time, recorders start at t=0
+##     'tstopms' : 1000,           #stop time of simulation
+##     'custom_fun'  : [active_declarations], # will execute this function
+##     'custom_fun_args' : [{'is_active': is_active}],
+## }
+
+## cell_params = {
+##     'morphology' : join(neuron_model, 'morphologies', 'cell1.hoc'),
+##     #'rm' : 30000,               # membrane resistance
+##     #'cm' : 1.0,                 # membrane capacitance
+##     #'Ra' : 100,                 # axial resistance
+##     'v_init' : -77,             # initial crossmembrane potential
+##     #'e_pas' : -90,              # reversal potential passive mechs
+##     'passive' : False,           # switch on passive mechs
+##     'nsegs_method' : 'lambda_f',# method for setting number of segments,
+##     'lambda_f' : 100,           # segments are isopotential at this frequency
+##     'timeres_NEURON' : 2**-4,   # dt of LFP and NEURON simulation.
+##     'timeres_python' : 2**-4,
+##     'tstartms' : -5000,          #start time, recorders start at t=0
+##     'tstopms' : 1000,           #stop time of simulation
+##     'custom_code'  : [join(neuron_model, 'custom_codes.hoc'), \
+##                       join(neuron_model, 'biophys3_passive.hoc')],
+## }
+
 cell_params = {
-    'morphology' : os.path.join(neuron_model, 'L5_Mainen96_wAxon_LFPy.hoc'),
-    #'morphology' : os.path.join('neuron_models', 'example_morphology.hoc'),
+    'morphology' : join(neuron_model, 'ball_n_stick.hoc'),
     'rm' : 30000,               # membrane resistance
     'cm' : 1.0,                 # membrane capacitance
     'Ra' : 150,                 # axial resistance
-    'v_init' : -65,             # initial crossmembrane potential
+    #'v_init' : -77,             # initial crossmembrane potential
     'e_pas' : -65,              # reversal potential passive mechs
-    'passive' : True,           # switch on passive mechs
+    'passive' : False,           # switch on passive mechs
     'nsegs_method' : 'lambda_f',# method for setting number of segments,
     'lambda_f' : 100,           # segments are isopotential at this frequency
     'timeres_NEURON' : 2**-4,   # dt of LFP and NEURON simulation.
     'timeres_python' : 2**-4,
-    'tstartms' : -500,          #start time, recorders start at t=0
-    'tstopms' : 500,           #stop time of simulation
-    'custom_fun'  : [active_declarations], # will execute this function
-    'custom_fun_args' : [{'is_active': is_active}],
+    'tstartms' : -100,          #start time, recorders start at t=0
+    'tstopms' : 400,           #stop time of simulation
+    'custom_fun'  : [active_ball_n_stick], # will execute this function
+    #'custom_fun_args' : [{'is_active': is_active}],  
 }
+
+
+## cell_params = {
+##     'morphology' : join(neuron_model, 'lws9287aMorph.hoc'),
+##     'rm' : 30000,               # membrane resistance
+##     'cm' : 1.0,                 # membrane capacitance
+##     'Ra' : 150,                 # axial resistance
+##     'v_init' : -65,             # initial crossmembrane potential
+##     'e_pas' : -65,              # reversal potential passive mechs
+##     'passive' : True,           # switch on passive mechs
+##     'nsegs_method' : 'lambda_f',# method for setting number of segments,
+##     'lambda_f' : 100,           # segments are isopotential at this frequency
+##     'timeres_NEURON' : 2**-4,   # dt of LFP and NEURON simulation.
+##     'timeres_python' : 2**-4,
+##     'tstartms' : -500,          #start time, recorders start at t=0
+##     'tstopms' : 1000,           #stop time of simulation
+##     'custom_code'  : [join(neuron_model, 'lws9287a_passive.hoc')],
+## }
+
 
 pulse_clamp = {
     'idx' : 0,
@@ -411,11 +546,9 @@ pulse_clamp = {
 }
 
 
-
-
-
 try:
-    renormalized_r_m = float(sys.argv[2])
+    #renormalized_r_m = float(sys.argv[2])
+    do_sim = int(sys.argv[2])
 except:
     pass
 
@@ -427,29 +560,37 @@ elif conductances == 'passive':
     r_m = 30000
 elif conductances == 'renormalized':
     is_active = False
-    r_m = renormalized_r_m # 9810.5
+    cell_params['rm'] = 830
+    cell_params['e_pas'] = -64.97
 elif conductances == 'compare':
     find_renormalized_passive(domain, cell_params, pulse_clamp)
     sys.exit()
 elif conductances == 'isearch':
     find_renormalized_Im(domain, cell_params, pulse_clamp)
     sys.exit()
-    
 else:
     print "active, passive or renormalized?"
     raise RuntimeError
-
-
 
 try:
     os.mkdir(domain)
 except OSError:
     pass
+if domain == 'mainen':
+    cell_params['custom_fun_args'] = [{'is_active': is_active}]
+elif domain == 'hay':
+    cell_params['custom_code'] = [join(neuron_model, 'custom_codes.hoc'), \
+                                  join(neuron_model, 'biophys3_%s.hoc' % conductances)]
+elif domain == 'retina':
+    cell_params['custom_code'] = [join(neuron_model, 'lws9287a_%s.hoc' % conductances)]
+elif domain == 'ball_n_stick':
+    cell_params['custom_fun_args'] = [{'is_active': is_active, 'cell_params' : cell_params}]
 
+plot_all_currents(domain, cell_params, pulse_clamp)
 #check_when_linear(domain, cell_params, pulse_clamp)
+sys.exit()
 
 cell = run_sim(cell_params, pulse_clamp)
-
 
 np.save(join(domain, 'somav_%s_%g.npy' % (conductances, r_m)), cell.somav)
 np.save(join(domain, 'somai_%s_%g.npy' % (conductances, r_m)), cell.imem[0,:])
