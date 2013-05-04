@@ -30,7 +30,7 @@ timeres = 2**-5
 srate = 1/timeres * 1000
 
 neur_input_params = {'input_place': 'somatic',
-                     'input_idx': 0,
+                     'input_idx': 650,
                      'input_scaling': 0.001, # Scale input amplitude to fit model
                      }
 
@@ -43,7 +43,7 @@ elec_z = np.zeros(len(elec_x))
 
 neural_sim_dict = {'domain': domain,
                    'model': model,
-                   'is_active': True,
+                   'is_active': False,
                    'load': 0,
                    'output_folder': join(domain, 'neural_sim'),
                    'timeres': timeres,
@@ -51,7 +51,7 @@ neural_sim_dict = {'domain': domain,
                    'tstartms': tstartms,
                    'tstopms': tstopms,
                    'ntsteps': round((tstopms) / timeres + 1),
-                   'cut_off': 2000, # How many ms to remove from start
+                   'cut_off': 5000, # How many ms to remove from start
                    'elec_x': elec_x,
                    'elec_y': elec_y,
                    'elec_z': elec_z,

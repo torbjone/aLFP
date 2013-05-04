@@ -185,6 +185,16 @@ def save_data(cell, electrode, syn, neural_sim_dict, neur_input_params):
     np.save(join(domain, name, 'ymid.npy'), cell.ymid)
     np.save(join(domain, name, 'zmid.npy'), cell.zmid)
 
+    np.save(join(domain, name, 'xend.npy'), cell.xend)
+    np.save(join(domain, name, 'yend.npy'), cell.yend)
+    np.save(join(domain, name, 'zend.npy'), cell.zend)
+
+    np.save(join(domain, name, 'xstart.npy'), cell.xstart)
+    np.save(join(domain, name, 'ystart.npy'), cell.ystart)
+    np.save(join(domain, name, 'zstart.npy'), cell.zstart)    
+
+
+    
     np.save(join(domain, name, 'elec_x.npy'), electrode.x)
     np.save(join(domain, name, 'elec_y.npy'), electrode.y)
     np.save(join(domain, name, 'elec_z.npy'), electrode.z)
@@ -216,6 +226,8 @@ def load_data(cell, electrode, syn, neural_sim_dict, neur_input_params):
     electrode.freqs = np.load(join(domain, name, 'freqs.npy'))
 
     cell.tvec = np.load(join(domain, name, 'tvec.npy'))
+    print cell.tvec.shape, cell.imem.shape, electrode.LFP.shape
+
 
     return cell, electrode, syn
 
@@ -241,18 +253,15 @@ def run_simulation(neural_sim_dict, neur_input_params):
             'custom_fun'  : [active_ball_n_stick],
             'custom_fun_args' : [{'is_active':neural_sim_dict['is_active']}],  
             }
-
-        sim_record = {'rec_imem': True,
-                      }
         
         pos_dict = {'rot_x': 0,
                     'rot_y': 0,
                     'rot_z': 0,
                     }
     elif model == 'mainen':
-        LFPy.cell.neuron.load_mechanisms(mod_path)
+        LFPy.cell.neuron.load_mechanisms(model_path)
         cell_params = {
-            'morphology' : join(neuron_model, 'L5_Mainen96_wAxon_LFPy.hoc'),
+            'morphology' : join(model_path, 'L5_Mainen96_wAxon_LFPy.hoc'),
             'rm' : 30000,               # membrane resistance
             'cm' : 1.0,                 # membrane capacitance
             'Ra' : 150,                 # axial resistance
@@ -266,25 +275,44 @@ def run_simulation(neural_sim_dict, neur_input_params):
             'tstartms' : neural_sim_dict['tstartms'],        
             'tstopms' : neural_sim_dict['tstopms'] + neural_sim_dict['cut_off'],           
             'custom_fun'  : [active_mainen], 
-            'custom_fun_args' : [{'is_active': is_active}],
+            'custom_fun_args' : [{'is_active': neural_sim_dict['is_active']}],
             }
 
-        sim_record = {'rec_imem': True,
-                      'rec_vmem': True,
-                      'rec_istim': True,
-                      'rec_synapses': True,
-                      'rec_variables' : ['ina', 'ik', 'ica'],
-                      }
         pos_dict = {'rot_x': -np.pi/2,
                     'rot_y': 0,
                     'rot_z': 0,
                     }
     elif model == 'hay':
+        mod_path = join(model_path, 'mod')
+        model_path = join(model_path, 'lfpy_version')
         LFPy.cell.neuron.load_mechanisms(mod_path)
         pos_dict = {'rot_x': -np.pi/2,
                     'rot_y': 0,
                     'rot_z': 0,
                     }
+        if neural_sim_dict['is_active']:
+            conductance = 'active'
+        else:
+            conductance = 'passive'
+        cell_params = {
+            'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
+            #'rm' : 30000,               # membrane resistance
+            #'cm' : 1.0,                 # membrane capacitance
+            #'Ra' : 100,                 # axial resistance
+            'v_init' : -77,             # initial crossmembrane potential
+            #'e_pas' : -90,              # reversal potential passive mechs
+            'passive' : False,           # switch on passive mechs
+            'nsegs_method' : 'lambda_f',# method for setting number of segments,
+            'lambda_f' : 100,           # segments are isopotential at this frequency
+            'timeres_NEURON' : neural_sim_dict['timeres'],   # dt of LFP and NEURON simulation.
+            'timeres_python' : neural_sim_dict['timeres'],
+            'tstartms' : neural_sim_dict['tstartms'],          #start time, recorders start at t=0
+            'tstopms' : neural_sim_dict['tstopms'] + neural_sim_dict['cut_off'], 
+            'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
+                              join(model_path, 'biophys3_%s.hoc' % conductance)],
+            }
+    sim_record = {'rec_imem': True,
+                  }
 
     cell = LFPy.Cell(**cell_params)
     cell.set_rotation(z = pos_dict['rot_z'])
@@ -293,8 +321,9 @@ def run_simulation(neural_sim_dict, neur_input_params):
     cell.set_pos(xpos = 0, \
                  ypos = 0, \
                  zpos = 0)
-
-    initial_ntsteps = round((neural_sim_dict['tstopms'] + neural_sim_dict['cut_off']) / neural_sim_dict['timeres'] + 1)
+    #aLFP.plot_comp_numbers(cell)
+    initial_ntsteps = round((neural_sim_dict['tstopms'] + neural_sim_dict['cut_off']) / \
+                            neural_sim_dict['timeres'] + 1)
     
     input_array = neur_input_params['input_scaling'] * \
                   aLFP.make_WN_input(neural_sim_dict)
@@ -332,6 +361,5 @@ def run_simulation(neural_sim_dict, neur_input_params):
     else:
         cell.simulate(electrode=electrode, **sim_record)
         save_data(cell, electrode, syn, neural_sim_dict, neur_input_params)
-    
     return cell, syn, electrode
 

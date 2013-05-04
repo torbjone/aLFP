@@ -21,7 +21,7 @@ pl.rcParams.update({'font.size' : 8,
                     'wspace' : 0.5, 'hspace' : 0.5})
 np.random.seed(1234)
 
-model = 'ball_n_stick' 
+model = 'mainen'
 domain = 'white_noise_%s' %model
 neuron_model = join('neuron_models', model)
 tstartms = 0
@@ -30,11 +30,11 @@ timeres = 2**-5
 srate = 1/timeres * 1000
 
 neur_input_params = {'input_place': 'somatic',
-                     'input_idx': 0,
+                     'input_idx': 669,
                      'input_scaling': 0.001, # Scale input amplitude to fit model
                      }
 
-plotting_params = {'cell_extent': [-400, 400, -200, 1200],
+plotting_params = {'cell_extent': [-600, 600, -400, 1300],
                    }
 
 elec_x = np.array([-100, 0, 100, 0, 0])
@@ -51,7 +51,7 @@ neural_sim_dict = {'domain': domain,
                    'tstartms': tstartms,
                    'tstopms': tstopms,
                    'ntsteps': round((tstopms) / timeres + 1),
-                   'cut_off': 200, # How many ms to remove from start
+                   'cut_off': 2000, # How many ms to remove from start
                    'elec_x': elec_x,
                    'elec_y': elec_y,
                    'elec_z': elec_z,

@@ -1,7 +1,10 @@
 import numpy as np
 import scipy.fftpack as ff
 import pylab as pl
+
+
 def return_r_m_tilde(cell):
+    """ Returns renormalized membrane potential """
     r_tilde = (cell.somav[-1] - cell.somav[0])/\
               (cell.imem[0,-1] - cell.imem[0, 0]) * cell.area[0] * 10**-2
     return r_tilde

@@ -19,7 +19,13 @@ pl.rcParams.update({'font.size' : 8,
     'wspace' : 0.5, 'hspace' : 0.5})
 np.random.seed(1234)
 
-
+def plot_comp_numbers(cell):
+    for comp_idx in xrange(len(cell.xmid)):
+        pl.plot(cell.zmid[comp_idx], cell.ymid[comp_idx],\
+                marker='$%i$'%comp_idx, color='b', markersize=10)
+    pl.show()
+    pl.close('all')
+    sys.exit()
 
 def plot_all_currents(cell, syn, electrode, neural_sim_dict,
                       plotting_params, neur_input_params):
@@ -72,7 +78,7 @@ def plot_all_currents(cell, syn, electrode, neural_sim_dict,
         if len(a) > 0:
             ax4.plot(np.r_[cell.xstart[a], cell.xend[a][-1]],
                      np.r_[cell.ystart[a], cell.yend[a][-1]],
-                     color='k', lw=2)
+                     color='gray', alpha=0.5, lw=2)
 
     ax4.plot(cell.xmid[neur_input_params['input_idx']],
              cell.ymid[neur_input_params['input_idx']],
