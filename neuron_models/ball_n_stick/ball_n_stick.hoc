@@ -10,8 +10,8 @@ proc topol() { local i
   basic_shape()
 }
 proc basic_shape() {
-  soma {pt3dclear() pt3dadd(0, -8, 0, 17.) pt3dadd(0, 8, 0, 17.)}
-  dend {pt3dclear() pt3dadd(0, 8, 0, 3.) pt3dadd(0, 1000, 0, 0.2)}
+  soma {pt3dclear() pt3dadd(0, -10, 0, 10.) pt3dadd(0, 10, 0, 10.)}
+  dend {pt3dclear() pt3dadd(0, 10, 0, 2.) pt3dadd(0, 1000, 0, 2.)}
 }
 
 objref all

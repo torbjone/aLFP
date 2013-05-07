@@ -10,14 +10,13 @@ def return_r_m_tilde(cell):
     return r_tilde
 
 
-def make_WN_input(neural_sim_dict):
+def make_WN_input(cell_params):
     """ White Noise input ala Linden 2010 is made """
-    tot_ntsteps = round((neural_sim_dict['tstopms'] + neural_sim_dict['cut_off'])/\
-                  neural_sim_dict['timeres'] + 1)
+    tot_ntsteps = round((cell_params['tstopms'])/\
+                  cell_params['timeres_NEURON'] + 1)
     I = np.zeros(tot_ntsteps)
-    tvec = np.arange(tot_ntsteps) * neural_sim_dict['timeres']
+    tvec = np.arange(tot_ntsteps) * cell_params['timeres_NEURON']
     for freq in xrange(1,1001):
-        
         I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
     I /= np.std(I)
     
