@@ -1,11 +1,16 @@
 #!/usr/bin/env python
-
+import os
+if not os.environ.has_key('DISPLAY'):
+    import matplotlib
+    matplotlib.use('Agg')
 import LFPy
 import numpy as np
 import neuron
-import os
 import sys
-from ipdb import set_trace
+try:
+    from ipdb import set_trace
+except:
+    pass
 import pylab as pl
 from os.path import join
 
@@ -20,11 +25,11 @@ neuron_model = join('..', 'neuron_models', model)
 model_path = join(neuron_model, 'lfpy_version')
 LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
 LFPy.cell.neuron.load_mechanisms(join('..', 'neuron_models'))      
-cut_off = 300
+cut_off = 1000
 is_active = True
-input_idxs = [0, 650]
+input_idxs = [0, 791, 611, 808, 681, 740, 606]
 
-input_scalings = [0.001, 0.01, 0.1]
+input_scalings = [0.001, 0.01, 0.1, 1.0]
 
 rot_params = {'x': -np.pi/2, 
               'y': 0, 
@@ -59,7 +64,8 @@ cell_params = {
                       join(model_path, 'biophys3_%s.hoc' % conductance)],
 }
 ntsteps = round((tstopms - 0) / timeres)
-aLFP.initialize_cell(cell_params, pos_params, rot_params, model, elec_x, elec_y, elec_z, ntsteps, model)
+aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
+                     elec_x, elec_y, elec_z, ntsteps, model, testing=False)
 
 #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
 

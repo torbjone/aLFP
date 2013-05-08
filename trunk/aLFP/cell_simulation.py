@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 import os
-if not os.environ.has_key('DISPLAY'):
-    import matplotlib
-    matplotlib.use('Agg')
-
 import LFPy
 import numpy as np
 import neuron
@@ -144,13 +140,9 @@ def vmem_quickplot(cell, input_array, sim_name, ofolder):
     pl.plot(cell.tvec, input_array)   
     pl.savefig(join(ofolder, 'current_%s.png' %sim_name))
 
-
-
-
-
     
 def initialize_cell(cell_params, pos_params, rot_params, cell_name, 
-                    elec_x, elec_y, elec_z, ntsteps, ofolder):
+                    elec_x, elec_y, elec_z, ntsteps, ofolder, testing=False):
     """ Position and plot a cell """
     neuron.h('forall delete_section()')
     try:
@@ -162,6 +154,9 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     cell = LFPy.Cell(**foo_params)
     cell.set_rotation(**rot_params)
     cell.set_pos(**pos_params)       
+    if testing:
+        aLFP.plot_comp_numbers(cell)
+    
     timestep = cell_params['timeres_NEURON']/1000
     # Making unscaled white noise input array
     input_array = aLFP.make_WN_input(cell_params)
@@ -172,7 +167,6 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     Y = ff.fft(input_array[-ntsteps:])[pidxs]
     power = np.abs(Y)/len(Y)
 
-    
     # Define electrode parameters
     electrode_parameters = {
         'sigma' : 0.3,      # extracellular conductivity
@@ -180,9 +174,20 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
         'y' : elec_y,
         'z' : elec_z
         }
+    dist_list = []
+    for elec in xrange(len(elec_x)):
+        for comp in xrange(len(cell.xmid)):
+            dist = np.sqrt((cell.xmid[comp] - elec_x[elec])**2 +
+                           (cell.ymid[comp] - elec_y[elec])**2 +
+                           (cell.zmid[comp] - elec_z[elec])**2)
+            dist_list.append(dist)
+    print "Minimum electrode-comp distance: %g" %(np.min(dist_list))
+    if np.min(dist_list) <= 1:
+        ERR = "Too close"
+        raise RuntimeError, ERR
+    
     electrode = LFPy.RecExtElectrode(**electrode_parameters)
     cell.simulate(electrode=electrode)
-
     pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder)
     length = np.sqrt((cell.xend - cell.xstart)**2 +
                      (cell.yend - cell.ystart)**2 +

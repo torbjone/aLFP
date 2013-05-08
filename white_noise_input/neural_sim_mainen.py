@@ -1,11 +1,16 @@
 #!/usr/bin/env python
-
+import os
+if not os.environ.has_key('DISPLAY'):
+    import matplotlib
+    matplotlib.use('Agg')
 import LFPy
 import numpy as np
 import neuron
-import os
 import sys
-from ipdb import set_trace
+try:
+    from ipdb import set_trace
+except:
+    pass
 import pylab as pl
 from os.path import join
 
@@ -129,11 +134,11 @@ neuron_model = join('..', 'neuron_models', model)
 
 LFPy.cell.neuron.load_mechanisms(join(neuron_model))      
 LFPy.cell.neuron.load_mechanisms(join('..', 'neuron_models'))      
-cut_off = 100
+cut_off = 500
 is_active = True
-input_idxs = [0, 650]
+input_idxs = [0, 1071, 610, 984, 846, 604, 302, 240, 422]
 
-input_scalings = [0.001, 0.01, 0.1]
+input_scalings = [0.001, 0.01, 0.1, 1.0]
 
 rot_params = {'x': -np.pi/2, 
               'y': 0, 
@@ -146,7 +151,7 @@ pos_params = {'xpos': 0,
               }        
 
 cell_params = {
-    'morphology' : join(model_path, 'L5_Mainen96_wAxon_LFPy.hoc'),
+    'morphology' : join(neuron_model, 'L5_Mainen96_wAxon_LFPy.hoc'),
     'rm' : 30000,               # membrane resistance
     'cm' : 1.0,                 # membrane capacitance
     'Ra' : 150,                 # axial resistance
@@ -160,10 +165,11 @@ cell_params = {
     'tstartms' : 0,        
     'tstopms' : tstopms + cut_off,           
     'custom_fun'  : [active_mainen], 
-#'custom_fun_args' : [{'is_active': is_active}],
+    'custom_fun_args' : [{'is_active': is_active}],
     }
-
-#aLFP.initialize_cell(cell_params, pos_params, rot_params, model, elec_x, elec_y, elec_z, model)
+ntsteps = round((tstopms - 0) / timeres)
+aLFP.initialize_cell(cell_params, pos_params, rot_params, model, elec_x, 
+                     elec_y, elec_z, ntsteps, model, testing=False)
 
 #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
 
@@ -172,7 +178,7 @@ cell_params = {
 
 
 cell_params['custom_fun_args'] = [{'is_active': True}]  
-aLFP.run_all_simulations(cell_params, True,  model, input_idxs, input_scalings)
+aLFP.run_all_simulations(cell_params, True,  model, input_idxs, input_scalings, ntsteps)
 
 cell_params['custom_fun_args'] = [{'is_active': False}]    
-aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings)
+aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)

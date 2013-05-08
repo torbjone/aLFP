@@ -1,12 +1,17 @@
 #!/usr/bin/env python
-
+import os
+if not os.environ.has_key('DISPLAY'):
+    import matplotlib
+    matplotlib.use('Agg')
 import LFPy
 import numpy as np
 import neuron
-import os
 import sys
-from ipdb import set_trace
-import pylab as pl
+try:
+    from ipdb import set_trace
+except:
+    pass
+    import pylab as pl
 from os.path import join
 
 import aLFP
@@ -39,7 +44,7 @@ LFPy.cell.neuron.load_mechanisms(join('..', 'neuron_models'))
 
 cut_off = 100
 is_active = True
-input_idxs = [0, 12]
+input_idxs = [31, 0, 12]
 
 input_scalings = [0.001, 0.01, 0.1]
 
