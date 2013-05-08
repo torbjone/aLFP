@@ -19,7 +19,7 @@ from os.path import join
 import aLFP
 from params import *
 
-input_idxs = [31, 0, 12]
+input_idxs = np.arange(32)
 
 input_scalings = [0.001, 0.01, 0.1]
 model = 'ball_n_stick' 
