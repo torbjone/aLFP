@@ -58,19 +58,19 @@ cell_params = {
     'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
                       join(model_path, 'biophys3_%s.hoc' % conductance)],
 }
-
-#aLFP.initialize_cell(cell_params, pos_params, rot_params, model, elec_x, elec_y, elec_z, model)
+ntsteps = round((tstopms - 0) / timeres)
+aLFP.initialize_cell(cell_params, pos_params, rot_params, model, elec_x, elec_y, elec_z, ntsteps, model)
 
 #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
 
 
 cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                               join(model_path, 'biophys3_active.hoc')]
-aLFP.run_all_simulations(cell_params, True,  model, input_idxs, input_scalings)
+aLFP.run_all_simulations(cell_params, True,  model, input_idxs, input_scalings, ntsteps)
 
 cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                               join(model_path, 'biophys3_passive.hoc')]
-aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings)
+aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)
 
 
 

@@ -40,16 +40,14 @@ def return_time_const(cell):
 def norm_it(sig):
     return (sig - sig[0])
 
-def return_dipole_stick(cell, ax):
+def return_dipole_stick(imem, ymid):
+    """ Sums imem contriburions along y-axis for imshow plotting"""
     n_points = 20
-    stick = np.linspace(ax.axis()[2], ax.axis()[3], n_points)
-    stick_values = np.zeros((n_points, len(cell.tvec)))
-    #print np.min(cell.ymid), np.max(cell.ymid)
-    #print stick
-    for comp in xrange(cell.totnsegs):
-        idx = np.argmin(np.abs(stick - cell.ymid[comp]))
-        #print stick[idx], cell.ymid[comp]
-        stick_values[idx] += cell.imem[comp]
+    stick = np.linspace(np.min(ymid), np.max(ymid), n_points)
+    stick_values = np.zeros((n_points, imem.shape[1]))
+    for comp in xrange(imem.shape[0]):
+        idx = np.argmin(np.abs(stick - ymid[comp]))
+        stick_values[idx] += imem[comp]
     return stick_values[::-1] # Reverse array
 
 

@@ -88,9 +88,15 @@ def run_simulation(cell_params, input_scaling, is_active, input_idx, ofolder, nt
     sig = np.dot(mapping, cell.imem)
 
     sig_psd, freqs = find_LFP_PSD(sig, cell.tvec[1] - cell.tvec[0])
-    somav_psd,freqs = find_LFP_PSD(np.array([cell.somav]), cell.tvec[1] - cell.tvec[0])
-    imem_psd,freqs = find_LFP_PSD(cell.imem, cell.tvec[1] - cell.tvec[0])
+    somav_psd, freqs = find_LFP_PSD(np.array([cell.somav]), cell.tvec[1] - cell.tvec[0])
+    imem_psd, freqs = find_LFP_PSD(cell.imem, cell.tvec[1] - cell.tvec[0])
+
+    ymid = np.load(join(ofolder, 'ymid.npy'))
+    stick = aLFP.return_dipole_stick(cell.imem, ymid)
+    stick_psd, freqs = find_LFP_PSD(stick, cell.tvec[1] - cell.tvec[0])
     
+    np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
+    np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
     np.save(join(ofolder, 'somav_psd_%s.npy' %(sim_name)), somav_psd[0])
     np.save(join(ofolder, 'imem_psd_%s.npy' %(sim_name)), imem_psd)
     np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), cell.imem)
