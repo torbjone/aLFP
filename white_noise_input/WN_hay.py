@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+import os
+if not os.environ.has_key('DISPLAY'):
+    import matplotlib
+    matplotlib.use('Agg')
+    at_stallo = True
+else:
+    at_stallo = False
+import LFPy
+import numpy as np
+import neuron
+import sys
+try:
+    from ipdb import set_trace
+except:
+    pass
+import pylab as pl
+from os.path import join
+import aLFP
+from params import *
+
+model = 'hay' 
+domain = 'white_noise_%s' %model
+
+np.random.seed(1234)
+
+if at_stallo:
+    neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
+else:
+    neuron_model = join('..', 'neuron_models', model)
+
+    
+input_idxs = [0, 791, 611, 808, 681, 740, 606]
+input_scalings = [0.001, 0.01, 0.1, 1.0]
+
+def simulate():
+    model_path = join(neuron_model, 'lfpy_version')
+    LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
+    LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
+
+    cut_off = 1000
+    is_active = True
+
+    rot_params = {'x': -np.pi/2, 
+                  'y': 0, 
+                  'z': 0
+                  }
+
+    pos_params = {'xpos': 0, 
+                  'ypos': 0,
+                  'zpos': 0,
+                  }        
+    if is_active:
+        conductance = 'active'
+    else:
+        conductance = 'passive'
+
+    cell_params = {
+        'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init' : -77,             # initial crossmembrane potential 
+        #'e_pas' : -90,              # reversal potential passive mechs
+        'passive' : False,           # switch on passive mechs
+        'nsegs_method' : 'lambda_f',# method for setting number of segments,
+        'lambda_f' : 100,           # segments are isopotential at this frequency
+        'timeres_NEURON' : timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python' : timeres,
+        'tstartms' : 0,          #start time, recorders start at t=0
+        'tstopms' : tstopms + cut_off, 
+        'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
+                          join(model_path, 'biophys3_%s.hoc' % conductance)],
+    }
+    ntsteps = round((tstopms - 0) / timeres)
+    aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
+                         elec_x, elec_y, elec_z, ntsteps, model, testing=False)
+
+    #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
+
+    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                  join(model_path, 'biophys3_active.hoc')]
+    aLFP.run_all_simulations(cell_params, True,  model, input_idxs, input_scalings, ntsteps)
+
+    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                  join(model_path, 'biophys3_passive.hoc')]
+    aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)
+
+def plot():
+    #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 
+    #elec_x, elec_y, elec_z, plot_params)
+    #sys.exit()
+    plot_params = {'ymax': 1250,
+                   'ymin': -250,
+                   }
+    
+    for input_idx in input_idxs:
+        for input_scaling in input_scalings:
+            print input_idx, input_scaling
+            aLFP.compare_active_passive(model, input_scaling , input_idx, 
+                                        elec_x, elec_y, elec_z, plot_params)
+
+            
+if __name__ == '__main__':
+    
+    if len(sys.argv) != 2:
+        sys.stderr.write("Usage: python %s <function-name> \n" % sys.argv[0])
+        raise SystemExit(1)
+    func = eval('%s' % sys.argv[1])
+    func()

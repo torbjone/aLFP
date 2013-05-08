@@ -296,18 +296,16 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
 
 
     # COLOR PLOT OF y-AXIS SUMMED IMEM CONTRIBUTION
-    stick_pos = np.linspace(ymax, ymin, stick_passive.shape[0])
+    stick_pos = np.linspace(np.max(ymid), np.min(ymid), stick_passive.shape[0])
     X, Y = np.meshgrid(freqs, stick_pos)
     
-    sc_stick_pas = ax_pas_imshow.imshow(1000*stick_passive, interpolation='nearest',
-                            extent=[tvec[0], tvec[-1], np.min(ymid), np.max(ymid)],
-                            vmax=np.max(np.abs(1000*stick_passive)), 
-                            vmin=-np.max(np.abs(1000*stick_passive)), cmap='jet_r')
+    sc_stick_pas = ax_pas_imshow.pcolormesh(X, Y, 1000*stick_passive, cmap='jet_r',
+                                            vmax=np.max(np.abs(1000*stick_passive)), 
+                                            vmin=-np.max(np.abs(1000*stick_passive)))
 
-    sc_stick_act = ax_act_imshow.imshow(1000*stick_active, interpolation='nearest',
-                            extent=[tvec[0], tvec[-1], np.min(ymid), np.max(ymid)],
-                            vmax=np.max(np.abs(1000*stick_active)), 
-                            vmin=-np.max(np.abs(1000*stick_active)), cmap='jet_r')
+    sc_stick_act = ax_act_imshow.pcolormesh(X, Y, 1000*stick_active, cmap='jet_r', 
+                                            vmax=np.max(np.abs(1000*stick_active)), 
+                                            vmin=-np.max(np.abs(1000*stick_active)))
     
     sc_stick_psd_pas = ax_pas_psd_imshow.pcolormesh(X, Y, 1000*stick_psd_passive, cmap='jet',
             norm=LogNorm(vmax=np.max(1000*stick_psd_passive), vmin=1e-4))

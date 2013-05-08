@@ -126,9 +126,7 @@ def vmem_quickplot(cell, input_array, sim_name, ofolder):
     pl.subplots_adjust(hspace=0.3)
     pl.subplot(311)
     pl.title('Soma imem [nA]')
-    #pl.ylim(-0.04, 0.04)
-
-    
+    #pl.ylim(-0.04, 0.04)    
     pl.plot(cell.tvec, cell.imem[0,:])
     pl.subplot(312)
     #pl.ylim(-90, -20)
