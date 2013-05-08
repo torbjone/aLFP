@@ -28,14 +28,12 @@ def plot_all_currents(cell, syn, electrode, neural_sim_dict,
                       plotting_params, neur_input_params):
     print "Plotting ..."
 
-    
     pl.close('all')    
     fig = pl.figure(figsize=[14,8])
     fig.suptitle("Model: %s, Input scaling: %s, Input index: %s, Active: %s"
                  %(neural_sim_dict['model'], neur_input_params['input_scaling'],
                    neur_input_params['input_idx'], neural_sim_dict['is_active']))
 
-    
     pl.subplots_adjust(hspace=0.5)
     #ax1a = fig.add_axes([0.05, 0.05, 0.15, 0.22])
     ax_in = fig.add_axes([0.1, 0.1, 0.12, 0.22])
@@ -293,7 +291,6 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
         ax_temp.set_xlim(1,1000)
         ax_temp.set_ylim(1e-2, 2e0)
         arrow_to_axis(pos, ax_neur, ax_temp, elec_clr_list[elec])
-
 
     # COLOR PLOT OF y-AXIS SUMMED IMEM CONTRIBUTION
     stick_pos = np.linspace(np.max(ymid), np.min(ymid), stick_passive.shape[0])
