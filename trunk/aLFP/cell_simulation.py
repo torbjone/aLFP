@@ -38,7 +38,10 @@ def find_LFP_PSD(sig, timestep):
 
 def return_power(sig, timestep):
     """ Returns the power of the input signal"""
-    sample_freq = ff.fftfreq(sig.shape[1], d=timestep)
+    try:
+        sample_freq = ff.fftfreq(len(sig), d=timestep)
+    except:
+        sample_freq = ff.fftfreq(sig.shape[1], d=timestep)
     pidxs = np.where(sample_freq > 0)
     freqs = sample_freq[pidxs]
     Y = ff.fft(sig)[pidxs]
@@ -71,7 +74,6 @@ def run_simulation(cell_params, input_scaling, is_active, input_idx, ofolder, nt
     noiseVec.play(syn._ref_amp, cell.timeres_NEURON)    
     mapping = np.load(join(ofolder, 'mapping.npy'))
     simulation_params = {'rec_imem': True,
-                         'rec_istim': True,
                          }
     cell.simulate(**simulation_params)
 
@@ -80,16 +82,24 @@ def run_simulation(cell_params, input_scaling, is_active, input_idx, ofolder, nt
     cell.somav = cell.somav[-ntsteps:]
     input_array = input_array[-ntsteps:]
     
-    vmem_quickplot(cell, input_array, sim_name, ofolder)
+    #vmem_quickplot(cell, input_array, sim_name, ofolder)
     sig = np.dot(mapping, cell.imem)
 
-    sig_psd, freqs = find_LFP_PSD(sig, cell.tvec[1] - cell.tvec[0])
-    somav_psd, freqs = find_LFP_PSD(np.array([cell.somav]), cell.tvec[1] - cell.tvec[0])
-    imem_psd, freqs = find_LFP_PSD(cell.imem, cell.tvec[1] - cell.tvec[0])
+    timestep = (cell.tvec[1] - cell.tvec[0])/1000.
+    
+    sig_psd, freqs = find_LFP_PSD(sig, timestep)
+    somav_psd, freqs = find_LFP_PSD(np.array([cell.somav]), timestep)
+    imem_psd, freqs = find_LFP_PSD(cell.imem, timestep)
+
+    pl.close('all')
+    pl.loglog(freqs, imem_psd[3])
+    pl.show()
+    set_trace()
+
 
     ymid = np.load(join(ofolder, 'ymid.npy'))
     stick = aLFP.return_dipole_stick(cell.imem, ymid)
-    stick_psd, freqs = find_LFP_PSD(stick, cell.tvec[1] - cell.tvec[0])
+    stick_psd, freqs = find_LFP_PSD(stick, timestep)
     
     np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
     np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)

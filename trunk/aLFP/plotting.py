@@ -24,91 +24,6 @@ def plot_comp_numbers(cell):
     pl.close('all')
     sys.exit()
 
-def plot_all_currents(cell, syn, electrode, neural_sim_dict,
-                      plotting_params, neur_input_params):
-    print "Plotting ..."
-
-    pl.close('all')    
-    fig = pl.figure(figsize=[14,8])
-    fig.suptitle("Model: %s, Input scaling: %s, Input index: %s, Active: %s"
-                 %(neural_sim_dict['model'], neur_input_params['input_scaling'],
-                   neur_input_params['input_idx'], neural_sim_dict['is_active']))
-
-    pl.subplots_adjust(hspace=0.5)
-    #ax1a = fig.add_axes([0.05, 0.05, 0.15, 0.22])
-    ax_in = fig.add_axes([0.1, 0.1, 0.12, 0.22])
-    ax_im = fig.add_axes([0.1, 0.4, 0.12, 0.22])
-    ax_vm = fig.add_axes([0.1, 0.70, 0.12, 0.22])
-    ax_neur = fig.add_axes([0.3, 0.1, 0.35, 0.75], frameon=False)
-    ax_im = fig.add_axes([0.80, 0.1, 0.14, 0.80], aspect='auto', frameon=False)
-
-    ax_vm.set_title('Soma membrane potential')
-    ax_vm.set_xlabel('[ms]')
-    ax_vm.set_ylabel('[mV]')
-    ax_vm.plot(cell.tvec, cell.somav)
-
-    ax_im.plot(cell.tvec, cell.imem[0,:])
-    ax_im.set_title('Soma transmembrane current')
-    ax_im.set_xlabel('[ms]')
-    ax_im.set_ylabel('[nA]')
-
-    #ax1a.set_title('Input current')
-    #ax1a.set_xlabel('[ms]')
-    ax_in.set_title('Input PDS')
-    ax_in.set_xlabel('[Hz]')
-    
-    #ax1a.plot(cell.tvec, cell.noiseVec, label='Noise input')
-    freqs, power = aLFP.return_psd(cell.noiseVec, neural_sim_dict)
-    ax_in.loglog(freqs, power/np.max(power), label='Noise input psd')
-    ax_in.grid(True)
-    ax_in.set_xlim(1,1000)
-    ax_in.set_ylim(1e-1, 1e0)
-    
-
-    for sec in neuron.h.allsec():
-        idx = cell.get_idx(sec.name())
-        a = np.array([x for x in idx if cell.ymid[x] > -300])
-        if len(a) > 0:
-            ax_neur.plot(np.r_[cell.xstart[a], cell.xend[a][-1]],
-                     np.r_[cell.ystart[a], cell.yend[a][-1]],
-                     color='gray', alpha=0.5, lw=2)
-
-    ax_neur.plot(cell.xmid[neur_input_params['input_idx']],
-             cell.ymid[neur_input_params['input_idx']],
-             color='m', marker='D', 
-             markersize=10)
-    
-    ax_neur.axis(plotting_params['cell_extent'])
-    for elec in xrange(len(electrode.x)):
-        xpos, ypos = electrode.x[elec], electrode.y[elec]
-        ax_neur.plot(xpos, ypos, 'gD')
-        pixel_coor = ax_neur.transData.transform((xpos, ypos))
-        fig_coor = fig.transFigure.inverted().transform((pixel_coor))
-        ax_temp = fig.add_axes([fig_coor[0], fig_coor[1], 0.08, 0.12], frameon=False)
-        ax_temp.set_xticklabels([])
-        ax_temp.set_yticklabels([])
-        ax_temp.grid(True)
-        ax_temp.loglog(electrode.freqs, electrode.LFP_psd[elec]/np.max(electrode.LFP_psd[elec]))
-        ax_temp.set_xlim(1,1000)
-        ax_temp.set_ylim(1e-2, 1e0)
-    stick = aLFP.return_dipole_stick(cell, ax_neur)
-    sc_stick = ax_im.imshow(stick, interpolation='nearest',
-                          extent=[cell.tvec[0], cell.tvec[-1], ax_neur.axis()[2], ax_neur.axis()[3]],
-                          vmax=np.max(np.abs(stick)), vmin=-np.max(np.abs(stick)), cmap='jet_r')
-    ax_im.axis('auto')
-    
-    #set_trace()
-    ax_im.set_title('Summed Imem along y-axis')
-    ax_im.set_ylabel('y [$\mu m$]')
-    ax_im.set_xlabel('Time [ms]')
-    pl.colorbar(sc_stick, cax = fig.add_axes([0.95, 0.1, 0.01, 0.8]))
-    name = "%s_%s_%s_%s" %(neural_sim_dict['model'],
-                           neur_input_params['input_scaling'],
-                           neur_input_params['input_idx'],
-                           neural_sim_dict['is_active'])
-    pl.savefig('WN_%s.png' % name)
-    #pl.show()
-
 def arrow_to_axis(pos, ax_origin, ax_target, clr):
     
     upper_pixel_coor = ax_target.transAxes.transform(([0,1]))
@@ -242,7 +157,6 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
         ax.set_yticks(yticks)
         for tl in ax.get_yticklabels():
             tl.set_color('b')
-
     
     # Starting plotting
     ax_vm.plot(tvec, somav_active, color=act_clr)

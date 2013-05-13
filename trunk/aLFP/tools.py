@@ -16,8 +16,9 @@ def make_WN_input(cell_params):
                   cell_params['timeres_NEURON'] + 1)
     I = np.zeros(tot_ntsteps)
     tvec = np.arange(tot_ntsteps) * cell_params['timeres_NEURON']
-    for freq in xrange(1,1001):
-        I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
+    I = np.random.random(tot_ntsteps)
+    #for freq in xrange(1,1001):
+    #    I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
     I /= np.std(I)
     
     if 0:

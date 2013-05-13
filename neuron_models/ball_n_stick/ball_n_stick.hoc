@@ -2,7 +2,6 @@ proc celldef() {
   topol()
   subsets()
 }
-
 create soma[1], dend[1]
 
 proc topol() { local i
@@ -22,8 +21,5 @@ proc subsets() { local i
     dend all.append()
 
 }
-
-
 access soma
-
 celldef()
