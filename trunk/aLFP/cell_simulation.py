@@ -91,12 +91,6 @@ def run_simulation(cell_params, input_scaling, is_active, input_idx, ofolder, nt
     somav_psd, freqs = find_LFP_PSD(np.array([cell.somav]), timestep)
     imem_psd, freqs = find_LFP_PSD(cell.imem, timestep)
 
-    pl.close('all')
-    pl.loglog(freqs, imem_psd[3])
-    pl.show()
-    set_trace()
-
-
     ymid = np.load(join(ofolder, 'ymid.npy'))
     stick = aLFP.return_dipole_stick(cell.imem, ymid)
     stick_psd, freqs = find_LFP_PSD(stick, timestep)
