@@ -46,6 +46,62 @@ def arrow_to_axis(pos, ax_origin, ax_target, clr):
               color=clr, clip_on=False, alpha=1.)
 
     
+def plot_active_currents(ifolder, input_scaling, input_idx, simulation_params):
+
+
+    name = "%d_%1.3f" %(input_idx, input_scaling)
+    name_active = "psd_%d_%1.3f_%s" %(input_idx, input_scaling, 'True')
+    freqs = np.load(join(ifolder, 'freqs.npy'))
+    freqs[0] += 1e-4
+    
+    tvec = np.load(join(ifolder, 'tvec.npy'))
+    imem = 1000 * np.load(join(ifolder, 'imem_%s.npy' %(name_active)))
+    icap = 1000 * np.load(join(ifolder, 'icap_%s.npy' %(name_active)))
+    ipas = 1000 * np.load(join(ifolder, 'ipas_%s.npy' %(name_active)))
+    active_dict = {}
+
+
+    clr_list = ['r', 'b', 'g', 'm']
+    
+    for cur in simulation_params['rec_variables']:
+        active_dict[cur] = 1000 * np.load(join(ifolder, '%s_%s.npy'%(cur, name_active)))
+    sim_name = '%d_%1.3f' %(input_idx, input_scaling)
+    pl.close('all')
+    n_cols = 6
+    n_rows = 6
+    fig = pl.figure(figsize=[15,10])
+    if n_cols * n_rows < imem.shape[0]:
+        n_plots = n_cols * n_rows
+        plots = np.array(np.linspace(0, imem.shape[0] - 1, n_plots), dtype=int)
+    else:
+        n_plots = imem.shape[0]
+        plots = xrange(n_plots)
+    
+    for plot_number, idx in enumerate(plots):
+        ax = fig.add_subplot(n_rows, n_cols, plot_number + 1)
+        ax.grid(True)
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_xlim(1e0,1e3)
+        ax.set_ylim(1e-7, 1e3)
+        for cur_numb, cur in enumerate(active_dict):
+            ax.plot(freqs[1:], active_dict[cur][idx,1:], label=cur, color=clr_list[cur_numb], lw=2)
+            ax.plot(1.5, active_dict[cur][idx,0], '+', color=clr_list[cur_numb])
+            
+
+        ax.plot(freqs, ipas[idx,:], label='Ipas', color='y', lw=2)
+        ax.plot(1.5, ipas[idx,0], '+', color='y')
+        ax.plot(freqs, icap[idx,:], label='Icap', color='grey', lw=2)
+        ax.plot(1.5, icap[idx,0], '+', color='grey')
+        ax.plot(freqs, imem[idx,:], label='Imem', color='k', lw=1)
+        ax.plot(1.5, imem[idx,0], '+', color='k')        
+        
+        if plot_number == n_rows - 1:
+            ax.legend(bbox_to_anchor=[1.7,1.0])
+    pl.savefig('active_currents_%s_%s_True_psd.png' % (ifolder, sim_name), dpi=300)
+    #pl.savefig('active_currents_%s_%s_True_psd.pdf' % (ifolder, sim_name))
+    
+    
 def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z, plot_params):
 
     name = "%d_%1.3f" %(input_idx, input_scaling)

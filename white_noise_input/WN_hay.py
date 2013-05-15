@@ -29,9 +29,15 @@ if at_stallo:
 else:
     neuron_model = join('..', 'neuron_models', model)
 
+simulation_params = {'rec_imem': True,
+                     'rec_icap' : True,
+                     'rec_ipas': True,
+                     'rec_variables': ['ina', 'ik', 'ica', 'ihcn_Ih'],
+                     }
+
     
 input_idxs = [0, 791, 611, 808, 681, 740, 606]
-input_scalings = [0.001, 0.01, 0.1, 1.0]
+input_scalings = [0., 0.001, 0.01, 0.1, 1.0]
 
 def simulate():
     model_path = join(neuron_model, 'lfpy_version')
@@ -72,21 +78,36 @@ def simulate():
         'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
                           join(model_path, 'biophys3_%s.hoc' % conductance)],
     }
+
+
+    
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
 
-    #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
+    #aLFP.run_simulation(cell_params, input_scalings[2], is_active, input_idxs[0], 
+    #                    model, ntsteps, simulation_params)
 
     cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                   join(model_path, 'biophys3_active.hoc')]
-    aLFP.run_all_simulations(cell_params, True,  model, input_idxs, input_scalings, ntsteps)
+    aLFP.run_all_simulations(cell_params, True,  model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params)
 
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                  join(model_path, 'biophys3_passive.hoc')]
-    aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)
+    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+    ##                               join(model_path, 'biophys3_passive.hoc')]
+    ## aLFP.run_all_simulations(cell_params, False,  model, input_idxs, 
+    ##                          input_scalings, ntsteps, simulation_params)
 
-def plot():
+
+def plot_active():
+
+    for input_idx in input_idxs:
+        for input_scaling in input_scalings:
+            print input_idx, input_scaling
+            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params)
+
+    
+def plot_compare():
     #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 
     #elec_x, elec_y, elec_z, plot_params)
     #sys.exit()

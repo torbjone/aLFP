@@ -25,7 +25,14 @@ model = 'mainen'
 domain = 'white_noise_%s' %model
 np.random.seed(1234)
 input_idxs = [0, 1071, 610, 984, 846, 604, 302, 240, 422]
-input_scalings = [0.001, 0.01, 0.1, 1.0]
+input_scalings = [0.0, 0.001, 0.01, 0.1]
+
+simulation_params = {'rec_imem': True,
+                     'rec_icap' : True,
+                     'rec_ipas': True,
+                     'rec_variables': ['ina', 'ik', 'ica'],
+                     }
+
 
 def simulate():
     def active_mainen(is_active):
@@ -180,13 +187,22 @@ def simulate():
     #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
 
     cell_params['custom_fun_args'] = [{'is_active': True}]  
-    aLFP.run_all_simulations(cell_params, True,  model, input_idxs, input_scalings, ntsteps)
+    aLFP.run_all_simulations(cell_params, True,  model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params)
 
-    cell_params['custom_fun_args'] = [{'is_active': False}]    
-    aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)
+    #cell_params['custom_fun_args'] = [{'is_active': False}]    
+    #aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)
 
 
-def plot():
+def plot_active():
+
+    for input_idx in input_idxs:
+        for input_scaling in input_scalings:
+            print input_idx, input_scaling
+            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params)
+
+    
+def plot_compare():
     plot_params = {'ymax': 1000,
                    'ymin': -250,
                    }
