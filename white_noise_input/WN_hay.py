@@ -46,7 +46,8 @@ def simulate():
 
     cut_off = 1000
     is_active = True
-
+    is_reduced = True
+    
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
                   'z': 0
@@ -56,11 +57,8 @@ def simulate():
                   'ypos': 0,
                   'zpos': 0,
                   }        
-    if is_active:
-        conductance = 'active'
-    else:
-        conductance = 'passive'
-
+    conductance_type = 'active'
+    
     cell_params = {
         'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
         #'rm' : 30000,               # membrane resistance
@@ -76,28 +74,28 @@ def simulate():
         'tstartms' : 0,          #start time, recorders start at t=0
         'tstopms' : tstopms + cut_off, 
         'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
-                          join(model_path, 'biophys3_%s.hoc' % conductance)],
+                          join(model_path, 'biophys3_%s.hoc' % conductance_type)],
     }
-
-
     
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
-
     #aLFP.run_simulation(cell_params, input_scalings[2], is_active, input_idxs[0], 
     #                    model, ntsteps, simulation_params)
-
     cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                   join(model_path, 'biophys3_active.hoc')]
-    aLFP.run_all_simulations(cell_params, True,  model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params)
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params, 'active')
 
-    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    ##                               join(model_path, 'biophys3_passive.hoc')]
-    ## aLFP.run_all_simulations(cell_params, False,  model, input_idxs, 
-    ##                          input_scalings, ntsteps, simulation_params)
-
+    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                  join(model_path, 'biophys3_passive.hoc')]
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params, 'passive')
+    
+    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                  join(model_path, 'biophys3_reduced.hoc')]
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params, 'reduced')
 
 def plot_active():
 

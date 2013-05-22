@@ -46,25 +46,25 @@ def arrow_to_axis(pos, ax_origin, ax_target, clr):
               color=clr, clip_on=False, alpha=1.)
 
     
-def plot_active_currents(ifolder, input_scaling, input_idx, simulation_params):
+def plot_active_currents(ifolder, input_scaling, input_idx, simulation_params, conductance_type):
 
-
-    name = "%d_%1.3f" %(input_idx, input_scaling)
-    name_active = "psd_%d_%1.3f_%s" %(input_idx, input_scaling, 'True')
+    #name = "%d_%1.3f" %(input_idx, input_scaling)
+    name = "psd_%d_%1.3f_%s" %(input_idx, input_scaling, conductance_type)
     freqs = np.load(join(ifolder, 'freqs.npy'))
-    freqs[0] += 1e-4
     
     tvec = np.load(join(ifolder, 'tvec.npy'))
-    imem = 1000 * np.load(join(ifolder, 'imem_%s.npy' %(name_active)))
-    icap = 1000 * np.load(join(ifolder, 'icap_%s.npy' %(name_active)))
-    ipas = 1000 * np.load(join(ifolder, 'ipas_%s.npy' %(name_active)))
+    imem = 1000 * np.load(join(ifolder, 'imem_%s.npy' %(name)))
+    icap = 1000 * np.load(join(ifolder, 'icap_%s.npy' %(name)))
+    ipas = 1000 * np.load(join(ifolder, 'ipas_%s.npy' %(name)))
     active_dict = {}
-
 
     clr_list = ['r', 'b', 'g', 'm']
     
     for cur in simulation_params['rec_variables']:
-        active_dict[cur] = 1000 * np.load(join(ifolder, '%s_%s.npy'%(cur, name_active)))
+        try:
+            active_dict[cur] = 1000 * np.load(join(ifolder, '%s_%s.npy'%(cur, name)))
+        except:
+            pass
     sim_name = '%d_%1.3f' %(input_idx, input_scaling)
     pl.close('all')
     n_cols = 6
@@ -88,7 +88,6 @@ def plot_active_currents(ifolder, input_scaling, input_idx, simulation_params):
             ax.plot(freqs[1:], active_dict[cur][idx,1:], label=cur, color=clr_list[cur_numb], lw=2)
             ax.plot(1.5, active_dict[cur][idx,0], '+', color=clr_list[cur_numb])
             
-
         ax.plot(freqs, ipas[idx,:], label='Ipas', color='y', lw=2)
         ax.plot(1.5, ipas[idx,0], '+', color='y')
         ax.plot(freqs, icap[idx,:], label='Icap', color='grey', lw=2)
@@ -98,15 +97,16 @@ def plot_active_currents(ifolder, input_scaling, input_idx, simulation_params):
         
         if plot_number == n_rows - 1:
             ax.legend(bbox_to_anchor=[1.7,1.0])
-    pl.savefig('active_currents_%s_%s_True_psd.png' % (ifolder, sim_name), dpi=300)
+    pl.savefig('active_currents_%s_%s_%s_psd.png' % (ifolder, sim_name, conductance_type), dpi=300)
     #pl.savefig('active_currents_%s_%s_True_psd.pdf' % (ifolder, sim_name))
     
     
 def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z, plot_params):
 
     name = "%d_%1.3f" %(input_idx, input_scaling)
-    name_active = "%d_%1.3f_%s" %(input_idx, input_scaling, 'True')
-    name_passive= "%d_%1.3f_%s" %(input_idx, input_scaling, 'False')
+    name_active = "%d_%1.3f_%s" %(input_idx, input_scaling, 'active')
+    name_passive = "%d_%1.3f_%s" %(input_idx, input_scaling, 'passive')
+    name_reduced = "%d_%1.3f_%s" %(input_idx, input_scaling, 'reduced')
 
     # Loading all needed data
     imem_active = np.load(join(ifolder, 'imem_%s.npy' %(name_active)))
@@ -117,6 +117,16 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
     psd_active = np.load(join(ifolder, 'psd_%s.npy' %(name_active)))
     stick_active = np.load(join(ifolder, 'stick_%s.npy' %(name_active)))
     stick_psd_active = np.load(join(ifolder, 'stick_psd_%s.npy' %(name_active)))
+
+    imem_reduced = np.load(join(ifolder, 'imem_%s.npy' %(name_reduced)))
+    imem_psd_reduced = np.load(join(ifolder, 'imem_psd_%s.npy' %(name_reduced)))
+    somav_psd_reduced = np.load(join(ifolder, 'somav_psd_%s.npy' %(name_reduced)))
+    somav_reduced = np.load(join(ifolder, 'somav_%s.npy' %(name_reduced)))
+    sig_reduced = np.load(join(ifolder, 'signal_%s.npy' %(name_reduced)))
+    psd_reduced = np.load(join(ifolder, 'psd_%s.npy' %(name_reduced)))
+    stick_reduced = np.load(join(ifolder, 'stick_%s.npy' %(name_reduced)))
+    stick_psd_reduced = np.load(join(ifolder, 'stick_psd_%s.npy' %(name_reduced)))
+    
     imem_passive = np.load(join(ifolder, 'imem_%s.npy' %(name_passive)))
     imem_psd_passive = np.load(join(ifolder, 'imem_psd_%s.npy' %(name_passive)))
     somav_psd_passive = np.load(join(ifolder, 'somav_psd_%s.npy' %(name_passive)))    
@@ -125,6 +135,7 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
     psd_passive = np.load(join(ifolder, 'psd_%s.npy' %(name_passive)))
     stick_passive = np.load(join(ifolder, 'stick_%s.npy' %(name_passive)))
     stick_psd_passive = np.load(join(ifolder, 'stick_psd_%s.npy' %(name_passive)))
+    
     freqs = np.load(join(ifolder, 'freqs.npy'))    
     tvec = np.load(join(ifolder, 'tvec.npy'))
     input_array = input_scaling * np.load(join(ifolder, 'input_array.npy'))[-len(tvec):]
@@ -159,7 +170,7 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
     ax_pas_psd_imshow = fig.add_axes([0.73, 0.1, 0.25, 0.13], title='Passive PSD', xscale='log')    
     ax_neur = fig.add_axes([0.25, 0.1, 0.35, 0.75], frameon=False, aspect='equal', xticks=[])
 
-    pl.figtext(0.74, 0.9, 'Sum of transmembrane \n  currents along y-axis', size=15)
+    pl.figtext(0.74, 0.9, 'Sum of transmembrane \n currents along y-axis', size=15)
     ax_vm.set_xlabel('ms')
     ax_vm.set_ylabel('mV')
     ax_vm_psd.set_xlabel('Hz')
@@ -196,6 +207,7 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
     # Setting up helpers and colors
     act_clr = 'k'
     pas_clr = 'grey'
+    reduced_clr = 'g'
     elec_clr_list = []
     for idx in xrange(len(elec_x)):
         i = 256. * idx
@@ -217,14 +229,19 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
     # Starting plotting
     ax_vm.plot(tvec, somav_active, color=act_clr)
     ax_vm.plot(tvec, somav_passive, color=pas_clr)
+    ax_vm.plot(tvec, somav_reduced, color=reduced_clr)
     ax_vm_psd.loglog(freqs, somav_psd_active, act_clr, lw=2, label='Active')
+    ax_vm_psd.loglog(freqs, somav_psd_reduced, reduced_clr, lw=2, label='Reduced')
     ax_vm_psd.loglog(freqs, somav_psd_passive, pas_clr, lw=2, label='Passive')
     ax_vm_psd.legend(bbox_to_anchor=[1.4,1.0])
 
     ax_im.plot(tvec, 1000*imem_active[0,:], act_clr)
     ax_im.plot(tvec, 1000*imem_passive[0,:], pas_clr)
+    ax_im.plot(tvec, 1000*imem_reduced[0,:], reduced_clr)
+    
     ax_im_psd.loglog(freqs, 1000*imem_psd_active[0,:], act_clr, lw=2)
     ax_im_psd.loglog(freqs, 1000*imem_psd_passive[0,:], pas_clr, lw=2)
+    ax_im_psd.loglog(freqs, 1000*imem_psd_reduced[0,:], reduced_clr, lw=2)
 
     ax_in.plot(tvec, 1000*input_array, 'k')
     ax_in_psd.loglog(freqs, 1000*input_array_psd, 'k', lw=2)
@@ -252,6 +269,9 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
                        color=act_clr, lw=2)
         ax_temp.loglog(freqs, psd_passive[elec]/np.max(psd_passive[elec]), 
                        color=pas_clr, lw=2)
+        
+        ax_temp.loglog(freqs, psd_reduced[elec]/np.max(psd_reduced[elec]), 
+                       color=reduced_clr, lw=2)        
         pos = [elec_x[elec], elec_y[elec]]
         
         if elec == 0:
@@ -262,32 +282,32 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
         ax_temp.set_ylim(1e-2, 2e0)
         arrow_to_axis(pos, ax_neur, ax_temp, elec_clr_list[elec])
 
-    # COLOR PLOT OF y-AXIS SUMMED IMEM CONTRIBUTION
-    stick_pos = np.linspace(np.max(ymid), np.min(ymid), stick_passive.shape[0])
-    X, Y = np.meshgrid(freqs, stick_pos)
+    ## # COLOR PLOT OF y-AXIS SUMMED IMEM CONTRIBUTION
+    ## stick_pos = np.linspace(np.max(ymid), np.min(ymid), stick_passive.shape[0])
+    ## X, Y = np.meshgrid(freqs, stick_pos)
     
-    sc_stick_pas = ax_pas_imshow.pcolormesh(X, Y, 1000*stick_passive, cmap='jet_r',
-                                            vmax=np.max(np.abs(1000*stick_passive)), 
-                                            vmin=-np.max(np.abs(1000*stick_passive)))
+    ## sc_stick_pas = ax_pas_imshow.pcolormesh(X, Y, 1000*stick_passive, cmap='jet_r',
+    ##                                         vmax=np.max(np.abs(1000*stick_passive)), 
+    ##                                         vmin=-np.max(np.abs(1000*stick_passive)))
 
-    sc_stick_act = ax_act_imshow.pcolormesh(X, Y, 1000*stick_active, cmap='jet_r', 
-                                            vmax=np.max(np.abs(1000*stick_active)), 
-                                            vmin=-np.max(np.abs(1000*stick_active)))
+    ## sc_stick_act = ax_act_imshow.pcolormesh(X, Y, 1000*stick_active, cmap='jet_r', 
+    ##                                         vmax=np.max(np.abs(1000*stick_active)), 
+    ##                                         vmin=-np.max(np.abs(1000*stick_active)))
     
-    sc_stick_psd_pas = ax_pas_psd_imshow.pcolormesh(X, Y, 1000*stick_psd_passive, cmap='jet',
-            norm=LogNorm(vmax=np.max(1000*stick_psd_passive), vmin=1e-4))
-    sc_stick_psd_act = ax_act_psd_imshow.pcolormesh(X, Y, 1000*stick_psd_active, cmap='jet',
-                                     norm=LogNorm(vmax=np.max(1000*stick_psd_active), vmin=1e-4))
+    ## sc_stick_psd_pas = ax_pas_psd_imshow.pcolormesh(X, Y, 1000*stick_psd_passive, cmap='jet',
+    ##         norm=LogNorm(vmax=np.max(1000*stick_psd_passive), vmin=1e-4))
+    ## sc_stick_psd_act = ax_act_psd_imshow.pcolormesh(X, Y, 1000*stick_psd_active, cmap='jet',
+    ##                                  norm=LogNorm(vmax=np.max(1000*stick_psd_active), vmin=1e-4))
 
-    ax_pas_imshow.axis('auto')
-    ax_act_imshow.axis('auto')
-    pl.colorbar(sc_stick_act, ax=ax_act_imshow)
-    pl.colorbar(sc_stick_pas, ax=ax_pas_imshow)
-    pl.colorbar(sc_stick_psd_pas, ax=ax_pas_psd_imshow)
-    pl.colorbar(sc_stick_psd_act, ax=ax_act_psd_imshow)
+    ## ax_pas_imshow.axis('auto')
+    ## ax_act_imshow.axis('auto')
+    ## pl.colorbar(sc_stick_act, ax=ax_act_imshow)
+    ## pl.colorbar(sc_stick_pas, ax=ax_pas_imshow)
+    ## pl.colorbar(sc_stick_psd_pas, ax=ax_pas_psd_imshow)
+    ## pl.colorbar(sc_stick_psd_act, ax=ax_act_psd_imshow)
 
-    xmin, xmax = ax_neur.get_xaxis().get_view_interval()
-    ax_neur.add_artist(pl.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
+    ## xmin, xmax = ax_neur.get_xaxis().get_view_interval()
+    ## ax_neur.add_artist(pl.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
     
-    pl.savefig('WN_%s_%s.png' % (ifolder, name))
+    pl.savefig('WN_%s_%s_reduced.png' % (ifolder, name))
 
