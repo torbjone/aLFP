@@ -14,4 +14,4 @@ cp /home/torbness/work/aLFP/white_noise_input/$filename .
 cp /home/torbness/work/aLFP/white_noise_input/params.py .
 
 python $filename simulate
-python $filename plot
+python $filename plot_active
