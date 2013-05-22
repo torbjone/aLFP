@@ -21,13 +21,13 @@ pl.rcParams.update({'font.size' : 8,
     'wspace' : 0.5, 'hspace' : 0.5})
 np.random.seed(1234)
 
-def run_all_simulations(cell_params, is_active, model, input_idxs, 
-                        input_scalings, ntsteps, simulation_params):
+def run_all_simulations(cell_params, model, input_idxs, 
+                        input_scalings, ntsteps, simulation_params, conductance_type):
 
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
-            run_simulation(cell_params, input_scaling, is_active, 
-                           input_idx, model, ntsteps, simulation_params)        
+            run_simulation(cell_params, input_scaling,
+                           input_idx, model, ntsteps, simulation_params, conductance_type)        
 
 def find_LFP_PSD(sig, timestep):
     """ Returns the power and freqency of the input signal"""
@@ -99,13 +99,14 @@ def check_current_sum(cell, noiseVec):
     pl.show()
     sys.exit()
     
-def run_simulation(cell_params, input_scaling, is_active, input_idx, ofolder, ntsteps, simulation_params):
+def run_simulation(cell_params, input_scaling, input_idx, 
+                   ofolder, ntsteps, simulation_params, conductance_type):
 
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
     cell = LFPy.Cell(**cell_params)
 
-    sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, bool(is_active))
+    sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
     input_array = input_scaling * \
                   np.load(join(ofolder, 'input_array.npy'))
     noiseVec = neuron.h.Vector(input_array)
@@ -147,13 +148,12 @@ def run_simulation(cell_params, input_scaling, is_active, input_idx, ofolder, nt
     np.save(join(ofolder, 'istim_%s.npy' %(sim_name)), input_array)
     np.save(join(ofolder, 'tvec.npy'), cell.tvec)
     const = (1E-2 * cell.area)
-    if is_active:
-        for cur in cell.rec_variables:
-            active_current = np.array([const[idx] * cell.rec_variables[cur][idx,:] 
-                                       for idx in xrange(len(cell.imem))])
-            psd, freqs = find_LFP_PSD(active_current, timestep)
-            np.save(join(ofolder, '%s_%s.npy' %(cur, sim_name)), active_current)
-            np.save(join(ofolder, '%s_psd_%s.npy' %(cur, sim_name)), psd)
+    for cur in cell.rec_variables:
+        active_current = np.array([const[idx] * cell.rec_variables[cur][idx,:] 
+                                   for idx in xrange(len(cell.imem))])
+        psd, freqs = find_LFP_PSD(active_current, timestep)
+        np.save(join(ofolder, '%s_%s.npy' %(cur, sim_name)), active_current)
+        np.save(join(ofolder, '%s_psd_%s.npy' %(cur, sim_name)), psd)
         
     #vmem_quickplot(cell, input_array, sim_name, ofolder)
     sig = np.dot(mapping, cell.imem)

@@ -28,16 +28,17 @@ input_idxs = [0, 1071, 610, 984, 846, 604, 302, 240, 422]
 input_scalings = [0.0, 0.001, 0.01, 0.1]
 
 simulation_params = {'rec_imem': True,
-                     'rec_icap' : True,
+                     'rec_icap': True,
                      'rec_ipas': True,
                      'rec_variables': ['ina', 'ik', 'ica'],
                      }
 
 
 def simulate():
-    def active_mainen(is_active):
+    def active_mainen(conductance_type):
         '''set active conductances and correct for spines,
         see file active_declarations_example3.hoc'''
+        
         spine_dens = 1
         spine_area = 0.83 # // um^2  -- K Harris
 
@@ -48,24 +49,31 @@ def simulate():
         Ek = -85.
         Ena = 60.
 
-        if is_active:
-            g_adjust = 1
-        else:
+        if conductance_type == 'passive':
             g_adjust = 0
-        block = 0
-        gna_dend = 20. * g_adjust
-        gna_node = 30000. * g_adjust
+            g_reduced = 0
+        elif conductance_type == 'active':
+            g_adjust = 1
+            g_reduced = 1
+        elif conductance_type == 'reduced':
+            g_adjust = 1
+            g_reduced = 0
+        else: 
+            raise RuntimeError, "Wrong conductance type"
+        
+        gna_dend = 20. * g_adjust * g_reduced
+        gna_node = 30000. * g_adjust * g_reduced
         gna_soma = gna_dend * 10
 
         gkv_axon = 2000. * g_adjust
         gkv_soma = 200. * g_adjust
 
-        gca = .3 * g_adjust
+        gca = .3 * g_adjust * g_reduced
         gkm = .1 * g_adjust
-        gkca = 3 * g_adjust
-        gca_soma = gca
+        gkca = 3 * g_adjust * g_reduced
+        gca_soma = gca * g_reduced
         gkm_soma = gkm 
-        gkca_soma = gkca 
+        gkca_soma = gkca * g_reduced
 
         dendritic = neuron.h.SectionList()
         for sec in neuron.h.allsec():
@@ -151,7 +159,7 @@ def simulate():
     LFPy.cell.neuron.load_mechanisms(join(neuron_model))      
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
     cut_off = 500
-    is_active = True
+    conductance_type = 'passive'
 
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
@@ -178,7 +186,7 @@ def simulate():
         'tstartms' : 0,        
         'tstopms' : tstopms + cut_off,           
         'custom_fun'  : [active_mainen], 
-        'custom_fun_args' : [{'is_active': is_active}],
+        'custom_fun_args' : [{'conductance_type': conductance_type}],
         }
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_cell(cell_params, pos_params, rot_params, model, elec_x, 
@@ -186,10 +194,18 @@ def simulate():
 
     #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
 
-    cell_params['custom_fun_args'] = [{'is_active': True}]  
-    aLFP.run_all_simulations(cell_params, True,  model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params)
+    cell_params['custom_fun_args'] = [{'conductance_type': 'active'}]  
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params, 'active')
 
+    cell_params['custom_fun_args'] = [{'conductance_type': 'reduced'}]  
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params, 'reduced')
+
+    cell_params['custom_fun_args'] = [{'conductance_type': 'passive'}]  
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params, 'passive')    
+    
     #cell_params['custom_fun_args'] = [{'is_active': False}]    
     #aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)
 
