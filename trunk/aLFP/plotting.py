@@ -97,7 +97,7 @@ def plot_active_currents(ifolder, input_scaling, input_idx, simulation_params, c
         
         if plot_number == n_rows - 1:
             ax.legend(bbox_to_anchor=[1.7,1.0])
-    pl.savefig('active_currents_%s_%s_%s_psd.png' % (ifolder, sim_name, conductance_type), dpi=300)
+    pl.savefig('active_currents_%s_%s_%s_psd.png' % (ifolder, sim_name, conductance_type), dpi=150)
     #pl.savefig('active_currents_%s_%s_True_psd.pdf' % (ifolder, sim_name))
     
     
