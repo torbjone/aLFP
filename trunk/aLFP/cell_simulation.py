@@ -124,7 +124,6 @@ def run_simulation(cell_params, input_scaling, input_idx,
     noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
     #set_trace()    
     mapping = np.load(join(ofolder, 'mapping.npy'))
-
     cell.simulate(**simulation_params)
     #set_trace()
     
@@ -197,7 +196,6 @@ def pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder):
     pl.subplot(122)
     pl.scatter(cell.zmid, cell.ymid, s=cell.diam)
     pl.scatter(elec_z, elec_y, c='r')
-    
     pl.xlabel('z')
     pl.ylabel('y')    
     pl.axis('equal')

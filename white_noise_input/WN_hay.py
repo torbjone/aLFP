@@ -57,7 +57,7 @@ def simulate():
                   'ypos': 0,
                   'zpos': 0,
                   }        
-    conductance_type = 'active'
+    conductance_type = 'reduced_with_na'
     
     cell_params = {
         'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
@@ -82,20 +82,20 @@ def simulate():
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
     #aLFP.run_simulation(cell_params, input_scalings[2], is_active, input_idxs[0], 
     #                    model, ntsteps, simulation_params)
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                  join(model_path, 'biophys3_active.hoc')]
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'active')
+    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+    ##                               join(model_path, 'biophys3_active.hoc')]
+    ## aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    ##                          input_scalings, ntsteps, simulation_params, 'active')
 
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                  join(model_path, 'biophys3_passive.hoc')]
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'passive')
+    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+    ##                               join(model_path, 'biophys3_passive.hoc')]
+    ## aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    ##                          input_scalings, ntsteps, simulation_params, 'passive')
     
     cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                  join(model_path, 'biophys3_reduced.hoc')]
+                                  join(model_path, 'biophys3_reduced_with_na.hoc')]
     aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'reduced')
+                             input_scalings, ntsteps, simulation_params, 'reduced_with_na')
 
 def plot_active():
 
@@ -121,7 +121,7 @@ def plot_compare():
 
             
 if __name__ == '__main__':
-    
+
     if len(sys.argv) != 2:
         sys.stderr.write("Usage: python %s <function-name> \n" % sys.argv[0])
         raise SystemExit(1)
