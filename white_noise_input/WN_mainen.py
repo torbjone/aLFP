@@ -55,14 +55,14 @@ def simulate():
         elif conductance_type == 'active':
             g_adjust = 1
             g_reduced = 1
-        elif conductance_type == 'reduced':
+        elif conductance_type == 'reduced_with_na':
             g_adjust = 1
             g_reduced = 0
         else: 
             raise RuntimeError, "Wrong conductance type"
         
-        gna_dend = 20. * g_adjust * g_reduced
-        gna_node = 30000. * g_adjust * g_reduced
+        gna_dend = 20. * g_adjust 
+        gna_node = 30000. * g_adjust 
         gna_soma = gna_dend * 10
 
         gkv_axon = 2000. * g_adjust
@@ -159,7 +159,7 @@ def simulate():
     LFPy.cell.neuron.load_mechanisms(join(neuron_model))      
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
     cut_off = 500
-    conductance_type = 'passive'
+    conductance_type = 'reduced_with_na'
 
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
@@ -194,17 +194,17 @@ def simulate():
 
     #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
 
-    cell_params['custom_fun_args'] = [{'conductance_type': 'active'}]  
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'active')
+    #cell_params['custom_fun_args'] = [{'conductance_type': 'active'}]  
+    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    #                         input_scalings, ntsteps, simulation_params, 'active')
 
-    cell_params['custom_fun_args'] = [{'conductance_type': 'reduced'}]  
+    cell_params['custom_fun_args'] = [{'conductance_type': 'reduced_with_na'}]  
     aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'reduced')
+                             input_scalings, ntsteps, simulation_params, 'reduced_with_na')
 
-    cell_params['custom_fun_args'] = [{'conductance_type': 'passive'}]  
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'passive')    
+    #cell_params['custom_fun_args'] = [{'conductance_type': 'passive'}]  
+    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    #                         input_scalings, ntsteps, simulation_params, 'passive')    
     
     #cell_params['custom_fun_args'] = [{'is_active': False}]    
     #aLFP.run_all_simulations(cell_params, False,  model, input_idxs, input_scalings, ntsteps)
