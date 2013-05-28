@@ -36,7 +36,7 @@ simulation_params = {'rec_imem': True,
                      }
 
     
-input_idxs = [0, 791, 611, 808, 681, 740, 606]
+input_idxs = [0, 791, 611, 681, 740]
 input_scalings = [0., 0.001, 0.01, 0.1, 1.0]
 
 def simulate():
@@ -44,7 +44,7 @@ def simulate():
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
 
-    cut_off = 1000
+    cut_off = 6000
     is_active = True
     is_reduced = True
     
@@ -82,27 +82,27 @@ def simulate():
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
     #aLFP.run_simulation(cell_params, input_scalings[2], is_active, input_idxs[0], 
     #                    model, ntsteps, simulation_params)
-    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    ##                               join(model_path, 'biophys3_active.hoc')]
-    ## aLFP.run_all_simulations(cell_params, model, input_idxs, 
-    ##                          input_scalings, ntsteps, simulation_params, 'active')
-
+    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                   join(model_path, 'biophys3_active.hoc')]
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                              input_scalings, ntsteps, simulation_params, 'active')
     ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
     ##                               join(model_path, 'biophys3_passive.hoc')]
     ## aLFP.run_all_simulations(cell_params, model, input_idxs, 
-    ##                          input_scalings, ntsteps, simulation_params, 'passive')
+    ##                         input_scalings, ntsteps, simulation_params, 'passive')
     
     cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                  join(model_path, 'biophys3_reduced_with_na.hoc')]
+                                  join(model_path, 'biophys3_reduced.hoc')]
     aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'reduced_with_na')
+                             input_scalings, ntsteps, simulation_params, 'reduced')
 
 def plot_active():
 
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling
-            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'reduced_with_na')
+            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'reduced')
+            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'active')
 
     
 def plot_compare():
