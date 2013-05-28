@@ -34,10 +34,15 @@ simulation_params = {'rec_imem': True,
                      'rec_ipas': True,
                      'rec_variables': ['ina', 'ik', 'ica', 'ihcn_Ih'],
                      }
+plot_params = {'ymax': 1250,
+               'ymin': -250,
+               }
 
-    
-input_idxs = [0, 791, 611, 808, 681, 740, 606]
-input_scalings = [0., 0.001, 0.01, 0.1, 1.0]
+n_plots = 10
+plot_compartments = np.array(np.linspace(0, 31, n_plots), dtype=int)
+
+input_idxs = [0]#, 791, 611, 808, 681, 740, 606]
+input_scalings = [0.]#, 0.001, 0.01, 0.1, 1.0]
 
 def simulate():
     model_path = join(neuron_model, 'lfpy_version')
@@ -99,20 +104,20 @@ def simulate():
 
 def plot_active():
 
+    aLFP.plot_active_currents(model, 0.01, 0, plot_params, 
+                              simulation_params, plot_compartments, 'active')
+    sys.exit()
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling
-            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params)
+            aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                                      simulation_params, plot_compartments, 'active')
 
     
 def plot_compare():
     #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 
     #elec_x, elec_y, elec_z, plot_params)
-    #sys.exit()
-    plot_params = {'ymax': 1250,
-                   'ymin': -250,
-                   }
-    
+    #sys.exit()    
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling
