@@ -102,7 +102,7 @@ def plot_active():
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling
-            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params)
+            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'reduced_with_na')
 
     
 def plot_compare():
