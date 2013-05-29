@@ -31,6 +31,14 @@ simulation_params = {'rec_imem': True,
                      'rec_variables': ['ina', 'ik', 'il_hh'],
                      }
 
+plot_params = {'ymax': 1000,
+               'ymin': 0,
+               }
+
+#plot_compartments = [0, 5, 10, 15, 20, 25, 30]
+n_plots = 10
+plot_compartments = np.array(np.linspace(0, 31, n_plots), dtype=int)
+
 def simulate():
     def active_ball_n_stick(conductance_type):
         if conductance_type == 'passive':
@@ -111,14 +119,13 @@ def plot_active():
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling
-            aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'active')
+            aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                                      simulation_params, plot_compartments, 'active')
+            #sys.exit()
             #aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'reduced')
             #aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'passive')
 
 def plot_compare():
-    plot_params = {'ymax': 1000,
-                   'ymin': 0,
-                   }
     #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 
     #                            elec_x, elec_y, elec_z, plot_params)
     #sys.exit()

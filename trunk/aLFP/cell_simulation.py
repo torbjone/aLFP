@@ -133,8 +133,9 @@ def run_simulation(cell_params, input_scaling, input_idx,
     # Cutting of start of simulations
     
     cut_list = ['cell.imem', 'cell.somav', 'input_array', 'cell.ipas', 'cell.icap']
-    for cur in cell.rec_variables:
-        cut_list.append('cell.rec_variables["%s"]' % cur)
+    if hasattr(cell, 'rec_variables'):
+        for cur in cell.rec_variables:
+            cut_list.append('cell.rec_variables["%s"]' % cur)
     for cur in cut_list:
         try:
             exec('%s = %s[:,-%d:]' %(cur, cur, ntsteps))
@@ -147,12 +148,13 @@ def run_simulation(cell_params, input_scaling, input_idx,
     np.save(join(ofolder, 'istim_%s.npy' %(sim_name)), input_array)
     np.save(join(ofolder, 'tvec.npy'), cell.tvec)
     const = (1E-2 * cell.area)
-    for cur in cell.rec_variables:
-        active_current = np.array([const[idx] * cell.rec_variables[cur][idx,:] 
-                                   for idx in xrange(len(cell.imem))])
-        psd, freqs = find_LFP_PSD(active_current, timestep)
-        np.save(join(ofolder, '%s_%s.npy' %(cur, sim_name)), active_current)
-        np.save(join(ofolder, '%s_psd_%s.npy' %(cur, sim_name)), psd)
+    if hasattr(cell, 'rec_variables'):
+        for cur in cell.rec_variables:
+            active_current = np.array([const[idx] * cell.rec_variables[cur][idx,:] 
+                                       for idx in xrange(len(cell.imem))])
+            psd, freqs = find_LFP_PSD(active_current, timestep)
+            np.save(join(ofolder, '%s_%s.npy' %(cur, sim_name)), active_current)
+            np.save(join(ofolder, '%s_psd_%s.npy' %(cur, sim_name)), psd)
         
     #vmem_quickplot(cell, input_array, sim_name, ofolder)
     sig = np.dot(mapping, cell.imem)
