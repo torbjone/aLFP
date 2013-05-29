@@ -75,6 +75,7 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
         try:
             active_dict[cur] = np.load(join(ifolder, '%s_psd_%s.npy'%(cur, cur_name)))
         except:
+            print "Failed to load ", cur
             pass
     
     freqs = np.load(join(ifolder, 'freqs.npy'))    
@@ -183,8 +184,8 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
 
 
     sc_stick = ax_imshow.pcolormesh(X_t, Y_t, stick, cmap='jet_r', 
-                                            vmax=np.max(np.abs(1000*stick)), 
-                                            vmin=-np.max(np.abs(1000*stick)))
+                                            vmax=np.max(np.abs(stick)), 
+                                            vmin=-np.max(np.abs(stick)))
     
     sc_stick_psd = ax_psd_imshow.pcolormesh(X, Y, stick_psd, cmap='jet',
                                      norm=LogNorm(1e-7, 1e0))
