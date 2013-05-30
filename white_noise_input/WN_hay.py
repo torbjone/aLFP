@@ -43,7 +43,7 @@ input_idxs = [0, 791, 611, 681, 740]
 input_scalings = [0., 0.001, 0.01, 0.1, 1.0]
 
 n_plots = 10
-plot_compartments = np.array(np.linspace(0, 31, n_plots), dtype=int)
+plot_compartments = np.array(np.linspace(0, 1000, n_plots), dtype=int)
 
 #input_idxs = [0]#, 791, 611, 808, 681, 740, 606]
 #input_scalings = [0.]#, 0.001, 0.01, 0.1, 1.0]
@@ -54,8 +54,6 @@ def simulate():
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
 
     cut_off = 6000
-    is_active = True
-    is_reduced = True
     
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
@@ -106,19 +104,27 @@ def simulate():
                              input_scalings, ntsteps, simulation_params, 'reduced')
 
 def plot_active():
-
-    aLFP.plot_active_currents(model, 0.01, 0, plot_params, 
-                              simulation_params, plot_compartments, 'active')
-    sys.exit()
+    ifolder = 'hay'
+    #aLFP.plot_active_currents(ifolder, 1.0, 0, plot_params, 
+    #                          simulation_params, plot_compartments, 'active')
+    #sys.exit()
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling          
             #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
             #                          simulation_params, plot_compartments, 'active')
-            aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-                                      simulation_params, plot_compartments, 'passive')
+            try:
+                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                                          simulation_params, plot_compartments, 'passive')
+            except:
+                pass
             #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
             #                          simulation_params, plot_compartments, 'reduced')
+            try:
+                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params,
+                                          simulation_params, plot_compartments, 'reduced_with_na')
+            except:
+                pass
 
 
     

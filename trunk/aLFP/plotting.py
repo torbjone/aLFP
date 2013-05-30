@@ -74,6 +74,7 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     for cur in simulation_params['rec_variables']:
         try:
             active_dict[cur] = np.load(join(ifolder, '%s_psd_%s.npy'%(cur, cur_name)))
+            print cur, active_dict[cur]
         except:
             print "Failed to load ", cur
             pass
@@ -141,6 +142,7 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     ax_neur.axis([-200, 200, ymin -50, ymax + 50])
     ax_neur.plot(xmid[input_idx], ymid[input_idx], '*', color='y', label='Input', markersize=15)
     ax_neur.legend(bbox_to_anchor=[.6, 1.05], numpoints=1)
+    
     for numb, comp in enumerate(plot_compartments):
         ax_neur.plot(xmid[comp], ymid[comp], 'o', color=comp_clr_list[numb])
         if numb % 2:
@@ -156,13 +158,22 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
         ax_temp.set_yticklabels([])
         ax_temp.grid(True)        
         for cur_numb, cur in enumerate(active_dict):
-            ax_temp.plot(freqs[1:], active_dict[cur][idx,1:], label=cur, color=clr_list[cur_numb], lw=2)
-            ax_temp.plot(1.5, active_dict[cur][idx,0], '+', color=clr_list[cur_numb])
+            #print active_dict[cur][idx]
+            #set_trace()
+            #if any(active_dict[cur][idx,:] >= 0):
+                 #if active_dict[cur][idx,:]
+                 #set_trace()
+            print cur, active_dict[cur][comp,:]
+            ax_temp.plot(freqs[:], active_dict[cur][comp,:], label=cur, color=clr_list[cur_numb], lw=2)
+            ax_temp.plot(1.5, active_dict[cur][comp,0], '+', color=clr_list[cur_numb])
+            #except ValueError:
+            #    print "Skipping ", cur
+            #     pass
             
-        ax_temp.plot(freqs, ipas[idx,:], label='Ipas', color='y', lw=2)
-        ax_temp.plot(1.5, ipas[idx,0], '+', color='y')
-        ax_temp.plot(freqs, icap[idx,:], label='Icap', color='grey', lw=2)
-        ax_temp.plot(1.5, icap[idx,0], '+', color='grey')
+        ax_temp.plot(freqs, ipas[comp,:], label='Ipas', color='y', lw=2)
+        ax_temp.plot(1.5, ipas[comp,0], '+', color='y')
+        ax_temp.plot(freqs, icap[comp,:], label='Icap', color='grey', lw=2)
+        ax_temp.plot(1.5, icap[comp,0], '+', color='grey')
         
         ax_temp.loglog(freqs, imem_psd[comp], color=clr, lw=1, label='Imem')      
         ax_temp.plot(1.5, imem_psd[comp,0], '+', color=clr)
@@ -174,7 +185,9 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
             ax_temp.legend(bbox_to_anchor=[1.7,1.0])
         ax_temp.axis(ax_temp.axis('tight'))
         ax_temp.set_xlim(1,1000)
-        ax_temp.set_ylim(1e-7, 1e0)
+        ax_temp.set_ylim(1e-10, 1e0)
+        ax_temp.set_xscale('log')
+        ax_temp.set_yscale('log')
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_shift)
 
     # COLOR PLOT OF y-AXIS SUMMED IMEM CONTRIBUTION
