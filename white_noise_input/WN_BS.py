@@ -100,10 +100,10 @@ def simulate():
     aLFP.initialize_cell(cell_params, pos_params, rot_params, model, elec_x, elec_y, elec_z, ntsteps, model)
     #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], 
     #                    model, ntsteps, simulation_params)
-    conductance_type = 'active'
-    cell_params['custom_fun_args'] = [{'conductance_type': conductance_type}]  
-    aLFP.run_all_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
-                             simulation_params, conductance_type)
+    #conductance_type = 'active'
+    #cell_params['custom_fun_args'] = [{'conductance_type': conductance_type}]  
+    #aLFP.run_all_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
+    #                         simulation_params, conductance_type)
     
     conductance_type = 'passive'
     cell_params['custom_fun_args'] = [{'conductance_type': conductance_type}]  
@@ -119,12 +119,16 @@ def plot_active():
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling
-            aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-                                      simulation_params, plot_compartments, 'active')
-            #sys.exit()
-            #aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'reduced')
-            #aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'passive')
-
+            try:
+                #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                #                          simulation_params, plot_compartments, 'active')
+                #sys.exit()
+                #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                #                          simulation_params, plot_compartments,'reduced')
+                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                                          simulation_params, plot_compartments, 'passive')
+            except:
+                continue
 def plot_compare():
     #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 
     #                            elec_x, elec_y, elec_z, plot_params)
