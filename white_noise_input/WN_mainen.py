@@ -61,14 +61,14 @@ def simulate():
         elif conductance_type == 'active':
             g_adjust = 1
             g_reduced = 1
-        elif conductance_type == 'reduced_with_na':
+        elif conductance_type == 'reduced':
             g_adjust = 1
             g_reduced = 0
         else: 
             raise RuntimeError, "Wrong conductance type"
         
-        gna_dend = 20. * g_adjust 
-        gna_node = 30000. * g_adjust 
+        gna_dend = 20. * g_adjust * g_reduced
+        gna_node = 30000. * g_adjust * g_reduced
         gna_soma = gna_dend * 10
 
         gkv_axon = 2000. * g_adjust
@@ -165,7 +165,7 @@ def simulate():
     LFPy.cell.neuron.load_mechanisms(join(neuron_model))      
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
     cut_off = 3000
-    conductance_type = 'reduced_with_na'
+    conductance_type = 'reduced'
 
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
@@ -200,21 +200,21 @@ def simulate():
 
     #aLFP.run_simulation(cell_params, input_scalings[0], is_active, input_idxs[0], model)
 
-    cell_params['custom_fun_args'] = [{'conductance_type': 'active'}]  
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'active')
+    #cell_params['custom_fun_args'] = [{'conductance_type': 'active'}]  
+    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    #                         input_scalings, ntsteps, simulation_params, 'active')
 
-    cell_params['custom_fun_args'] = [{'conductance_type': 'reduced_with_na'}]  
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'reduced_with_na')
+    #cell_params['custom_fun_args'] = [{'conductance_type': 'reduced_with_na'}]  
+    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    #                         input_scalings, ntsteps, simulation_params, 'reduced_with_na')
 
     cell_params['custom_fun_args'] = [{'conductance_type': 'reduced'}]  
     aLFP.run_all_simulations(cell_params, model, input_idxs, 
                              input_scalings, ntsteps, simulation_params, 'reduced')
     
-    #cell_params['custom_fun_args'] = [{'conductance_type': 'passive'}]  
-    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
-    #                         input_scalings, ntsteps, simulation_params, 'passive')    
+    cell_params['custom_fun_args'] = [{'conductance_type': 'passive'}]  
+    aLFP.run_all_simulations(cell_params, model, input_idxs, 
+                             input_scalings, ntsteps, simulation_params, 'passive')    
 
 
 
@@ -224,11 +224,11 @@ def plot_active():
         for input_scaling in input_scalings:
             print input_idx, input_scaling
             #aLFP.plot_active_currents(model, input_scaling, input_idx, simulation_params, 'reduced_with_na')
-            try:
-                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-                                          simulation_params, plot_compartments, 'active')
-            except:
-                pass
+            #try:
+            #    aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+            #                              simulation_params, plot_compartments, 'active')
+            #except:
+            #    pass
             try:
                 aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
                                           simulation_params, plot_compartments, 'passive')
@@ -239,11 +239,11 @@ def plot_active():
                                           simulation_params, plot_compartments, 'reduced')
             except:
                 pass            
-            try:
-                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-                                          simulation_params, plot_compartments, 'reduced_with_na')
-            except:
-                pass            
+            #try:
+            #    aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+            #                              simulation_params, plot_compartments, 'reduced_with_na')
+            #except:
+            #    pass            
     
 def plot_compare():
 
