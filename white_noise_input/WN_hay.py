@@ -49,10 +49,7 @@ def simulate():
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
 
-    cut_off = 100
-    is_active = True
-    is_reduced = True
-    
+    cut_off = 3000
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
                   'z': 0
@@ -103,7 +100,7 @@ def simulate():
                              input_scalings, ntsteps, simulation_params, 'reduced_with_na')
 
 def plot_active():
-    ifolder = 'stallo/data'
+    ifolder = 'hay'
     #aLFP.plot_active_currents(ifolder, 1.0, 0, plot_params, 
     #                          simulation_params, plot_compartments, 'active')
     #sys.exit()
