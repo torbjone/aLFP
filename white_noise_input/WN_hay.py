@@ -45,16 +45,15 @@ input_scalings = [0., 0.001, 0.01, 0.1, 1.0]
 n_plots = 10
 plot_compartments = np.array(np.linspace(0, 1000, n_plots), dtype=int)
 
-#input_idxs = [0]#, 791, 611, 808, 681, 740, 606]
-#input_scalings = [0.]#, 0.001, 0.01, 0.1, 1.0]
+input_idxs = [0, 791, 611, 808, 681, 740, 606]
+input_scalings = [0., 0.001, 0.01, 0.1, 1.0]
 
 def simulate():
     model_path = join(neuron_model, 'lfpy_version')
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
 
-    cut_off = 6000
-    
+    cut_off = 3000
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
                   'z': 0
@@ -64,7 +63,7 @@ def simulate():
                   'ypos': 0,
                   'zpos': 0,
                   }        
-    conductance_type = 'reduced_with_na'
+    conductance_type = 'reduced_Ih'
     
     cell_params = {
         'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
@@ -89,19 +88,24 @@ def simulate():
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
     #aLFP.run_simulation(cell_params, input_scalings[2], is_active, input_idxs[0], 
     #                    model, ntsteps, simulation_params)
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                   join(model_path, 'biophys3_active.hoc')]
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                              input_scalings, ntsteps, simulation_params, 'active')
+    #cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+    #                               join(model_path, 'biophys3_active.hoc')]
+    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    #                          input_scalings, ntsteps, simulation_params, 'active')
     ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
     ##                               join(model_path, 'biophys3_passive.hoc')]
     ## aLFP.run_all_simulations(cell_params, model, input_idxs, 
     ##                         input_scalings, ntsteps, simulation_params, 'passive')
     
+    #cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+    #                              join(model_path, 'biophys3_reduced.hoc')]
+    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
+    #                         input_scalings, ntsteps, simulation_params, 'reduced')
+   
     cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                  join(model_path, 'biophys3_reduced.hoc')]
+                                   join(model_path, 'biophys3_reduced_Ih.hoc')]
     aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'reduced')
+                             input_scalings, ntsteps, simulation_params, 'reduced_Ih')
 
 def plot_active():
     ifolder = 'hay'
@@ -113,20 +117,24 @@ def plot_active():
             print input_idx, input_scaling          
             #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
             #                          simulation_params, plot_compartments, 'active')
-            try:
-                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-                                          simulation_params, plot_compartments, 'passive')
-            except:
-                pass
+            #try:
+            #    aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+            #                              simulation_params, plot_compartments, 'passive')
+            #except:
+            #    pass
             #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
             #                          simulation_params, plot_compartments, 'reduced')
+            #try:
+            #    aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params,
+            #                              simulation_params, plot_compartments, 'reduced_with_na')
+            #except:
+            #    pass
+
             try:
-                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params,
-                                          simulation_params, plot_compartments, 'reduced_with_na')
+                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                                          simulation_params, plot_compartments, 'reduced_Ih')
             except:
                 pass
-
-
     
 def plot_compare():
     #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 
