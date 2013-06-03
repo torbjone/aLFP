@@ -107,6 +107,23 @@ def simulate():
     aLFP.run_all_simulations(cell_params, model, input_idxs, 
                              input_scalings, ntsteps, simulation_params, 'reduced_Ih')
 
+
+def plot_transfer():
+    aLFP.plot_transfer_functions(model, 0.01, 0, plot_params, 
+                              simulation_params, plot_compartments, 'passive')
+    sys.exit()
+    for input_idx in input_idxs:
+        for input_scaling in input_scalings:
+            print input_idx, input_scaling
+            try:
+                aLFP.plot_transfer_functions(model, input_scaling, input_idx, plot_params, 
+                                          simulation_params, plot_compartments, 'active')
+            except:
+                continue
+
+
+
+    
 def plot_active():
     ifolder = 'hay'
     #aLFP.plot_active_currents(ifolder, 1.0, 0, plot_params, 
