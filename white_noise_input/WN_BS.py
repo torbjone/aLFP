@@ -36,8 +36,8 @@ plot_params = {'ymax': 1000,
                }
 
 #plot_compartments = [0, 5, 10, 15, 20, 25, 30]
-n_plots = 10
-plot_compartments = np.array(np.linspace(0, 31, n_plots), dtype=int)
+n_plots = 6
+plot_compartments = [0, 1, 5, 10, 20, 31]#np.array(np.linspace(0, 31, n_plots), dtype=int)
 
 def simulate():
     def active_ball_n_stick(conductance_type):
@@ -115,6 +115,21 @@ def simulate():
     aLFP.run_all_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
                              simulation_params, conductance_type)  
 
+
+
+def plot_transfer():
+    aLFP.plot_transfer_functions(model, 0.01, 0, plot_params, 
+                              simulation_params, plot_compartments, 'passive')
+    sys.exit()
+    for input_idx in input_idxs:
+        for input_scaling in input_scalings:
+            print input_idx, input_scaling
+            try:
+                aLFP.plot_transfer_functions(model, input_scaling, input_idx, plot_params, 
+                                          simulation_params, plot_compartments, 'active')
+            except:
+                continue
+    
 def plot_active():
     for input_idx in input_idxs:
         for input_scaling in input_scalings:

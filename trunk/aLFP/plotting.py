@@ -29,11 +29,11 @@ def arrow_to_axis(pos, ax_origin, ax_target, clr, x_shift):
     if x_shift > 0:
         upper_pixel_coor = ax_target.transAxes.transform(([0,1]))
         lower_pixel_coor = ax_target.transAxes.transform(([0,0]))
-        shift = 500*x_shift
+        shift = 10*x_shift
     else:
         upper_pixel_coor = ax_target.transAxes.transform(([1,1]))
         lower_pixel_coor = ax_target.transAxes.transform(([1,0]))   
-        shift = 2000*x_shift
+        shift = 500*x_shift
     
     upper_coor = ax_origin.transData.inverted().transform(upper_pixel_coor)
     lower_coor = ax_origin.transData.inverted().transform(lower_pixel_coor)
@@ -211,6 +211,149 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     #xmin, xmax = ax_neur.get_xaxis().get_view_interval()
     #ax_neur.add_artist(pl.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
     pl.savefig('%s_%s.png' % (ifolder, cur_name), dpi=150)
+
+    
+def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simulation_params,
+                            plot_compartments, name):
+
+    cur_name = '%d_%1.3f_%s' %(input_idx, input_scaling, name)
+    # Loading all needed data
+    #imem = np.load(join(ifolder, 'imem_%s.npy' %(cur_name)))
+    imem_active = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'active')))
+    imem_reduced = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'reduced')))
+    imem_passive = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'passive')))
+    #icap = np.load(join(ifolder, 'icap_psd_%s.npy' %(cur_name)))
+    #ipas = np.load(join(ifolder, 'ipas_psd_%s.npy' %(cur_name)))
+    active_dict = {}
+    clr_list = ['r', 'b', 'g', 'm']
+    
+    #for cur in simulation_params['rec_variables']:
+    #    try:
+    #        active_dict[cur] = np.load(join(ifolder, '%s_psd_%s.npy'%(cur, cur_name)))
+    #        print cur, active_dict[cur]
+    #    except:
+    #        print "Failed to load ", cur
+    #        pass
+    
+    freqs = np.load(join(ifolder, 'freqs.npy'))    
+    tvec = np.load(join(ifolder, 'tvec.npy'))
+    xmid = np.load(join(ifolder, 'xmid.npy' ))
+    ymid = np.load(join(ifolder, 'ymid.npy' ))
+    zmid = np.load(join(ifolder, 'zmid.npy' ))
+    xstart = np.load(join(ifolder, 'xstart.npy' ))
+    ystart = np.load(join(ifolder, 'ystart.npy' ))
+    zstart = np.load(join(ifolder, 'zstart.npy' ))
+    xend = np.load(join(ifolder, 'xend.npy' ))
+    yend = np.load(join(ifolder, 'yend.npy' ))
+    zend = np.load(join(ifolder, 'zend.npy' ))    
+    diam = np.load(join(ifolder, 'diam.npy'))
+    
+    # Initializing figure
+    pl.close('all')    
+    
+    fig = pl.figure(figsize=[8,8])
+    fig.suptitle("Model: %s, type: %s, input_idx: %d, input_scaling: %g "%(ifolder, name, input_idx, input_scaling))
+    pl.subplots_adjust(hspace=0.5)
+    ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])
+
+    #Sorting compartemts after y-height
+    argsort = np.argsort([ymid[comp] for comp in plot_compartments])
+    plot_compartments = np.array(plot_compartments)[argsort[:]]
+    comp_clr_list = []
+    for idx in xrange(len(plot_compartments)):
+        i = 256. * idx
+        if len(plot_compartments) > 1:
+            i /= len(plot_compartments) - 1.
+        else:
+            i /= len(plot_compartments)
+        comp_clr_list.append(pl.cm.rainbow(int(i)))
+    ymin = plot_params['ymin']
+    ymax = plot_params['ymax']
+    yticks = np.arange(ymin, ymax + 1 , 250)
+    yticks = yticks[np.where((np.min(ymid) <= yticks) * (yticks <= np.max(ymid)))]
+    ext_ax_width = 0.2
+    ext_ax_height = 0.8/len(plot_compartments)
+
+    reduced_clr = 'r' 
+    act_clr = 'k'
+    pas_clr = 'gray'
+       
+    for comp in xrange(len(xmid)):
+        ax_neur.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], lw=diam[comp], color='gray')
+    ax_neur.axis([-200, 200, ymin -50, ymax + 50])
+    ax_neur.plot(xmid[input_idx], ymid[input_idx], '*', color='y', label='Input', markersize=15)
+    ax_neur.legend(bbox_to_anchor=[1.1, 1.05], numpoints=1)
+    for numb, comp in enumerate(plot_compartments):
+        ax_neur.plot(xmid[comp], ymid[comp], 'o', color=comp_clr_list[numb])
+        if numb % 2:
+            x_pos = 0.2
+        else:
+            x_pos = 0.6
+        ax_temp = fig.add_axes([x_pos, 0.1 + numb*(ext_ax_height+0.05)/2, 
+                                ext_ax_width, ext_ax_height])
+        ax_temp.tick_params(color=comp_clr_list[numb])
+        for spine in ax_temp.spines.values():
+            spine.set_edgecolor(comp_clr_list[numb])
+        #ax_temp.set_xticklabels([])
+        #ax_temp.set_yticklabels([])
+        ax_temp.grid(True)        
+        ## for cur_numb, cur in enumerate(active_dict):
+        ##     #print active_dict[cur][idx]
+        ##     #set_trace()
+        ##     #if any(active_dict[cur][idx,:] >= 0):
+        ##          #if active_dict[cur][idx,:]
+        ##          #set_trace()
+        ##     print cur, active_dict[cur][comp,:]
+        ##     if 1:
+        ##         ax_temp.plot(freqs, active_dict[cur][comp,:], label=cur, color=clr_list[cur_numb], lw=2)
+        ##         ax_temp.plot(1.5, active_dict[cur][comp,0], '+', color=clr_list[cur_numb])
+        ##     else:
+        ##         ax_temp.plot(freqs, active_dict[cur][comp,:]/active_dict[cur][input_idx,:], label=cur, color=clr_list[cur_numb], lw=2)
+        ##         ax_temp.plot(1.5, active_dict[cur][comp,0]/active_dict[cur][input_idx,0], '+', color=clr_list[cur_numb])
+        ##     #except ValueError:
+        ##     #    print "Skipping ", cur
+        ##     #     pass
+        if 0:
+            sim_type = 'current'
+            #ax_temp.plot(freqs, ipas[comp,:], label='Ipas', color='y', lw=2)
+            #ax_temp.plot(1.5, ipas[comp,0], '+', color='y')
+            #ax_temp.plot(freqs, icap[comp,:], '--', label='Icap', color='grey', lw=2)
+            #ax_temp.plot(1.5, icap[comp,0], '+', color='grey')
+            ax_temp.plot(freqs, imem_passive[comp], color=pas_clr, lw=1, label='Passive')      
+            ax_temp.plot(1.5, imem_passive[comp,0], '+', color=pas_clr)
+            ax_temp.plot(freqs, imem_reduced[comp], color=reduced_clr, lw=1, label='Reduced')      
+            ax_temp.plot(1.5, imem_reduced[comp,0], '+', color=reduced_clr)
+            
+            ax_temp.plot(freqs, imem_active[comp], color=act_clr, lw=1, label='active')      
+            ax_temp.plot(1.5, imem_active[comp,0], '+', color=act_clr)
+            ax_temp.set_ylim(1e-7, 1e1)
+        else:
+            sim_type = 'transfer'
+            #ax_temp.plot(freqs, ipas[comp,:] / ipas[input_idx,:], label='Ipas', color='y', lw=2)
+            #ax_temp.plot(1.5, ipas[comp,0]/ ipas[input_idx,0], '+', color='y')
+            #ax_temp.plot(freqs, icap[comp,:]/ icap[input_idx,:], '--', label='Icap', color='grey', lw=2)
+            #ax_temp.plot(1.5, icap[comp,0]/ icap[input_idx,0], '+', color='grey')
+            ax_temp.plot(freqs, imem_passive[comp]/ imem_passive[input_idx,:], color=pas_clr, lw=1, label='Passive')      
+            ax_temp.plot(1.5, imem_passive[comp,0]/ imem_passive[input_idx,0], '+', color=pas_clr)
+            ax_temp.plot(freqs, imem_reduced[comp]/ imem_reduced[input_idx,:], color=reduced_clr, lw=1, label='Reduced')      
+            ax_temp.plot(1.5, imem_reduced[comp,0]/ imem_reduced[input_idx,0], '+', color=reduced_clr)            
+            ax_temp.plot(freqs, imem_active[comp]/ imem_active[input_idx,:], color=act_clr, lw=1, label='Active')      
+            ax_temp.plot(1.5, imem_active[comp,0]/ imem_active[input_idx,0], '+', color=act_clr)
+            ax_temp.set_ylim(1e-5, 1e1)
+            
+        pos = [xmid[comp], ymid[comp]]
+        if numb == 0:
+            #ax_temp.legend(bbox_to_anchor=[1.4, 1.22])
+            ax_temp.set_xlabel('Hz')
+            ax_temp.set_ylabel('Transfer factor')
+            #ax_temp.legend(bbox_to_anchor=[1.8,1.1])
+            #ax_temp.axis(ax_temp.axis('tight'))
+        ax_temp.set_xlim(1,1000)
+        
+        ax_temp.set_xscale('log')
+        ax_temp.set_yscale('log')
+        arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
+    pl.savefig('imem_%s_%s_%s.png' % (ifolder, cur_name, sim_type), dpi=300)
 
 
     
