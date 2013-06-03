@@ -117,7 +117,7 @@ def plot_transfer():
             print input_idx, input_scaling
             try:
                 aLFP.plot_transfer_functions(model, input_scaling, input_idx, plot_params, 
-                                          simulation_params, plot_compartments, 'active')
+                                          simulation_params, plot_compartments)
             except:
                 continue
 

@@ -217,6 +217,7 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
                             plot_compartments):
 
     cur_name = '%d_%1.3f' %(input_idx, input_scaling)
+
     # Loading all needed data
     #imem = np.load(join(ifolder, 'imem_%s.npy' %(cur_name)))
     imem_active = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'active')))
@@ -253,6 +254,7 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
     
     fig = pl.figure(figsize=[8,8])
     fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g "%(ifolder, input_idx, input_scaling))
+
     pl.subplots_adjust(hspace=0.5)
     ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])
 
