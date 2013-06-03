@@ -345,10 +345,9 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
             
         pos = [xmid[comp], ymid[comp]]
         if numb == 0:
-            #ax_temp.legend(bbox_to_anchor=[1.4, 1.22])
+            ax_temp.legend(bbox_to_anchor=[1.8, 1.22])
             ax_temp.set_xlabel('Hz')
             ax_temp.set_ylabel('Transfer factor')
-            #ax_temp.legend(bbox_to_anchor=[1.8,1.1])
             #ax_temp.axis(ax_temp.axis('tight'))
         ax_temp.set_xlim(1,1000)
         
