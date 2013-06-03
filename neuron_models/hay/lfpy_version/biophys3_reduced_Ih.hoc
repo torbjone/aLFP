@@ -35,20 +35,20 @@ proc biophys() {
 	  //insert NaTa_t
 	  //insert CaDynamics_E2
 	  insert Ih
-   	  ek = -85
-	  ena = 50
+   	  //ek = -85
+	  //ena = 50
 	  gIhbar_Ih = 0.0002
           g_pas = 0.0000338 
   	  //decay_CaDynamics_E2 = 460.0
   	  //gamma_CaDynamics_E2 = 0.000501
-  	  gCa_LVAstbar_Ca_LVAst = 0.00343 * 0
-  	  gCa_HVAbar_Ca_HVA = 0.000992 * 0
-  	  gSKv3_1bar_SKv3_1 = 0.693 * 0
-  	  gSK_E2bar_SK_E2 = 0.0441 * 0
-  	  gK_Tstbar_K_Tst = 0.0812 * 0
-  	  gK_Pstbar_K_Pst = 0.00223 * 0
-  	  gNap_Et2bar_Nap_Et2 = 0.00172 * 0
-  	  gNaTa_tbar_NaTa_t = 2.04 * 0
+  	  //gCa_LVAstbar_Ca_LVAst = 0.00343 * 0
+  	  //gCa_HVAbar_Ca_HVA = 0.000992 * 0
+  	  //gSKv3_1bar_SKv3_1 = 0.693 * 0
+  	  //gSK_E2bar_SK_E2 = 0.0441 * 0
+  	  //gK_Tstbar_K_Tst = 0.0812 * 0
+  	  //gK_Pstbar_K_Pst = 0.00223 * 0
+  	  //gNap_Et2bar_Nap_Et2 = 0.00172 * 0
+  	  //gNaTa_tbar_NaTa_t = 2.04 * 0
   }
 
 	forsec "apic" {
@@ -61,14 +61,14 @@ proc biophys() {
   		//insert NaTa_t 
   		//insert Im 
   		//insert CaDynamics_E2
-		ek = -85
-		ena = 50
-        	decay_CaDynamics_E2 = 122 
-        	gamma_CaDynamics_E2 = 0.000509 
-        	gSK_E2bar_SK_E2 = 0.0012 * 0
-  		gSKv3_1bar_SKv3_1 = 0.000261 * 0
-  		gNaTa_tbar_NaTa_t = 0.0213 * 0
-  		gImbar_Im = 0.0000675 * 0
+		//ek = -85
+		//ena = 50
+        	//decay_CaDynamics_E2 = 122 
+        	//gamma_CaDynamics_E2 = 0.000509 
+        	//gSK_E2bar_SK_E2 = 0.0012 * 0
+  		//gSKv3_1bar_SKv3_1 = 0.000261 * 0
+  		//gNaTa_tbar_NaTa_t = 0.0213 * 0
+  		//gImbar_Im = 0.0000675 * 0
   		g_pas = 0.0000589 
 	}
 	distribute_channels("apic","gIhbar_Ih",2,-0.8696,3.6161,0.0,2.0870,0.00020000000) 
