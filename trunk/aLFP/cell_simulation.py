@@ -21,14 +21,25 @@ pl.rcParams.update({'font.size' : 8,
     'wspace' : 0.5, 'hspace' : 0.5})
 np.random.seed(1234)
 
-def run_all_simulations(cell_params, model, input_idxs, 
+def run_all_WN_simulations(cell_params, model, input_idxs, 
                         input_scalings, ntsteps, simulation_params, conductance_type):
 
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
-            run_simulation(cell_params, input_scaling,
+            run_WN_simulation(cell_params, input_scaling,
                            input_idx, model, ntsteps, simulation_params, conductance_type)        
 
+
+def run_all_synaptic_simulations(cell_params, model, input_idxs, 
+                        input_scalings, ntsteps, simulation_params, conductance_type):
+
+    for input_idx in input_idxs:
+        for input_scaling in input_scalings:
+            run_synaptic_simulation(cell_params, input_scaling,
+                           input_idx, model, ntsteps, simulation_params, conductance_type)        
+
+
+            
 def find_LFP_PSD(sig, timestep):
     """ Returns the power and freqency of the input signal"""
     sample_freq = ff.fftfreq(sig.shape[1], d=timestep)
@@ -99,21 +110,24 @@ def check_current_sum(cell, noiseVec):
     pl.show()
     sys.exit()
     
-def run_simulation(cell_params, input_scaling, input_idx, 
-                   ofolder, ntsteps, simulation_params, conductance_type):
+def run_WN_simulation(cell_params, input_scaling, input_idx, 
+                   ofolder, ntsteps, simulation_params, conductance_type, epas=None):
 
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
     cell = LFPy.Cell(**cell_params)
-
+    
     sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
     input_array = input_scaling * \
                   np.load(join(ofolder, 'input_array.npy'))
     noiseVec = neuron.h.Vector(input_array)
     i = 0
+
     syn = None
     for sec in cell.allseclist:
         for seg in sec:
+            if not epas == None:
+                seg.pas.e = epas
             if i == input_idx:
                 syn = neuron.h.ISyn(seg.x, sec=sec)
             i += 1
@@ -184,7 +198,95 @@ def run_simulation(cell_params, input_scaling, input_idx,
     np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
     np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
     
+def run_synaptic_simulation(cell_params, input_scaling, input_idx, 
+                   ofolder, ntsteps, simulation_params, conductance_type, epas = None):
 
+    neuron.h('forall delete_section()')
+    neuron.h('secondorder=2')
+    cell = LFPy.Cell(**cell_params)
+
+    #### ####
+    if not epas == None:
+        for sec in cell.allseclist:
+            for seg in sec:
+                seg.pas.e = epas
+    
+    sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
+
+    # Define synapse parameters
+    synapse_parameters = {
+        'idx' : input_idx,
+        'e' : 0.,                   # reversal potential
+        'syntype' : 'ExpSyn',       # synapse type
+        'tau' : 10.,                # syn. time constant
+        'weight' : input_scaling,            # syn. weight
+        'record_current' : True,
+        }
+
+    # Create synapse and set time of synaptic input
+    synapse = LFPy.Synapse(cell, **synapse_parameters)
+    synapse.set_spike_times(np.array([20.]))
+    
+    #mapping = np.load(join(ofolder, 'mapping.npy'))
+    cell.simulate(**simulation_params)
+    #set_trace()
+    
+    ###check_current_sum(cell, noiseVec)
+    #set_trace()
+
+    # Cutting of start of simulations
+    
+    #cut_list = ['cell.imem', 'cell.somav', 'input_array', 'cell.ipas', 'cell.icap']
+    #if hasattr(cell, 'rec_variables'):
+    #    for cur in cell.rec_variables:
+    #        cut_list.append('cell.rec_variables["%s"]' % cur)
+    #for cur in cut_list:
+    #    try:
+    #        exec('%s = %s[:,-%d:]' %(cur, cur, ntsteps))
+    #    except IndexError:
+    #        exec('%s = %s[-%d:]' %(cur, cur, ntsteps))
+    #        #cur = cur[-ntsteps:]
+    #cell.tvec = cell.tvec[-ntsteps:] - cell.tvec[-ntsteps]
+    timestep = (cell.tvec[1] - cell.tvec[0])/1000.
+    np.save(join(ofolder, 'tvec.npy'), cell.tvec)
+    const = (1E-2 * cell.area)
+    if hasattr(cell, 'rec_variables'):
+        for cur in cell.rec_variables:
+            active_current = np.array([const[idx] * cell.rec_variables[cur][idx,:] 
+                                       for idx in xrange(len(cell.imem))])
+            psd, freqs = find_LFP_PSD(active_current, timestep)
+            np.save(join(ofolder, '%s_%s.npy' %(cur, sim_name)), active_current)
+            np.save(join(ofolder, '%s_psd_%s.npy' %(cur, sim_name)), psd)
+        
+    #vmem_quickplot(cell, input_array, sim_name, ofolder)
+    #sig = np.dot(mapping, cell.imem)
+    #sig_psd, freqs = find_LFP_PSD(sig, timestep)
+    #np.save(join(ofolder, 'signal_%s.npy' %(sim_name)), sig)
+    #np.save(join(ofolder, 'psd_%s.npy' %(sim_name)), sig_psd)
+    
+    somav_psd, freqs = find_LFP_PSD(np.array([cell.somav]), timestep)
+    np.save(join(ofolder, 'somav_psd_%s.npy' %(sim_name)), somav_psd[0])
+    np.save(join(ofolder, 'somav_%s.npy' %(sim_name)), cell.somav)
+    
+    imem_psd, freqs = find_LFP_PSD(cell.imem, timestep)
+    np.save(join(ofolder, 'imem_psd_%s.npy' %(sim_name)), imem_psd)
+    np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), cell.imem)
+
+    icap_psd, freqs = find_LFP_PSD(cell.icap, timestep)
+    np.save(join(ofolder, 'icap_psd_%s.npy' %(sim_name)), icap_psd)
+    np.save(join(ofolder, 'icap_%s.npy' %(sim_name)), cell.icap)
+
+    ipas_psd, freqs = find_LFP_PSD(cell.ipas, timestep)
+    np.save(join(ofolder, 'ipas_psd_%s.npy' %(sim_name)), ipas_psd)
+    np.save(join(ofolder, 'ipas_%s.npy' %(sim_name)), cell.ipas)
+
+    ymid = np.load(join(ofolder, 'ymid.npy'))
+    stick = aLFP.return_dipole_stick(cell.imem, ymid)
+    stick_psd, freqs = find_LFP_PSD(stick, timestep)
+    np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
+    np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
+
+    np.save(join(ofolder, 'freqs.npy'), freqs)
 
     
 def pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder):
@@ -223,7 +325,7 @@ def vmem_quickplot(cell, input_array, sim_name, ofolder):
     pl.savefig(join(ofolder, 'current_%s.png' %sim_name))
 
     
-def initialize_cell(cell_params, pos_params, rot_params, cell_name, 
+def initialize_WN_cell(cell_params, pos_params, rot_params, cell_name, 
                     elec_x, elec_y, elec_z, ntsteps, ofolder, testing=False):
     """ Position and plot a cell """
     neuron.h('forall delete_section()')
@@ -290,3 +392,61 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     np.save(join(ofolder, 'zmid.npy' ), cell.zmid)
     np.save(join(ofolder, 'length.npy' ), length)
     np.save(join(ofolder, 'diam.npy' ), cell.diam)
+
+def initialize_synaptic_cell(cell_params, pos_params, rot_params, cell_name, 
+                    elec_x, elec_y, elec_z, ntsteps, ofolder, testing=False):
+    """ Position and plot a cell """
+    neuron.h('forall delete_section()')
+    try:
+        os.mkdir(ofolder)
+    except OSError:
+        pass
+    foo_params = cell_params.copy()
+    foo_params['tstartms'] = 0
+    foo_params['tstopms'] = 1
+    cell = LFPy.Cell(**foo_params)
+    cell.set_rotation(**rot_params)
+    cell.set_pos(**pos_params)       
+    if testing:
+        aLFP.plot_comp_numbers(cell)
+
+    # Define electrode parameters
+    electrode_parameters = {
+        'sigma' : 0.3,      # extracellular conductivity
+        'x' : elec_x,  # electrode requires 1d vector of positions
+        'y' : elec_y,
+        'z' : elec_z
+        }
+    dist_list = []
+    for elec in xrange(len(elec_x)):
+        for comp in xrange(len(cell.xmid)):
+            dist = np.sqrt((cell.xmid[comp] - elec_x[elec])**2 +
+                           (cell.ymid[comp] - elec_y[elec])**2 +
+                           (cell.zmid[comp] - elec_z[elec])**2)
+            dist_list.append(dist)
+    print "Minimum electrode-comp distance: %g" %(np.min(dist_list))
+    if np.min(dist_list) <= 1:
+        ERR = "Too close"
+        raise RuntimeError, ERR
+    
+    electrode = LFPy.RecExtElectrode(**electrode_parameters)
+    cell.simulate(electrode=electrode)
+    pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder)
+    length = np.sqrt((cell.xend - cell.xstart)**2 +
+                     (cell.yend - cell.ystart)**2 +
+                     (cell.zend - cell.zstart)**2)
+
+    np.save(join(ofolder, 'mapping.npy' ), electrode.electrodecoeff)
+    np.save(join(ofolder, 'xstart.npy' ), cell.xstart)
+    np.save(join(ofolder, 'ystart.npy' ), cell.ystart)
+    np.save(join(ofolder, 'zstart.npy' ), cell.zstart)
+    np.save(join(ofolder, 'xend.npy' ), cell.xend)
+    np.save(join(ofolder, 'yend.npy' ), cell.yend)
+    np.save(join(ofolder, 'zend.npy' ), cell.zend) 
+    np.save(join(ofolder, 'xmid.npy' ), cell.xmid)
+    np.save(join(ofolder, 'ymid.npy' ), cell.ymid)
+    np.save(join(ofolder, 'zmid.npy' ), cell.zmid)
+    np.save(join(ofolder, 'length.npy' ), length)
+    np.save(join(ofolder, 'diam.npy' ), cell.diam)
+
+    
