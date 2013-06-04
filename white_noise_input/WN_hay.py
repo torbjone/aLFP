@@ -130,30 +130,15 @@ def plot_active():
     #aLFP.plot_active_currents(ifolder, 1.0, 0, plot_params, 
     #                          simulation_params, plot_compartments, 'active')
     #sys.exit()
-    for input_idx in input_idxs:
-        for input_scaling in input_scalings:
-            print input_idx, input_scaling          
-            #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-            #                          simulation_params, plot_compartments, 'active')
-            #try:
-            #    aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-            #                              simulation_params, plot_compartments, 'passive')
-            #except:
-            #    pass
-            #aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-            #                          simulation_params, plot_compartments, 'reduced')
-            #try:
-            #    aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params,
-            #                              simulation_params, plot_compartments, 'reduced_with_na')
-            #except:
-            #    pass
+    simulate = ['active', 'reduced_Ih', 'passive']
+    for conductance_type in simulate:
+        for input_idx in input_idxs:
+            for input_scaling in input_scalings:
+                for epas in epas_array:
+                    print input_idx, input_scaling, epas
+                    aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                                          simulation_params, plot_compartments, conductance_type, epas=epas)
 
-            #try:
-            aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-                                      simulation_params, plot_compartments, 'active', epas=-100)
-            #except:
-            #    pass
-    
 def plot_compare():
     #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 
     #elec_x, elec_y, elec_z, plot_params)
