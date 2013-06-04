@@ -20,38 +20,38 @@ import aLFP
 from params import *
 
 model = 'hay' 
-domain = 'white_noise_%s' %model
 
 np.random.seed(1234)
 
 if at_stallo:
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
+    cut_off = 6000
 else:
     neuron_model = join('..', 'neuron_models', model)
+    cut_off = 100
 
 simulation_params = {'rec_imem': True,
                      'rec_icap' : True,
                      'rec_ipas': True,
                      'rec_variables': ['ina', 'ik', 'ica', 'ihcn_Ih'],
                      }
+
 plot_params = {'ymax': 1250,
                'ymin': -250,
                }
-
     
-input_idxs = [0, 791, 611, 681, 740]
-input_scalings = [0., 0.01, 0.1, 1.0]
+input_idxs = [0]#, 791, 611, 681, 740]
+input_scalings = [0.1]#[0., 0.01, 0.1, 1.0]
+epas_array = [-100, -90, -80, -70, -60, -50]
 
 n_plots = 10
 plot_compartments = np.array(np.linspace(0, 1000, n_plots), dtype=int)
-
 
 def simulate():
     model_path = join(neuron_model, 'lfpy_version')
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
     LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
 
-    cut_off = 3000
     rot_params = {'x': -np.pi/2, 
                   'y': 0, 
                   'z': 0
@@ -61,7 +61,7 @@ def simulate():
                   'ypos': 0,
                   'zpos': 0,
                   }        
-    conductance_type = 'reduced_Ih'
+    conductance_type = 'active'
     
     cell_params = {
         'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
@@ -80,31 +80,36 @@ def simulate():
         'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
                           join(model_path, 'biophys3_%s.hoc' % conductance_type)],
     }
+
+
+    simulate = ['active', 'reduced_Ih', 'passive']
     
     ntsteps = round((tstopms - 0) / timeres)
-    aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
+    aLFP.initialize_WN_cell(cell_params, pos_params, rot_params, model, 
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
-    #aLFP.run_simulation(cell_params, input_scalings[2], is_active, input_idxs[0], 
-    #                    model, ntsteps, simulation_params)
-    #cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    #                               join(model_path, 'biophys3_active.hoc')]
-    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
-    #                          input_scalings, ntsteps, simulation_params, 'active')
-    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    ##                               join(model_path, 'biophys3_passive.hoc')]
-    ## aLFP.run_all_simulations(cell_params, model, input_idxs, 
-    ##                         input_scalings, ntsteps, simulation_params, 'passive')
-    
-    #cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    #                              join(model_path, 'biophys3_reduced.hoc')]
-    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
-    #                         input_scalings, ntsteps, simulation_params, 'reduced')
-   
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                   join(model_path, 'biophys3_reduced_Ih.hoc')]
-    aLFP.run_all_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'reduced_Ih')
-
+    single_run = 0
+    if single_run:
+        temp_sim_params = simulation_params.copy()
+        if conductance_type == 'passive':
+            temp_sim_params['rec_variables'] = []
+        elif conductance_type == 'reduced_Ih':
+            temp_sim_params['rec_variables'] = ['ihcn_Ih']
+        
+        aLFP.run_WN_simulation(cell_params, input_scalings[0], input_idxs[0], 
+                            model, ntsteps, temp_sim_params, conductance_type, epas=-100)
+        sys.exit()
+        
+    for conductance_type in simulate:
+        temp_sim_params = simulation_params.copy()
+        if conductance_type == 'passive':
+            temp_sim_params['rec_variables'] = []
+        elif conductance_type == 'reduced_Ih':
+            temp_sim_params['rec_variables'] = ['ihcn_Ih']
+        
+        cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                      join(model_path, 'biophys3_%s.hoc' % conductance_type)]
+        aLFP.run_all_WN_simulations(cell_params, model, input_idxs, input_scalings, ntsteps, 
+                                 temp_sim_params, conductance_type, epas_array=epas_array)
 
 def plot_transfer():
     aLFP.plot_transfer_functions(model, 0.1, 0, plot_params, 
@@ -118,8 +123,6 @@ def plot_transfer():
                                           simulation_params, plot_compartments)
             except:
                 continue
-
-
 
     
 def plot_active():
@@ -145,11 +148,11 @@ def plot_active():
             #except:
             #    pass
 
-            try:
-                aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
-                                          simulation_params, plot_compartments, 'reduced_Ih')
-            except:
-                pass
+            #try:
+            aLFP.plot_active_currents(model, input_scaling, input_idx, plot_params, 
+                                      simulation_params, plot_compartments, 'active', epas=-100)
+            #except:
+            #    pass
     
 def plot_compare():
     #aLFP.compare_active_passive(model, input_scalings[0] , input_idxs[1], 

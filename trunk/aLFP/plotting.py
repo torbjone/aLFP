@@ -27,13 +27,13 @@ def plot_comp_numbers(cell):
 def arrow_to_axis(pos, ax_origin, ax_target, clr, x_shift):
 
     if x_shift > 0:
-        upper_pixel_coor = ax_target.transAxes.transform(([0,1]))
+        upper_pixel_coor = ax_target.transAxes.transform(([0,0.5]))
         lower_pixel_coor = ax_target.transAxes.transform(([0,0]))
-        shift = 10*x_shift
+        shift = 1000*x_shift
     else:
-        upper_pixel_coor = ax_target.transAxes.transform(([1,1]))
+        upper_pixel_coor = ax_target.transAxes.transform(([1,0.5]))
         lower_pixel_coor = ax_target.transAxes.transform(([1,0]))   
-        shift = 500*x_shift
+        shift = 2000*x_shift
     
     upper_coor = ax_origin.transData.inverted().transform(upper_pixel_coor)
     lower_coor = ax_origin.transData.inverted().transform(lower_pixel_coor)
@@ -48,23 +48,22 @@ def arrow_to_axis(pos, ax_origin, ax_target, clr, x_shift):
     
     ax_origin.plot(upper_line_x, upper_line_y, lw=1, 
               color=clr, clip_on=False, alpha=1.)
-    ax_origin.plot(lower_line_x, lower_line_y, lw=1, 
-              color=clr, clip_on=False, alpha=1.)
-
-
-
+    #ax_origin.plot(lower_line_x, lower_line_y, lw=1, 
+    #          color=clr, clip_on=False, alpha=1.)
     
 def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulation_params,
-                         plot_compartments, name):
+                         plot_compartments, conductance_type, epas=None):
 
-    cur_name = '%d_%1.3f_%s' %(input_idx, input_scaling, name)
+    if epas == None:
+        cur_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
+    else:
+        cur_name = '%d_%1.3f_%s_%g' %(input_idx, input_scaling, conductance_type, epas)
+
     # Loading all needed data
     imem = np.load(join(ifolder, 'imem_%s.npy' %(cur_name)))
     imem_psd = np.load(join(ifolder, 'imem_psd_%s.npy' %(cur_name)))
     somav_psd = np.load(join(ifolder, 'somav_psd_%s.npy' %(cur_name)))
     somav = np.load(join(ifolder, 'somav_%s.npy' %(cur_name)))
-    stick = np.load(join(ifolder, 'stick_%s.npy' %(cur_name)))
-    stick_psd = np.load(join(ifolder, 'stick_psd_%s.npy' %(cur_name)))
     icap = np.load(join(ifolder, 'icap_psd_%s.npy' %(cur_name)))
     ipas = np.load(join(ifolder, 'ipas_psd_%s.npy' %(cur_name)))
 
@@ -74,7 +73,6 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     for cur in simulation_params['rec_variables']:
         try:
             active_dict[cur] = np.load(join(ifolder, '%s_psd_%s.npy'%(cur, cur_name)))
-            print cur, active_dict[cur]
         except:
             print "Failed to load ", cur
             pass
@@ -94,25 +92,21 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     
     # Initializing figure
     pl.close('all')    
-    
     fig = pl.figure(figsize=[14,8])
     fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g "%(ifolder, input_idx, input_scaling))
-
     pl.subplots_adjust(hspace=0.5)
-    
     ax_vm = fig.add_axes([0.05, 0.60, 0.10, 0.20], title='Soma $V_m$')    
-    ax_vm_psd = fig.add_axes([0.20, 0.60, 0.10, 0.20], title='Soma $V_m$ PSD')    
-    ax_imshow = fig.add_axes([0.05, 0.3, 0.25, 0.13], title='Summed I_m')
-    ax_psd_imshow = fig.add_axes([0.05, 0.1, 0.25, 0.13], title='Summed I_m PSD', xscale='log')
-    ax_psd_imshow.set_xlim(1e0, 1e3)
-    ax_imshow.set_xlim(0, 1000)
+    ax_vm_psd = fig.add_axes([0.05, 0.30, 0.10, 0.20], title='Soma $V_m$ PSD')    
+
     ax_neur = fig.add_axes([0.45, 0.1, 0.35, 0.75], frameon=False, aspect='equal', xticks=[], yticks=[])
     ax_vm_psd.grid(True)
     ax_vm.set_xlabel('ms')
     ax_vm.set_ylabel('mV')
     ax_vm_psd.set_xlabel('Hz')
     ax_vm_psd.set_ylabel('mV')
-    ax_vm.set_ylim(np.min(somav) - 0.05, np.max(somav) + 0.05)
+    ax_vm.set_ylim(-110,-20)
+    ax_vm_psd.set_ylim(1e-2,1e1)
+    ax_vm_psd.set_xlim(1e0,1e3)
 
     #Sorting compartemts after y-height
     argsort = np.argsort([ymid[comp] for comp in plot_compartments])
@@ -129,8 +123,8 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     ymax = plot_params['ymax']
     yticks = np.arange(ymin, ymax + 1 , 250)
     yticks = yticks[np.where((np.min(ymid) <= yticks) * (yticks <= np.max(ymid)))]
-    ext_ax_width = 0.1
-    ext_ax_height = 0.8/len(plot_compartments)
+    ext_ax_width = 0.2
+    ext_ax_height = 1.0/len(plot_compartments)
     clr = 'k'
     
     # Starting plotting
@@ -146,7 +140,7 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     for numb, comp in enumerate(plot_compartments):
         ax_neur.plot(xmid[comp], ymid[comp], 'o', color=comp_clr_list[numb])
         if numb % 2:
-            x_shift = -0.05
+            x_shift = -ext_ax_width 
         else:
             x_shift = 0.2
         ax_temp = fig.add_axes([0.5 + x_shift, 0.1 + numb*(ext_ax_height+0.05)/2, 
@@ -154,59 +148,39 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
         ax_temp.tick_params(color=comp_clr_list[numb])
         for spine in ax_temp.spines.values():
             spine.set_edgecolor(comp_clr_list[numb])
-        ax_temp.set_xticklabels([])
-        ax_temp.set_yticklabels([])
+        
+        #ax_temp.set_yticklabels([])
         ax_temp.grid(True)        
         for cur_numb, cur in enumerate(active_dict):
-            #print active_dict[cur][idx]
-            #set_trace()
-            #if any(active_dict[cur][idx,:] >= 0):
-                 #if active_dict[cur][idx,:]
-                 #set_trace()
-            print cur, active_dict[cur][comp,:]
+
             ax_temp.plot(freqs[:], active_dict[cur][comp,:], label=cur, color=clr_list[cur_numb], lw=2)
             ax_temp.plot(1.5, active_dict[cur][comp,0], '+', color=clr_list[cur_numb])
             #except ValueError:
             #    print "Skipping ", cur
             #     pass
-            
         ax_temp.plot(freqs, ipas[comp,:], label='Ipas', color='y', lw=2)
         ax_temp.plot(1.5, ipas[comp,0], '+', color='y')
         ax_temp.plot(freqs, icap[comp,:], label='Icap', color='grey', lw=2)
         ax_temp.plot(1.5, icap[comp,0], '+', color='grey')
         
-        ax_temp.loglog(freqs, imem_psd[comp], color=clr, lw=1, label='Imem')      
+        ax_temp.plot(freqs, imem_psd[comp], color=clr, lw=1, label='Imem')      
         ax_temp.plot(1.5, imem_psd[comp,0], '+', color=clr)
         pos = [xmid[comp], ymid[comp]]
         if numb == 0:
             #ax_temp.legend(bbox_to_anchor=[1.4, 1.22])
             ax_temp.set_xlabel('Hz')
             ax_temp.set_ylabel('Norm. amp')
-            ax_temp.legend(bbox_to_anchor=[1.7,1.0])
-        ax_temp.axis(ax_temp.axis('tight'))
+            ax_temp.legend(bbox_to_anchor=[1.4,1.0])
+            #ax_temp.axis(ax_temp.axis('tight'))
         ax_temp.set_xlim(1,1000)
         ax_temp.set_ylim(1e-10, 1e0)
         ax_temp.set_xscale('log')
         ax_temp.set_yscale('log')
+        ax_temp.set_yticks(ax_temp.get_yticks()[::2])
+        #ax_temp.set_yticklabels(ax_temp.get_yticklabels()[::2])
+        #ax_temp.set_yticks([10**(4*n) for n in np.arange(-5,1)])
+        #ax_temp.set_yticklabels(['10$^{%d}$' %(4*n) for n in np.arange(-3,1)])
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_shift)
-
-    # COLOR PLOT OF y-AXIS SUMMED IMEM CONTRIBUTION
-    stick_pos = np.linspace(np.max(ymid), np.min(ymid), stick.shape[0])
-    X, Y = np.meshgrid(freqs, stick_pos)
-    X_t, Y_t = np.meshgrid(tvec, stick_pos)
-
-
-    sc_stick = ax_imshow.pcolormesh(X_t, Y_t, stick, cmap='jet_r', 
-                                            vmax=np.max(np.abs(stick)), 
-                                            vmin=-np.max(np.abs(stick)))
-    
-    sc_stick_psd = ax_psd_imshow.pcolormesh(X, Y, stick_psd, cmap='jet',
-                                     norm=LogNorm(1e-7, 1e0))
-
-    ax_imshow.axis('auto')
-    pl.colorbar(sc_stick, ax=ax_imshow)
-
-    pl.colorbar(sc_stick_psd, ax=ax_psd_imshow)
 
     #xmin, xmax = ax_neur.get_xaxis().get_view_interval()
     #ax_neur.add_artist(pl.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))

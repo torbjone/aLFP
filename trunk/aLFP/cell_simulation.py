@@ -14,32 +14,29 @@ import cPickle
 import aLFP
 import scipy.fftpack as ff
 
-
-
 pl.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
     'wspace' : 0.5, 'hspace' : 0.5})
 np.random.seed(1234)
 
-def run_all_WN_simulations(cell_params, model, input_idxs, 
-                        input_scalings, ntsteps, simulation_params, conductance_type):
+def run_all_WN_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
+                         simulation_params, conductance_type, epas_array=[None]):
 
-    for input_idx in input_idxs:
-        for input_scaling in input_scalings:
-            run_WN_simulation(cell_params, input_scaling,
-                           input_idx, model, ntsteps, simulation_params, conductance_type)        
+    for epas in epas_array:
+        for input_idx in input_idxs:
+            for input_scaling in input_scalings:
+                run_WN_simulation(cell_params, input_scaling, input_idx, model, ntsteps, 
+                                  simulation_params, conductance_type, epas)        
 
-
-def run_all_synaptic_simulations(cell_params, model, input_idxs, 
-                        input_scalings, ntsteps, simulation_params, conductance_type):
-
-    for input_idx in input_idxs:
-        for input_scaling in input_scalings:
-            run_synaptic_simulation(cell_params, input_scaling,
-                           input_idx, model, ntsteps, simulation_params, conductance_type)        
-
-
-            
+def run_all_synaptic_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
+                         simulation_params, conductance_type, epas_array=[None]):
+        for epas in epas_array:
+            for input_idx in input_idxs:
+                for input_scaling in input_scalings:
+                    run_synaptic_simulation(cell_params, input_scaling, input_idx, model, ntsteps,
+                                             simulation_params, conductance_type, epas)        
+        
+                    
 def find_LFP_PSD(sig, timestep):
     """ Returns the power and freqency of the input signal"""
     sample_freq = ff.fftfreq(sig.shape[1], d=timestep)
@@ -106,7 +103,6 @@ def check_current_sum(cell, noiseVec):
     pl.plot(cell.tvec, summed_current[idx, :], 'r--')
     error = (cell.imem - summed_current)
     print np.sqrt(np.average(error**2)), np.max(np.abs(error))
-    
     pl.show()
     sys.exit()
     
@@ -116,8 +112,12 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
     cell = LFPy.Cell(**cell_params)
+
+    if epas == None:
+        sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
+    else:
+         sim_name = '%d_%1.3f_%s_%g' %(input_idx, input_scaling, conductance_type, epas)
     
-    sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
     input_array = input_scaling * \
                   np.load(join(ofolder, 'input_array.npy'))
     noiseVec = neuron.h.Vector(input_array)
@@ -137,13 +137,8 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
     syn.delay = 0
     noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
     #set_trace()    
-    mapping = np.load(join(ofolder, 'mapping.npy'))
+    #mapping = np.load(join(ofolder, 'mapping.npy'))
     cell.simulate(**simulation_params)
-    #set_trace()
-    
-    ###check_current_sum(cell, noiseVec)
-    #set_trace()
-
     # Cutting of start of simulations
     
     cut_list = ['cell.imem', 'cell.somav', 'input_array', 'cell.ipas', 'cell.icap']
@@ -171,10 +166,10 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
             np.save(join(ofolder, '%s_psd_%s.npy' %(cur, sim_name)), psd)
         
     #vmem_quickplot(cell, input_array, sim_name, ofolder)
-    sig = np.dot(mapping, cell.imem)
-    sig_psd, freqs = find_LFP_PSD(sig, timestep)
-    np.save(join(ofolder, 'signal_%s.npy' %(sim_name)), sig)
-    np.save(join(ofolder, 'psd_%s.npy' %(sim_name)), sig_psd)
+    #sig = np.dot(mapping, cell.imem)
+    #sig_psd, freqs = find_LFP_PSD(sig, timestep)
+    #np.save(join(ofolder, 'signal_%s.npy' %(sim_name)), sig)
+    #np.save(join(ofolder, 'psd_%s.npy' %(sim_name)), sig_psd)
     
     somav_psd, freqs = find_LFP_PSD(np.array([cell.somav]), timestep)
     np.save(join(ofolder, 'somav_psd_%s.npy' %(sim_name)), somav_psd[0])
@@ -192,14 +187,14 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
     np.save(join(ofolder, 'ipas_psd_%s.npy' %(sim_name)), ipas_psd)
     np.save(join(ofolder, 'ipas_%s.npy' %(sim_name)), cell.ipas)
 
-    ymid = np.load(join(ofolder, 'ymid.npy'))
-    stick = aLFP.return_dipole_stick(cell.imem, ymid)
-    stick_psd, freqs = find_LFP_PSD(stick, timestep)
-    np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
-    np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
+    #ymid = np.load(join(ofolder, 'ymid.npy'))
+    #stick = aLFP.return_dipole_stick(cell.imem, ymid)
+    #stick_psd, freqs = find_LFP_PSD(stick, timestep)
+    #np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
+    #np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
     
 def run_synaptic_simulation(cell_params, input_scaling, input_idx, 
-                   ofolder, ntsteps, simulation_params, conductance_type, epas = None):
+                   ofolder, ntsteps, simulation_params, conductance_type, epas=None):
 
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
