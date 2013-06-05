@@ -209,7 +209,6 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
     #    except:
     #        print "Failed to load ", cur
     #        pass
-    
     freqs = np.load(join(ifolder, 'freqs.npy'))    
     tvec = np.load(join(ifolder, 'tvec.npy'))
     xmid = np.load(join(ifolder, 'xmid.npy' ))
@@ -331,19 +330,28 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
     pl.savefig('imem_%s_%s_%s.png' % (ifolder, cur_name, sim_type), dpi=300)
 
 def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simulation_params,
-                            plot_compartments):
+                            plot_compartments, epas=None):
 
-    cur_name = '%d_%1.3f' %(input_idx, input_scaling)
+
+    if epas == None:
+        cur_name = '%d_%1.3f' %(input_idx, input_scaling)
+    else:
+        cur_name = '%d_%1.3f_%g' %(input_idx, input_scaling, epas)
 
     # Loading all needed data
-    imem_psd_active = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'active')))
-    imem_active = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'active')))
+    imem_psd_active = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' 
+                                   %(input_idx, input_scaling, 'active')))
+    imem_active = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' 
+                               %(input_idx, input_scaling, 'active')))
+    imem_psd_reduced = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' 
+                                    %(input_idx, input_scaling, 'reduced_Ih')))
+    imem_reduced = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' 
+                                %(input_idx, input_scaling, 'reduced_Ih')))
+    imem_psd_passive = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' 
+                                    %(input_idx, input_scaling, 'passive')))
+    imem_passive = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' 
+                                %(input_idx, input_scaling, 'passive')))
     
-    imem_psd_reduced = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'reduced_Ih')))
-    imem_reduced = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'reduced_Ih')))
-    
-    imem_psd_passive = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'passive')))
-    imem_passive = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' %(input_idx, input_scaling, 'passive')))
     #icap = np.load(join(ifolder, 'icap_psd_%s.npy' %(cur_name)))
     #ipas = np.load(join(ifolder, 'ipas_psd_%s.npy' %(cur_name)))
     active_dict = {}
@@ -385,8 +393,6 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
     act_clr = 'k'
     pas_clr = 'gray'
 
-
-    
     # Initializing time-axis figure
     pl.close('all')    
     fig = pl.figure(figsize=[8,8])

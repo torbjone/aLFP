@@ -26,8 +26,10 @@ np.random.seed(1234)
 
 if at_stallo:
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
+    cut_off = 6000
 else:
     neuron_model = join('..', 'neuron_models', model)
+    cut_off = 100
 
 simulation_params = {'rec_imem': True,
                      'rec_icap' : True,
@@ -38,13 +40,18 @@ plot_params = {'ymax': 1250,
                'ymin': -250,
                }
 
-    
-input_idxs = [0, 791, 611, 681, 740]
-input_scalings = [0., 0.001, 0.01, .1]
+input_idxs = [791]
+input_scalings = [0.001]
+
+input_idxs = [0]
+input_scalings = [0.01]
+
+
+epas_array = [-100, -90, -80, -70, -60, -50]
 
 n_plots = 10
 plot_compartments = np.array(np.linspace(0, 1000, n_plots), dtype=int)
-cutoff = 6000
+
 
 def simulate():
     model_path = join(neuron_model, 'lfpy_version')
@@ -74,11 +81,13 @@ def simulate():
         'lambda_f' : 100,           # segments are isopotential at this frequency
         'timeres_NEURON' : timeres,   # dt of LFP and NEURON simulation.
         'timeres_python' : timeres,
-        'tstartms' : -cutoff,          #start time, recorders start at t=0
+        'tstartms' : -cut_off,          #start time, recorders start at t=0
         'tstopms' : tstopms, 
         'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
                           join(model_path, 'biophys3_%s.hoc' % conductance_type)],
     }
+
+    simulate = ['active', 'reduced_Ih', 'passive']
     
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_synaptic_cell(cell_params, pos_params, rot_params, model, 
@@ -86,44 +95,34 @@ def simulate():
     
     cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                    join(model_path, 'biophys3_active.hoc')]
-    aLFP.run_synaptic_simulation(cell_params, input_scalings[1], input_idxs[1], 
-                        model, ntsteps, simulation_params, 'active')
-    
-    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    ##                             join(model_path, 'biophys3_passive.hoc')]
-    ## aLFP.run_synaptic_simulation(cell_params, input_scalings[1], input_idxs[1], 
-    ##                     model, ntsteps, simulation_params, 'passive')
 
-    ## cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    ##                                join(model_path, 'biophys3_reduced_Ih.hoc')]    
-    ## aLFP.run_synaptic_simulation(cell_params, input_scalings[1], input_idxs[1], 
-    ##                              model, ntsteps, simulation_params, 'reduced_Ih')
+    single_run = 0
+    if single_run:
+        temp_sim_params = simulation_params.copy()
+        if conductance_type == 'passive':
+            temp_sim_params['rec_variables'] = []
+        elif conductance_type == 'reduced_Ih':
+            temp_sim_params['rec_variables'] = ['ihcn_Ih']
+        aLFP.run_synaptic_simulation(cell_params, input_scalings[0], input_idxs[0], 
+                            model, ntsteps, temp_sim_params, conductance_type, epas=-90)
+        sys.exit()
 
-
-    
-    sys.exit()
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                   join(model_path, 'biophys3_active.hoc')]
-    aLFP.run_all_synaptic_simulations(cell_params, model, input_idxs, 
-                              input_scalings, ntsteps, simulation_params, 'active')
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                join(model_path, 'biophys3_passive.hoc')]
-    aLFP.run_all_synaptic_simulations(cell_params, model, input_idxs, 
-                            input_scalings, ntsteps, simulation_params, 'passive')
-    
-    #cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-    #                              join(model_path, 'biophys3_reduced.hoc')]
-    #aLFP.run_all_simulations(cell_params, model, input_idxs, 
-    #                         input_scalings, ntsteps, simulation_params, 'reduced')
-   
-    cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                   join(model_path, 'biophys3_reduced_Ih.hoc')]
-    aLFP.run_all_synaptic_simulations(cell_params, model, input_idxs, 
-                             input_scalings, ntsteps, simulation_params, 'reduced_Ih')
-
+    for conductance_type in simulate:
+        temp_sim_params = simulation_params.copy()
+        if conductance_type == 'passive':
+            temp_sim_params['rec_variables'] = []
+        elif conductance_type == 'reduced_Ih':
+            temp_sim_params['rec_variables'] = ['ihcn_Ih']
+        
+        cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                      join(model_path, 'biophys3_%s.hoc' % conductance_type)]
+        aLFP.run_all_synaptic_simulations(cell_params, model, input_idxs, input_scalings, ntsteps, 
+                                          temp_sim_params, conductance_type, epas_array=epas_array)
+        
 def plot_synaptic():
-    aLFP.plot_synaptic_currents(model, input_scalings[1], input_idxs[1], plot_params, 
-                              simulation_params, plot_compartments)
+    for epas in epas_array:
+        aLFP.plot_synaptic_currents(model, input_scalings[0], input_idxs[0], plot_params, 
+                                    simulation_params, plot_compartments, epas=epas)
     
 def plot_transfer():
     aLFP.plot_transfer_functions(model, 0.01, 0, plot_params, 
