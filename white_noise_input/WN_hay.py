@@ -40,8 +40,9 @@ plot_params = {'ymax': 1250,
                'ymin': -250,
                }
     
-input_idxs = [0]#, 791, 611, 681, 740]
-input_scalings = [0.1]#[0., 0.01, 0.1, 1.0]
+input_idxs = [791]#, 791, 611, 681, 740]
+input_scalings = [0.01]#[0., 0.01, 0.1, 1.0]
+
 epas_array = [-100, -90, -80, -70, -60, -50]
 
 n_plots = 10
