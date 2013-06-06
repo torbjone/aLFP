@@ -200,14 +200,14 @@ def run_synaptic_simulation(cell_params, input_scaling, input_idx,
     neuron.h('secondorder=2')
     cell = LFPy.Cell(**cell_params)
 
-    #### ####
-    if not epas == None:
+    if epas == None:
+        sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
+    else:
+        sim_name = '%d_%1.3f_%s_%g' %(input_idx, input_scaling, conductance_type, epas)
         for sec in cell.allseclist:
             for seg in sec:
                 seg.pas.e = epas
-    
-    sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
-
+        
     # Define synapse parameters
     synapse_parameters = {
         'idx' : input_idx,
@@ -280,7 +280,6 @@ def run_synaptic_simulation(cell_params, input_scaling, input_idx,
     stick_psd, freqs = find_LFP_PSD(stick, timestep)
     np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
     np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
-
     np.save(join(ofolder, 'freqs.npy'), freqs)
 
     

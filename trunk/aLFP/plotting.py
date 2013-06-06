@@ -331,26 +331,26 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
 
 def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simulation_params,
                             plot_compartments, epas=None):
-
-
+    
     if epas == None:
-        cur_name = '%d_%1.3f' %(input_idx, input_scaling)
+        sim_name = '%d_%1.3f' %(input_idx, input_scaling)
+        act_name = '%d_%1.3f_%s' %(input_idx, input_scaling, 'active')
+        red_name = '%d_%1.3f_%s' %(input_idx, input_scaling, 'reduced_Ih')
+        pas_name = '%d_%1.3f_%s' %(input_idx, input_scaling, 'passive')
     else:
-        cur_name = '%d_%1.3f_%g' %(input_idx, input_scaling, epas)
-
+        sim_name = '%d_%1.3f_%d' %(input_idx, input_scaling, epas)
+        act_name = '%d_%1.3f_%s_%d' %(input_idx, input_scaling, 'active', epas)
+        red_name = '%d_%1.3f_%s_%d' %(input_idx, input_scaling, 'reduced_Ih', epas)
+        pas_name = '%d_%1.3f_%s_%d' %(input_idx, input_scaling, 'passive', epas)
+        
+    
     # Loading all needed data
-    imem_psd_active = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' 
-                                   %(input_idx, input_scaling, 'active')))
-    imem_active = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' 
-                               %(input_idx, input_scaling, 'active')))
-    imem_psd_reduced = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' 
-                                    %(input_idx, input_scaling, 'reduced_Ih')))
-    imem_reduced = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' 
-                                %(input_idx, input_scaling, 'reduced_Ih')))
-    imem_psd_passive = np.load(join(ifolder, 'imem_psd_%d_%1.3f_%s.npy' 
-                                    %(input_idx, input_scaling, 'passive')))
-    imem_passive = np.load(join(ifolder, 'imem_%d_%1.3f_%s.npy' 
-                                %(input_idx, input_scaling, 'passive')))
+    imem_psd_active = np.load(join(ifolder, 'imem_psd_%s.npy' % act_name))
+    imem_active = np.load(join(ifolder, 'imem_%s.npy' % act_name))
+    imem_psd_reduced = np.load(join(ifolder, 'imem_psd_%s.npy' % red_name))
+    imem_reduced = np.load(join(ifolder, 'imem_%s.npy'  % red_name))    
+    imem_psd_passive = np.load(join(ifolder, 'imem_psd_%s.npy' % pas_name))
+    imem_passive = np.load(join(ifolder, 'imem_%s.npy' % pas_name))
     
     #icap = np.load(join(ifolder, 'icap_psd_%s.npy' %(cur_name)))
     #ipas = np.load(join(ifolder, 'ipas_psd_%s.npy' %(cur_name)))
@@ -358,7 +358,6 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
     clr_list = ['r', 'b', 'g', 'm']
 
     freqs = np.load(join(ifolder, 'freqs.npy'))    
-    
     tvec = np.load(join(ifolder, 'tvec.npy'))
     xmid = np.load(join(ifolder, 'xmid.npy' ))
     ymid = np.load(join(ifolder, 'ymid.npy' ))
@@ -396,7 +395,8 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
     # Initializing time-axis figure
     pl.close('all')    
     fig = pl.figure(figsize=[8,8])
-    fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g "%(ifolder, input_idx, input_scaling))
+    fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g, epas: %d"
+                 %(ifolder, input_idx, input_scaling, epas))
 
     pl.subplots_adjust(hspace=0.5)
     ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])    
@@ -423,11 +423,14 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
         #ax_temp.plot(freqs, icap[comp,:], '--', label='Icap', color='grey', lw=2)
         #ax_temp.plot(1.5, icap[comp,0], '+', color='grey')
         #set_trace()
-        ax_temp.plot(tvec, imem_passive[comp] - imem_passive[comp, 0], color=pas_clr, lw=2, label='Passive')      
+        ax_temp.plot(tvec, imem_passive[comp] - imem_passive[comp, 0], 
+                     color=pas_clr, lw=2, label='Passive')      
         #ax_temp.plot(1.5, imem_passive[comp,0], '+', color=pas_clr)
-        ax_temp.plot(tvec, imem_reduced[comp] - imem_reduced[comp, 0], color=reduced_clr, lw=1, label='Reduced')      
+        ax_temp.plot(tvec, imem_reduced[comp] - imem_reduced[comp, 0], 
+                     color=reduced_clr, lw=1, label='Reduced')      
         #ax_temp.plot(1.5, imem_reduced[comp,0], '+', color=reduced_clr)
-        ax_temp.plot(tvec, imem_active[comp] - imem_active[comp, 0], '--', color=act_clr, lw=1, label='active')      
+        ax_temp.plot(tvec, imem_active[comp] - imem_active[comp, 0], '--', 
+                     color=act_clr, lw=1, label='active')      
         #ax_temp.plot(1.5, imem_active[comp,0], '+', color=act_clr)'
         #ax_temp.set_ylim(1e-7, 1e1)
         pos = [xmid[comp], ymid[comp]]
@@ -441,14 +444,15 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
         #ax_temp.set_xscale('log')
         #ax_temp.set_yscale('log')
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
-    pl.savefig('synaptic_%s_%s.png' % (ifolder, cur_name), dpi=300)
+    pl.savefig('synaptic_%s_%s.png' % (ifolder, sim_name), dpi=300)
 
 
     
     # Initializing frequency-axis figure
     pl.close('all')    
     fig = pl.figure(figsize=[8,8])
-    fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g "%(ifolder, input_idx, input_scaling))
+    fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g, epas: %d "
+                 % (ifolder, input_idx, input_scaling, epas))
 
     pl.subplots_adjust(hspace=0.5)
     ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])    
@@ -494,7 +498,7 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
         ax_temp.set_xscale('log')
         ax_temp.set_yscale('log')
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
-    pl.savefig('synaptic_%s_%s_psd.png' % (ifolder, cur_name), dpi=300)
+    pl.savefig('synaptic_%s_%s_psd.png' % (ifolder, sim_name), dpi=300)
 
 
 
