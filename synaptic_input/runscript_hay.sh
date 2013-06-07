@@ -14,4 +14,4 @@ cp /home/torbness/work/aLFP/synaptic_input/$filename .
 cp /home/torbness/work/aLFP/synaptic_input/params.py .
 
 python $filename simulate
-python $filename plot_active
+python $filename plot_synaptic
