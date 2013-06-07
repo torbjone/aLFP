@@ -29,14 +29,20 @@ proc biophys() {
 	  ek = -85
           g_pas = 0.0000338 
   	  gK_Tstbar_K_Tst = 0.0812 
+	  insert Ih
+	  gIhbar_Ih = 0.0002
   }
 
 	forsec "apic" {
 		cm = 2
   		g_pas = 0.0000589 
+		insert Ih
 	}	
+	distribute_channels("apic","gIhbar_Ih",2,-0.8696,3.6161,0.0,2.0870,0.00020000000) 
   forsec "dend" {
 		cm = 2
+		insert Ih
+		gIhbar_Ih = 0.0002
   		g_pas = 0.0000467 
 	}
   forsec "axon" {
