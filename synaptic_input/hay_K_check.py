@@ -82,9 +82,9 @@ def simulate():
         'tstopms' : tstopms, 
         'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
                           join(model_path, 'biophys3_%s.hoc' % conductance_type)],
-    
+    }
     simulate = ['active', 'passive', 'reduced_Ih', 'reduced_all_K',
-                             'reduced_K_Tst', 'reduced_K_Pst', 'reduced_SKv3_1']
+                'reduced_K_Tst', 'reduced_K_Pst', 'reduced_SKv3_1']
     
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_synaptic_cell(cell_params, pos_params, rot_params, model, 
