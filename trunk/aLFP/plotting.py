@@ -331,32 +331,25 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
 
 def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simulation_params,
                             plot_compartments, epas=None):
-    
+
+
+    conductance_type_list = ['active', 'passive', 'reduced_Ih', 'reduced_all_K',
+                             'reduced_K_Tst', 'reduced_K_Pst', 'reduced_SKv3_1']
+
+    line_style = ['r', 'k', 'b', 'g', 'y', 'm', 'grey']
     if epas == None:
         sim_name = '%d_%1.3f' %(input_idx, input_scaling)
-        act_name = '%d_%1.3f_%s' %(input_idx, input_scaling, 'active')
-        red_name = '%d_%1.3f_%s' %(input_idx, input_scaling, 'reduced_Ih')
-        pas_name = '%d_%1.3f_%s' %(input_idx, input_scaling, 'passive')
     else:
         sim_name = '%d_%1.3f_%d' %(input_idx, input_scaling, epas)
-        act_name = '%d_%1.3f_%s_%d' %(input_idx, input_scaling, 'active', epas)
-        red_name = '%d_%1.3f_%s_%d' %(input_idx, input_scaling, 'reduced_Ih', epas)
-        pas_name = '%d_%1.3f_%s_%d' %(input_idx, input_scaling, 'passive', epas)
-        
     
-    # Loading all needed data
-    imem_psd_active = np.load(join(ifolder, 'imem_psd_%s.npy' % act_name))
-    imem_active = np.load(join(ifolder, 'imem_%s.npy' % act_name))
-    imem_psd_reduced = np.load(join(ifolder, 'imem_psd_%s.npy' % red_name))
-    imem_reduced = np.load(join(ifolder, 'imem_%s.npy'  % red_name))    
-    imem_psd_passive = np.load(join(ifolder, 'imem_psd_%s.npy' % pas_name))
-    imem_passive = np.load(join(ifolder, 'imem_%s.npy' % pas_name))
+    imem_dict = {}
+    for conductance_type in conductance_type_list:
+        if epas == None:
+            imem_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
+        else:
+            imem_name = '%d_%1.3f_%s_%d' %(input_idx, input_scaling, conductance_type, epas)
+        imem_dict[conductance_type] = np.load(join(ifolder, 'imem_%s.npy' % imem_name))
     
-    #icap = np.load(join(ifolder, 'icap_psd_%s.npy' %(cur_name)))
-    #ipas = np.load(join(ifolder, 'ipas_psd_%s.npy' %(cur_name)))
-    active_dict = {}
-    clr_list = ['r', 'b', 'g', 'm']
-
     freqs = np.load(join(ifolder, 'freqs.npy'))    
     tvec = np.load(join(ifolder, 'tvec.npy'))
     xmid = np.load(join(ifolder, 'xmid.npy' ))
@@ -418,21 +411,11 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
             spine.set_edgecolor(comp_clr_list[numb])
         ax_temp.grid(True)        
 
-        #ax_temp.plot(freqs, ipas[comp,:], label='Ipas', color='y', lw=2)
-        #ax_temp.plot(1.5, ipas[comp,0], '+', color='y')
-        #ax_temp.plot(freqs, icap[comp,:], '--', label='Icap', color='grey', lw=2)
-        #ax_temp.plot(1.5, icap[comp,0], '+', color='grey')
-        #set_trace()
-        ax_temp.plot(tvec, imem_passive[comp] - imem_passive[comp, 0], 
-                     color=pas_clr, lw=2, label='Passive')      
-        #ax_temp.plot(1.5, imem_passive[comp,0], '+', color=pas_clr)
-        ax_temp.plot(tvec, imem_reduced[comp] - imem_reduced[comp, 0], 
-                     color=reduced_clr, lw=1, label='Reduced')      
-        #ax_temp.plot(1.5, imem_reduced[comp,0], '+', color=reduced_clr)
-        ax_temp.plot(tvec, imem_active[comp] - imem_active[comp, 0], '--', 
-                     color=act_clr, lw=1, label='active')      
-        #ax_temp.plot(1.5, imem_active[comp,0], '+', color=act_clr)'
-        #ax_temp.set_ylim(1e-7, 1e1)
+        for line_numb, conductance_type in enumerate(conductance_type_list):
+            lw = 0.5 + 0.5 / ((line_numb + 1.) / len(conductance_type_list))
+            ax_temp.plot(tvec, imem_dict[conductance_type][comp] - imem_dict[conductance_type][comp, 0], 
+                     line_style[line_numb], lw=lw, label=conductance_type)      
+
         pos = [xmid[comp], ymid[comp]]
         if numb == 0:
             ax_temp.legend(bbox_to_anchor=[1.8, 1.22])
@@ -444,61 +427,61 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
         #ax_temp.set_xscale('log')
         #ax_temp.set_yscale('log')
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
-    pl.savefig('synaptic_%s_%s.png' % (ifolder, sim_name), dpi=300)
-
+    pl.savefig('K_check_%s_%s.png' % (ifolder, sim_name), dpi=300)
+    pl.show()
 
     
-    # Initializing frequency-axis figure
-    pl.close('all')    
-    fig = pl.figure(figsize=[8,8])
-    fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g, epas: %d "
-                 % (ifolder, input_idx, input_scaling, epas))
+    ## # Initializing frequency-axis figure
+    ## pl.close('all')    
+    ## fig = pl.figure(figsize=[8,8])
+    ## fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g, epas: %d "
+    ##              % (ifolder, input_idx, input_scaling, epas))
 
-    pl.subplots_adjust(hspace=0.5)
-    ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])    
-    for comp in xrange(len(xmid)):
-        ax_neur.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], lw=diam[comp], color='gray')
-    ax_neur.axis([-200, 200, ymin -50, ymax + 50])
-    ax_neur.plot(xmid[input_idx], ymid[input_idx], '*', color='y', label='Input', markersize=15)
-    ax_neur.legend(bbox_to_anchor=[1.1, 1.05], numpoints=1)
-    for numb, comp in enumerate(plot_compartments):
-        ax_neur.plot(xmid[comp], ymid[comp], 'o', color=comp_clr_list[numb])
-        if numb % 2:
-            x_pos = 0.1
-        else:
-            x_pos = 0.6
-        ax_temp = fig.add_axes([x_pos, 0.1 + numb*(ext_ax_height+0.05)/2, 
-                                ext_ax_width, ext_ax_height])
-        ax_temp.tick_params(color=comp_clr_list[numb])
-        for spine in ax_temp.spines.values():
-            spine.set_edgecolor(comp_clr_list[numb])
-        ax_temp.grid(True)        
+    ## pl.subplots_adjust(hspace=0.5)
+    ## ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])    
+    ## for comp in xrange(len(xmid)):
+    ##     ax_neur.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], lw=diam[comp], color='gray')
+    ## ax_neur.axis([-200, 200, ymin -50, ymax + 50])
+    ## ax_neur.plot(xmid[input_idx], ymid[input_idx], '*', color='y', label='Input', markersize=15)
+    ## ax_neur.legend(bbox_to_anchor=[1.1, 1.05], numpoints=1)
+    ## for numb, comp in enumerate(plot_compartments):
+    ##     ax_neur.plot(xmid[comp], ymid[comp], 'o', color=comp_clr_list[numb])
+    ##     if numb % 2:
+    ##         x_pos = 0.1
+    ##     else:
+    ##         x_pos = 0.6
+    ##     ax_temp = fig.add_axes([x_pos, 0.1 + numb*(ext_ax_height+0.05)/2, 
+    ##                             ext_ax_width, ext_ax_height])
+    ##     ax_temp.tick_params(color=comp_clr_list[numb])
+    ##     for spine in ax_temp.spines.values():
+    ##         spine.set_edgecolor(comp_clr_list[numb])
+    ##     ax_temp.grid(True)        
 
-        #ax_temp.plot(freqs, ipas[comp,:], label='Ipas', color='y', lw=2)
-        #ax_temp.plot(1.5, ipas[comp,0], '+', color='y')
-        #ax_temp.plot(freqs, icap[comp,:], '--', label='Icap', color='grey', lw=2)
-        #ax_temp.plot(1.5, icap[comp,0], '+', color='grey')
-        #set_trace()
-        ax_temp.plot(freqs, imem_psd_passive[comp], color=pas_clr, lw=2, label='Passive')      
-        #ax_temp.plot(1.5, imem_passive[comp,0], '+', color=pas_clr)
-        ax_temp.plot(freqs, imem_psd_reduced[comp], color=reduced_clr, lw=1, label='Reduced')      
-        #ax_temp.plot(1.5, imem_reduced[comp,0], '+', color=reduced_clr)
-        ax_temp.plot(freqs, imem_psd_active[comp], '--', color=act_clr, lw=1, label='active')      
-        #ax_temp.plot(1.5, imem_active[comp,0], '+', color=act_clr)
-        ax_temp.set_ylim(1e-9, 1e-1)
+    ##     #ax_temp.plot(freqs, ipas[comp,:], label='Ipas', color='y', lw=2)
+    ##     #ax_temp.plot(1.5, ipas[comp,0], '+', color='y')
+    ##     #ax_temp.plot(freqs, icap[comp,:], '--', label='Icap', color='grey', lw=2)
+    ##     #ax_temp.plot(1.5, icap[comp,0], '+', color='grey')
+    ##     #set_trace()
+    ##     ax_temp.plot(freqs, imem_psd_passive[comp], color=pas_clr, lw=2, label='Passive')      
+    ##     #ax_temp.plot(1.5, imem_passive[comp,0], '+', color=pas_clr)
+    ##     ax_temp.plot(freqs, imem_psd_reduced[comp], color=reduced_clr, lw=1, label='Reduced')      
+    ##     #ax_temp.plot(1.5, imem_reduced[comp,0], '+', color=reduced_clr)
+    ##     ax_temp.plot(freqs, imem_psd_active[comp], '--', color=act_clr, lw=1, label='active')      
+    ##     #ax_temp.plot(1.5, imem_active[comp,0], '+', color=act_clr)
+    ##     ax_temp.set_ylim(1e-9, 1e-1)
             
-        pos = [xmid[comp], ymid[comp]]
-        if numb == 0:
-            ax_temp.legend(bbox_to_anchor=[1.8, 1.22])
-            ax_temp.set_xlabel('Hz')
-            ax_temp.set_ylabel('Transmemb. current')
-            #ax_temp.axis(ax_temp.axis('tight'))
-            #ax_temp.set_xlim(1,1000)
+    ##     pos = [xmid[comp], ymid[comp]]
+    ##     if numb == 0:
+    ##         ax_temp.legend(bbox_to_anchor=[1.8, 1.22])
+    ##         ax_temp.set_xlabel('Hz')
+    ##         ax_temp.set_ylabel('Transmemb. current')
+    ##         #ax_temp.axis(ax_temp.axis('tight'))
+    ##         #ax_temp.set_xlim(1,1000)
         
-        ax_temp.set_xscale('log')
-        ax_temp.set_yscale('log')
-        arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
-    pl.savefig('synaptic_%s_%s_psd.png' % (ifolder, sim_name), dpi=300)
+    ##     ax_temp.set_xscale('log')
+    ##     ax_temp.set_yscale('log')
+    ##     arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
+    ## pl.savefig('synaptic_%s_%s_psd.png' % (ifolder, sim_name), dpi=300)
 
 
 
