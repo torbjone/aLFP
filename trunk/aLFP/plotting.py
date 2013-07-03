@@ -1,4 +1,4 @@
-import pylab as pl
+import pylab as plt
 from matplotlib.colors import LogNorm
 import numpy as np
 import sys
@@ -11,17 +11,19 @@ from os.path import join
 
 import aLFP
 
-pl.rcParams.update({'font.size' : 8,
+plt.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
     'wspace' : 0.5, 'hspace' : 0.5})
 np.random.seed(1234)
 
-def plot_comp_numbers(cell):
+def plot_comp_numbers(cell, elec_x, elec_y, elec_z):
+    plt.axis('equal')
     for comp_idx in xrange(len(cell.xmid)):
-        pl.plot(cell.zmid[comp_idx], cell.ymid[comp_idx],\
+        plt.plot(cell.zmid[comp_idx], cell.ymid[comp_idx],\
                 marker='$%i$'%comp_idx, color='b', markersize=10)
-    pl.show()
-    pl.close('all')
+    plt.scatter(elec_z, elec_y)
+    plt.show()
+    plt.close('all')
     sys.exit()
 
 def arrow_to_axis(pos, ax_origin, ax_target, clr, x_shift):
@@ -91,10 +93,10 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     diam = np.load(join(ifolder, 'diam.npy'))
     
     # Initializing figure
-    pl.close('all')    
-    fig = pl.figure(figsize=[14,8])
+    plt.close('all')    
+    fig = plt.figure(figsize=[14,8])
     fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g "%(ifolder, input_idx, input_scaling))
-    pl.subplots_adjust(hspace=0.5)
+    plt.subplots_adjust(hspace=0.5)
     ax_vm = fig.add_axes([0.05, 0.60, 0.10, 0.20], title='Soma $V_m$')    
     ax_vm_psd = fig.add_axes([0.05, 0.30, 0.10, 0.20], title='Soma $V_m$ PSD')    
 
@@ -118,7 +120,7 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
             i /= len(plot_compartments) - 1.
         else:
             i /= len(plot_compartments)
-        comp_clr_list.append(pl.cm.rainbow(int(i)))
+        comp_clr_list.append(plt.cm.rainbow(int(i)))
     ymin = plot_params['ymin']
     ymax = plot_params['ymax']
     yticks = np.arange(ymin, ymax + 1 , 250)
@@ -148,7 +150,6 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
         ax_temp.tick_params(color=comp_clr_list[numb])
         for spine in ax_temp.spines.values():
             spine.set_edgecolor(comp_clr_list[numb])
-        
         #ax_temp.set_yticklabels([])
         ax_temp.grid(True)        
         for cur_numb, cur in enumerate(active_dict):
@@ -183,8 +184,8 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_shift)
 
     #xmin, xmax = ax_neur.get_xaxis().get_view_interval()
-    #ax_neur.add_artist(pl.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
-    pl.savefig('%s_%s.png' % (ifolder, cur_name), dpi=150)
+    #ax_neur.add_artist(plt.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
+    plt.savefig('%s_%s.png' % (ifolder, cur_name), dpi=150)
 
     
 def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simulation_params,
@@ -223,12 +224,12 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
     diam = np.load(join(ifolder, 'diam.npy'))
     
     # Initializing figure
-    pl.close('all')    
+    plt.close('all')    
     
-    fig = pl.figure(figsize=[8,8])
+    fig = plt.figure(figsize=[8,8])
     fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g "%(ifolder, input_idx, input_scaling))
 
-    pl.subplots_adjust(hspace=0.5)
+    plt.subplots_adjust(hspace=0.5)
     ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])
 
     #Sorting compartemts after y-height
@@ -241,7 +242,7 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
             i /= len(plot_compartments) - 1.
         else:
             i /= len(plot_compartments)
-        comp_clr_list.append(pl.cm.rainbow(int(i)))
+        comp_clr_list.append(plt.cm.rainbow(int(i)))
     ymin = plot_params['ymin']
     ymax = plot_params['ymax']
     yticks = np.arange(ymin, ymax + 1 , 250)
@@ -327,14 +328,13 @@ def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simu
         ax_temp.set_xscale('log')
         ax_temp.set_yscale('log')
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
-    pl.savefig('imem_%s_%s_%s.png' % (ifolder, cur_name, sim_type), dpi=300)
+    plt.savefig('imem_%s_%s_%s.png' % (ifolder, cur_name, sim_type), dpi=300)
 
 def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simulation_params,
                             plot_compartments, epas=None):
 
 
-    conductance_type_list = ['active', 'passive', 'reduced_Ih', 'reduced_all_K',
-                             'reduced_K_Tst', 'reduced_K_Pst', 'reduced_SKv3_1']
+    conductance_type_list = ['active', 'passive', 'reduced_Ih', 'Ih_linearized']
 
     line_style = ['r', 'k', 'b', 'g', 'y', 'm', 'grey']
     if epas == None:
@@ -373,7 +373,7 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
             i /= len(plot_compartments) - 1.
         else:
             i /= len(plot_compartments)
-        comp_clr_list.append(pl.cm.rainbow(int(i)))
+        comp_clr_list.append(plt.cm.rainbow(int(i)))
     ymin = plot_params['ymin']
     ymax = plot_params['ymax']
     yticks = np.arange(ymin, ymax + 1 , 250)
@@ -386,12 +386,12 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
     pas_clr = 'gray'
 
     # Initializing time-axis figure
-    pl.close('all')    
-    fig = pl.figure(figsize=[8,8])
+    plt.close('all')    
+    fig = plt.figure(figsize=[8,8])
     fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g, epas: %d"
                  %(ifolder, input_idx, input_scaling, epas))
 
-    pl.subplots_adjust(hspace=0.5)
+    plt.subplots_adjust(hspace=0.5)
     ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])    
     for comp in xrange(len(xmid)):
         ax_neur.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], lw=diam[comp], color='gray')
@@ -413,7 +413,7 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
 
         for line_numb, conductance_type in enumerate(conductance_type_list):
             lw = 0.5 + 0.5 / ((line_numb + 1.) / len(conductance_type_list))
-            ax_temp.plot(tvec, imem_dict[conductance_type][comp] - imem_dict[conductance_type][comp, 0], 
+            ax_temp.plot(tvec, imem_dict[conductance_type][comp], 
                      line_style[line_numb], lw=lw, label=conductance_type)      
 
         pos = [xmid[comp], ymid[comp]]
@@ -427,17 +427,17 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
         #ax_temp.set_xscale('log')
         #ax_temp.set_yscale('log')
         arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
-    pl.savefig('K_check_%s_%s.png' % (ifolder, sim_name), dpi=300)
-    pl.show()
+    plt.savefig('K_check_%s_%s.png' % (ifolder, sim_name), dpi=300)
+    #plt.show()
 
     
     ## # Initializing frequency-axis figure
-    ## pl.close('all')    
-    ## fig = pl.figure(figsize=[8,8])
+    ## plt.close('all')    
+    ## fig = plt.figure(figsize=[8,8])
     ## fig.suptitle("Model: %s, input_idx: %d, input_scaling: %g, epas: %d "
     ##              % (ifolder, input_idx, input_scaling, epas))
 
-    ## pl.subplots_adjust(hspace=0.5)
+    ## plt.subplots_adjust(hspace=0.5)
     ## ax_neur = fig.add_axes([0.3, 0.1, 0.3, 0.8], frameon=False, aspect='equal', xticks=[], yticks=[])    
     ## for comp in xrange(len(xmid)):
     ##     ax_neur.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], lw=diam[comp], color='gray')
@@ -481,7 +481,7 @@ def plot_synaptic_currents(ifolder, input_scaling, input_idx, plot_params, simul
     ##     ax_temp.set_xscale('log')
     ##     ax_temp.set_yscale('log')
     ##     arrow_to_axis(pos, ax_neur, ax_temp, comp_clr_list[numb], x_pos)
-    ## pl.savefig('synaptic_%s_%s_psd.png' % (ifolder, sim_name), dpi=300)
+    ## plt.savefig('synaptic_%s_%s_psd.png' % (ifolder, sim_name), dpi=300)
 
 
 
@@ -506,10 +506,10 @@ def plot_active_currents_deprecated(ifolder, input_scaling, input_idx, simulatio
         except:
             pass
     sim_name = '%d_%1.3f' %(input_idx, input_scaling)
-    pl.close('all')
+    plt.close('all')
     n_cols = 6
     n_rows = 6
-    fig = pl.figure(figsize=[15,10])
+    fig = plt.figure(figsize=[15,10])
     if n_cols * n_rows < imem.shape[0]:
         n_plots = n_cols * n_rows
         plots = np.array(np.linspace(0, imem.shape[0] - 1, n_plots), dtype=int)
@@ -537,8 +537,8 @@ def plot_active_currents_deprecated(ifolder, input_scaling, input_idx, simulatio
         
         if plot_number == n_rows - 1:
             ax.legend(bbox_to_anchor=[1.7,1.0])
-    pl.savefig('active_currents_%s_%s_%s_psd.png' % (ifolder, sim_name, conductance_type), dpi=150)
-    #pl.savefig('active_currents_%s_%s_True_psd.pdf' % (ifolder, sim_name))
+    plt.savefig('active_currents_%s_%s_%s_psd.png' % (ifolder, sim_name, conductance_type), dpi=150)
+    #plt.savefig('active_currents_%s_%s_True_psd.pdf' % (ifolder, sim_name))
     
     
 def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z, plot_params):
@@ -592,12 +592,12 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
     diam = np.load(join(ifolder, 'diam.npy'))
 
     # Initializing figure
-    pl.close('all')    
-    fig = pl.figure(figsize=[14,8])
+    plt.close('all')    
+    fig = plt.figure(figsize=[14,8])
     fig.suptitle("Model: %s, Input scaling: %s, Input index: %s"
                  %(ifolder, input_scaling, input_idx))
 
-    pl.subplots_adjust(hspace=0.5)
+    plt.subplots_adjust(hspace=0.5)
     ax_in = fig.add_axes([0.05, 0.1, 0.10, 0.20], title='Input')
     ax_im = fig.add_axes([0.05, 0.4, 0.1, 0.2], title='Soma $I_m$')
     ax_vm = fig.add_axes([0.05, 0.70, 0.10, 0.20], title='Soma $V_m$')    
@@ -610,7 +610,7 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
     ax_pas_psd_imshow = fig.add_axes([0.73, 0.1, 0.25, 0.13], title='Passive PSD', xscale='log')    
     ax_neur = fig.add_axes([0.25, 0.1, 0.35, 0.75], frameon=False, aspect='equal', xticks=[])
 
-    pl.figtext(0.74, 0.9, 'Sum of transmembrane \n currents along y-axis', size=15)
+    plt.figtext(0.74, 0.9, 'Sum of transmembrane \n currents along y-axis', size=15)
     ax_vm.set_xlabel('ms')
     ax_vm.set_ylabel('mV')
     ax_vm_psd.set_xlabel('Hz')
@@ -655,7 +655,7 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
             i /= len(elec_x) - 1.
         else:
             i /= len(elec_x)
-        elec_clr_list.append(pl.cm.rainbow(int(i)))
+        elec_clr_list.append(plt.cm.rainbow(int(i)))
     ymin = plot_params['ymin']
     ymax = plot_params['ymax']
     yticks = np.arange(ymin, ymax + 1 , 250)
@@ -741,16 +741,21 @@ def compare_active_passive(ifolder, input_scaling, input_idx, elec_x, elec_y, el
 
     ## ax_pas_imshow.axis('auto')
     ## ax_act_imshow.axis('auto')
-    ## pl.colorbar(sc_stick_act, ax=ax_act_imshow)
-    ## pl.colorbar(sc_stick_pas, ax=ax_pas_imshow)
-    ## pl.colorbar(sc_stick_psd_pas, ax=ax_pas_psd_imshow)
-    ## pl.colorbar(sc_stick_psd_act, ax=ax_act_psd_imshow)
+    ## plt.colorbar(sc_stick_act, ax=ax_act_imshow)
+    ## plt.colorbar(sc_stick_pas, ax=ax_pas_imshow)
+    ## plt.colorbar(sc_stick_psd_pas, ax=ax_pas_psd_imshow)
+    ## plt.colorbar(sc_stick_psd_act, ax=ax_act_psd_imshow)
 
     ## xmin, xmax = ax_neur.get_xaxis().get_view_interval()
-    ## ax_neur.add_artist(pl.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
+    ## ax_neur.add_artist(plt.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
     
-    pl.savefig('WN_%s_%s_reduced.png' % (ifolder, name))
+    plt.savefig('WN_%s_%s_reduced.png' % (ifolder, name))
 
+
+
+
+
+    
 def stationary_currents(ifolder, plot_params, plot_compartments, name):
 
 
@@ -778,11 +783,11 @@ def stationary_currents(ifolder, plot_params, plot_compartments, name):
     diam = np.load(join(ifolder, 'diam.npy'))
     
     # Initializing figure
-    pl.close('all')    
-    fig = pl.figure(figsize=[14,8])
+    plt.close('all')    
+    fig = plt.figure(figsize=[14,8])
     fig.suptitle("Model: %s"%(ifolder))
 
-    pl.subplots_adjust(hspace=0.5)
+    plt.subplots_adjust(hspace=0.5)
 
     ax_im = fig.add_axes([0.05, 0.4, 0.1, 0.2], title='Soma $I_m$')
     ax_vm = fig.add_axes([0.05, 0.70, 0.10, 0.20], title='Soma $V_m$')    
@@ -793,7 +798,7 @@ def stationary_currents(ifolder, plot_params, plot_compartments, name):
     ax_psd_imshow = fig.add_axes([0.73, 0.32, 0.25, 0.13], title='PSD', xscale='log')
     ax_neur = fig.add_axes([0.25, 0.1, 0.35, 0.75], frameon=False, aspect='equal', xticks=[])
 
-    pl.figtext(0.74, 0.9, 'Sum of transmembrane \n currents along y-axis', size=15)
+    plt.figtext(0.74, 0.9, 'Sum of transmembrane \n currents along y-axis', size=15)
     ax_vm.set_xlabel('ms')
     ax_vm.set_ylabel('mV')
     ax_vm_psd.set_xlabel('Hz')
@@ -829,7 +834,7 @@ def stationary_currents(ifolder, plot_params, plot_compartments, name):
             i /= len(plot_compartments) - 1.
         else:
             i /= len(plot_compartments)
-        comp_clr_list.append(pl.cm.rainbow(int(i)))
+        comp_clr_list.append(plt.cm.rainbow(int(i)))
     ymin = plot_params['ymin']
     ymax = plot_params['ymax']
     yticks = np.arange(ymin, ymax + 1 , 250)
@@ -894,12 +899,167 @@ def stationary_currents(ifolder, plot_params, plot_compartments, name):
                                      norm=LogNorm(vmax=np.max(1000*stick_psd), vmin=1e-4))
 
     ax_imshow.axis('auto')
-    pl.colorbar(sc_stick, ax=ax_imshow)
+    plt.colorbar(sc_stick, ax=ax_imshow)
 
-    pl.colorbar(sc_stick_psd, ax=ax_psd_imshow)
+    plt.colorbar(sc_stick_psd, ax=ax_psd_imshow)
 
     xmin, xmax = ax_neur.get_xaxis().get_view_interval()
-    ax_neur.add_artist(pl.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
+    ax_neur.add_artist(plt.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
     
-    pl.savefig('%s_%s.png' % (ifolder, name))
+    plt.savefig('%s_%s.png' % (ifolder, name))
 
+def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z, 
+                 plot_params, conductance_list):
+    
+    freqs = np.load(join(ifolder, 'freqs.npy'))    
+    tvec = np.load(join(ifolder, 'tvec.npy'))
+    xmid = np.load(join(ifolder, 'xmid.npy' ))
+    ymid = np.load(join(ifolder, 'ymid.npy' ))
+    zmid = np.load(join(ifolder, 'zmid.npy' ))
+    xstart = np.load(join(ifolder, 'xstart.npy' ))
+    ystart = np.load(join(ifolder, 'ystart.npy' ))
+    zstart = np.load(join(ifolder, 'zstart.npy' ))
+    xend = np.load(join(ifolder, 'xend.npy' ))
+    yend = np.load(join(ifolder, 'yend.npy' ))
+    zend = np.load(join(ifolder, 'zend.npy' ))    
+    diam = np.load(join(ifolder, 'diam.npy'))
+
+    sim_name = "%d_%1.3f" %(input_idx, input_scaling)
+    sig_dict = {}
+    sig_psd_dict = {}
+    imem_dict = {}
+    vmem_dict = {}
+    conductance_color_dict = {}
+    
+    for cond_number, conductance_type in enumerate(conductance_list):
+        conductance_name = "%d_%1.3f_%s" %(input_idx, input_scaling, conductance_type)
+        imem_dict[conductance_type] = np.load(join(ifolder, 'imem_%s.npy' %(conductance_name)))
+        vmem_dict[conductance_type] = np.load(join(ifolder, 'vmem_%s.npy' %(conductance_name)))
+        sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
+        sig_psd_dict[conductance_type] = np.load(join(ifolder, 'sig_psd_%s.npy' %(conductance_name)))
+        if len(conductance_list) > 1:
+            clr_number = 256. * cond_number/(len(conductance_list) - 1.)
+        else:
+            clr_number = 256. * cond_number/(len(conductance_list))
+        conductance_color_dict[conductance_type] = plt.cm.jet(int(clr_number))
+
+    # Initializing figure
+    plt.close('all')    
+    fig = plt.figure(figsize=[14,8])
+    fig.suptitle("Model: %s, Input scaling: %s, Input index: %s"
+                 %(ifolder, input_scaling, input_idx))
+
+    plt.subplots_adjust(hspace=0.5)
+    ax_vm = fig.add_axes([0.05, 0.70, 0.10, 0.20], title='Soma $V_m$')
+    ax_vm_shifted = fig.add_axes([0.2, 0.70, 0.10, 0.20], title='Shifted soma $V_m$')    
+    
+    ax_in = fig.add_axes([0.05, 0.1, 0.10, 0.20], title='Input compartment $V_m$')   
+    ax_in_shifted = fig.add_axes([0.2, 0.1, 0.10, 0.20], title='Shifted input compartment $V_m$')   
+    
+    ax_neur = fig.add_axes([0.5, 0.1, 0.1, 0.75], frameon=False, 
+                            xticks=[], yticks=[])
+    #plt.figtext(0.74, 0.9, 'Sum of transmembrane \n currents along y-axis', size=15)
+    ax_vm.set_xlabel('ms')
+    ax_vm.set_ylabel('mV')
+    ax_in.set_xlabel('ms')
+    ax_in.set_ylabel('mV')
+    #ax_neur.set_ylabel('y [$\mu m$]', color='b')
+
+    for ax in [ax_vm, ax_in, ax_in_shifted, ax_vm_shifted]:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.get_xaxis().tick_bottom()
+        ax.get_yaxis().tick_left()
+
+    # Setting up helpers and colors
+    elec_clr_list = []
+    for idx in xrange(len(elec_x)):
+        i = 256. * idx
+        if len(elec_x) > 1:
+            i /= len(elec_x) - 1.
+        else:
+            i /= len(elec_x)
+        elec_clr_list.append(plt.cm.rainbow(int(i)))
+    
+    ymin = plot_params['ymin']
+    ymax = plot_params['ymax']
+    #yticks = np.arange(ymin, ymax + 1 , 250)
+    #yticks = yticks[np.where((np.min(ymid) <= yticks) * (yticks <= np.max(ymid)))]
+    #for ax in [ax_neur]:
+    #    ax.get_yaxis().tick_left()
+    #    ax.set_yticks(yticks)
+    #    for tl in ax.get_yticklabels():
+    #        tl.set_color('b')
+    
+    # Starting plotting
+    for conductance_type in conductance_list:
+        ax_vm.plot(tvec, vmem_dict[conductance_type][0,:], lw=2,
+                   color=conductance_color_dict[conductance_type])
+        ax_vm_shifted.plot(tvec, vmem_dict[conductance_type][0,:] - vmem_dict[conductance_type][0,0], 
+                         lw=2, color=conductance_color_dict[conductance_type], label=conductance_type)
+        ax_in.plot(tvec, vmem_dict[conductance_type][input_idx,:], lw=2,
+                   color=conductance_color_dict[conductance_type])
+        ax_in_shifted.plot(tvec, vmem_dict[conductance_type][input_idx,:] - \
+                         vmem_dict[conductance_type][input_idx,0], lw=2,
+                         color=conductance_color_dict[conductance_type])
+    ax_vm_shifted.legend(bbox_to_anchor=[1.8,1])
+    for comp in xrange(len(xmid)):
+        if comp == 0:
+            ax_neur.scatter(xmid[comp], ymid[comp], s=diam[comp]*10, c='gray', edgecolor='none')
+        else:
+            ax_neur.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], 
+                         lw=diam[comp], color='gray')
+
+    ax_neur.plot(xmid[input_idx], ymid[input_idx], '*', color='y', label='Input', markersize=15)
+    ax_neur.legend(bbox_to_anchor=[.6, 1.05], numpoints=1)
+    ax_neur.axis([-200, 200, np.min([np.min(elec_y) - 50, ymin]) , np.max([np.max(elec_y) + 50, ymax])])
+    
+    ext_ax_width=0.1
+    ext_ax_height = 0.6/len(elec_x)
+    neur_ax = ax_neur.axis()
+    for elec in xrange(len(elec_x)):
+        if elec_x[elec] > 0:
+            ax_xpos = 0.65
+        else:
+            ax_xpos = 0.35
+        ax_neur.plot(elec_x[elec], elec_y[elec], 'o', color=elec_clr_list[elec])
+        ax_temp = fig.add_axes([ax_xpos, 0.15 + elec*(ext_ax_height+0.05)/2., 
+                                ext_ax_width, ext_ax_height])
+        ax_neur.axis(neur_ax)
+        ax_temp.spines['top'].set_visible(False)
+        ax_temp.spines['right'].set_visible(False)
+        ax_temp.get_xaxis().tick_bottom()
+        ax_temp.get_yaxis().tick_left()
+        ax_temp.tick_params(color=elec_clr_list[elec])
+        for spine in ax_temp.spines.values():
+            spine.set_edgecolor(elec_clr_list[elec])
+
+        ax_temp.set_xticklabels([])
+        ax_temp.set_yticklabels([])
+        #ax_temp.grid(True)
+        for conductance_type in conductance_list:
+            ax_temp.plot(tvec, sig_dict[conductance_type][elec] -sig_dict[conductance_type][elec,0], 
+            color=conductance_color_dict[conductance_type], lw=2)
+        pos = [elec_x[elec], elec_y[elec]]
+        if elec == 0:
+            #ax_temp.legend(bbox_to_anchor=[1.4, 1.22])
+            ax_temp.set_xlabel('[ms]')
+            ax_temp.set_ylabel('Norm. amp')
+        #ax_temp.set_xlim(-10,tvec[-1] + 1)
+        #ax_temp.set_ylim(-1, 2)
+        LFP_arrow_to_axis(pos, ax_neur, ax_temp, elec_clr_list[elec], ax_xpos)
+    ax_neur.axis(neur_ax)
+    plt.savefig('LFP_%s_%s.png' % (ifolder, sim_name))
+
+def LFP_arrow_to_axis(pos, ax_origin, ax_target, clr, ax_xpos):
+    if ax_xpos < 0.5:
+        upper_pixel_coor = ax_target.transAxes.transform(([1,0.5]))
+    else:
+        upper_pixel_coor = ax_target.transAxes.transform(([0,0.5]))
+    upper_coor = ax_origin.transData.inverted().transform(upper_pixel_coor)
+
+    upper_line_x = [pos[0], upper_coor[0]]
+    upper_line_y = [pos[1], upper_coor[1]]
+    
+    ax_origin.plot(upper_line_x, upper_line_y, lw=1, 
+              color=clr, clip_on=False, alpha=1.)
