@@ -20,7 +20,6 @@ import aLFP
 from params import *
 
 model = 'hay' 
-domain = 'white_noise_%s' %model
 
 np.random.seed(1234)
 
@@ -84,8 +83,7 @@ def simulate():
                           join(model_path, 'biophys3_%s.hoc' % conductance_type)],
     }
 
-    simulate = ['active', 'reduced_Ih', 'passive']
-    
+    simulate = ['reduced_SKv3_1']
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_synaptic_cell(cell_params, pos_params, rot_params, model, 
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
@@ -110,7 +108,9 @@ def simulate():
             temp_sim_params['rec_variables'] = []
         elif conductance_type == 'reduced_Ih':
             temp_sim_params['rec_variables'] = ['ihcn_Ih']
-        
+        elif conductance_type == 'reduced_SKv3_1':
+            temp_sim_params['rec_variables'] = ['ihcn_Ih', 'ik']    
+            
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
         aLFP.run_all_synaptic_simulations(cell_params, model, input_idxs, input_scalings, ntsteps, 

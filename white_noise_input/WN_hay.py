@@ -82,7 +82,7 @@ def simulate():
     }
 
 
-    simulate = ['active', 'reduced_Ih', 'passive']
+    simulate = ['reduced_SKv3_1']
     
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_WN_cell(cell_params, pos_params, rot_params, model, 
@@ -105,6 +105,8 @@ def simulate():
             temp_sim_params['rec_variables'] = []
         elif conductance_type == 'reduced_Ih':
             temp_sim_params['rec_variables'] = ['ihcn_Ih']
+        elif conductance_type == 'reduced_SKv3_1':
+            temp_sim_params['rec_variables'] = ['ihcn_Ih', 'ik']            
         
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
@@ -130,7 +132,7 @@ def plot_active():
     #aLFP.plot_active_currents(ifolder, 1.0, 0, plot_params, 
     #                          simulation_params, plot_compartments, 'active')
     #sys.exit()
-    simulate = ['active', 'reduced_Ih', 'passive']
+    simulate = ['active', 'reduced_Ih', 'passive', 'reduced_SKv3_1']
     for conductance_type in simulate:
         for input_idx in input_idxs:
             for input_scaling in input_scalings:

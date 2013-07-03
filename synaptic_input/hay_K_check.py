@@ -83,7 +83,8 @@ def simulate():
         'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
                           join(model_path, 'biophys3_%s.hoc' % conductance_type)],
     }
-    simulate = ['reduced_all_K',
+
+    simulate = ['active', 'passive', 'reduced_Ih', 'reduced_all_K',
                 'reduced_K_Tst', 'reduced_K_Pst', 'reduced_SKv3_1']
     
     ntsteps = round((tstopms - 0) / timeres)
@@ -92,7 +93,6 @@ def simulate():
     
     cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                    join(model_path, 'biophys3_active.hoc')]
-
     single_run = 0
     if single_run:
         temp_sim_params = simulation_params.copy()
