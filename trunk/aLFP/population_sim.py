@@ -8,168 +8,238 @@ try:
     from ipdb import set_trace
 except:
     pass
+from mpl_toolkits.mplot3d import Axes3D
 import pylab as plt
 from os.path import join
 import cPickle
+import pickle
 import aLFP
 import scipy.fftpack as ff
 import scipy.signal
+import tables
 
 plt.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
     'wspace' : 0.5, 'hspace' : 0.5})
 np.random.seed(1234)
 
+def run_population_simulation(cell_params, conductance_list, ofolder, model_path,
+                              ntsteps, all_synaptic_params):
 
-
-
-def run_linearized_simulation(cell_params, input_scaling, input_idx, 
-                   ofolder, ntsteps, simulation_params, conductance_type, 
-                   input_type, downsample=False):
-
-    neuron.h('forall delete_section()')
-    neuron.h('secondorder=2')
+   # Excitatory synapse parameters:
+    synapseParameters_AMPA = {
+        'e' : 0,                    #reversal potential
+        'syntype' : 'Exp2Syn',      #conductance based exponential synapse
+        'tau1' : 1.,                #Time constant, rise
+        'tau2' : 3.,                #Time constant, decay
+        'weight' : 0.005,           #Synaptic weight
+        'color' : 'r',              #for pl.plot
+        'marker' : '.',             #for pl.plot
+        'record_current' : True,    #record synaptic currents
+        }
+    # Excitatory synapse parameters
+    synapseParameters_NMDA = {         
+        'e' : 0,
+        'syntype' : 'Exp2Syn',
+        'tau1' : 10.,
+        'tau2' : 30.,
+        'weight' : 0.005,
+        'color' : 'm',
+        'marker' : '.',
+        'record_current' : True,
+        }
+    # Inhibitory synapse parameters
+    synapseParameters_GABA_A = {         
+        'e' : -80,
+        'syntype' : 'Exp2Syn',
+        'tau1' : 1.,
+        'tau2' : 12.,
+        'weight' : 0.005,
+        'color' : 'b',
+        'marker' : '.',
+        'record_current' : True
+        }
+    
     static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
-    cell_params['v_init'] = np.average(static_Vm)
     cell = LFPy.Cell(**cell_params)
-    sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
-    if not conductance_type == 'active':
-        comp_idx = 0
-        for sec in cell.allseclist:
-            for seg in sec:
-                exec('seg.vss_%s = static_Vm[%d]'% (conductance_type, comp_idx))
-                comp_idx += 1
+    
+    AMPA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['AMPA'])
+    GABA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['GABA_A'])
+    NMDA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['NMDA'])
+    
+    for conductance_type in conductance_list:
+        neuron.h('forall delete_section()')
+        neuron.h('secondorder=2')
+        del cell
+        cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                      join(model_path, 'biophys3_%s.hoc' % conductance_type)]        
 
-    if input_type == 'synapse':
+        cell_params['v_init'] = np.average(static_Vm)
+        cell = LFPy.Cell(**cell_params)
+        sim_name = conductance_type
+        if not conductance_type == 'active':
+            comp_idx = 0
+            for sec in cell.allseclist:
+                for seg in sec:
+                    exec('seg.vss_%s = static_Vm[%d]'% (conductance_type, comp_idx))
+                    comp_idx += 1
+                    
+        set_input_spiketrain(cell, synapseParameters_AMPA, AMPA_spiketimes_dict)
+        set_input_spiketrain(cell, synapseParameters_GABA_A, GABA_spiketimes_dict)
+        set_input_spiketrain(cell, synapseParameters_NMDA, NMDA_spiketimes_dict)
 
-        # Define synapse parameters
-        synapse_parameters = {
-            'idx' : input_idx,
-            'e' : 0.,                   # reversal potential
-            'syntype' : 'ExpSyn',       # synapse type
-            'tau' : 10.,                # syn. time constant
-            'weight' : input_scaling,            # syn. weight
-            'record_current' : True,
-            }
+        cell.simulate(rec_imem=True)
+        f = tables.openFile(join(ofolder, 'signal.h5'), mode = "w")
+        filters = tables.Filters(complevel=5, complib='zlib')
 
-        # Create synapse and set time of synaptic input
-        synapse = LFPy.Synapse(cell, **synapse_parameters)
-        synapse.set_spike_times(np.array([20.]))
+        somav_array = f.createCArray('/', 'somav', tables.Float32Col(),
+                                     [len(cell.somav)], filters=filters)
+        somav_array[:] = cell.somav
+        t_array = f.createCArray('/', 'tvec', tables.Float32Col(),
+                                 [len(cell.tvec)], filters=filters)
+        t_array[:] = cell.tvec
+        imem_array = f.createCArray('/', 'imem', tables.Float32Col(),
+                                    cell.imem.shape, filters=filters)
+        imem_array[:,:] = cell.imem
+        f.close()
+        plot_example(cell, sim_name)
 
-    elif input_type == 'ZAP':
-        downsample = True
-        ZAP_clamp = {
-            'idx' : input_idx,
-            'record_current' : True,
-            'dur' : 20000,
-            'delay': 0,
-            'freq_start' : 0,
-            'freq_end': 15,
-            'pkamp' : input_scaling,
-            'pptype' : 'ZAPClamp',
-            }
-        current_clamp = LFPy.StimIntElectrode(cell, **ZAP_clamp)
-    else:
-        raise FAIL
+def calculate_LFP():
+    pass
         
-    cell.simulate(**simulation_params)
+def plot_example(cell, sim_name):
 
-    if downsample:
-        set_trace()
-        resample_npts = len(cell.tvec) / 4
-        imem, tvec = scipy.signal.resample(cell.imem, resample_npts, t=cell.tvec, axis=1)
-        vmem, tvec = scipy.signal.resample(cell.vmem, resample_npts, t=cell.tvec, axis=1)
-    else:
-        imem = cell.imem
-        vmem = cell.vmem
-        tvec = cell.tvec
+    plt.close('all')
+    fig = plt.figure(figsize=[15, 6])
+    ax1 = fig.add_axes([0.05, 0.1, 0.7, 0.3])
+    ax3 = fig.add_axes([0.05, 0.6, 0.7, 0.3])
+    ax4 = fig.add_axes([0.75, 0.1, 0.18, 0.80], aspect='equal', frameon=False)
+    
+    ax1.plot(cell.tvec, cell.somav)
+    ax1.set_title('Soma potential [mV]')    
+    
+    ax3.plot(cell.tvec, cell.imem[0,:])
+    ax3.set_title('Soma membrane current [nA]')
+    ax1.set_xlabel('Time [ms]')
+    ax3.set_xlabel('Time [ms]')
+
+    for sec in neuron.h.allsec():
+        idx = cell.get_idx(sec.name())        
+        ax4.plot(np.r_[cell.xstart[idx], cell.xend[idx][-1]],
+                 np.r_[cell.zstart[idx], cell.zend[idx][-1]],
+                 color='k', lw=2)
+    for i in xrange(len(cell.synapses)):
+        ax4.plot([cell.synapses[i].x], [cell.synapses[i].z],
+            color=cell.synapses[i].color, marker=cell.synapses[i].marker, 
+            markersize=10)
+    ax4.set_xticks([])
+    ax4.set_yticks([])
+    ax4.set_title('GABA_A: b, AMPA: r, NMDA: m')
+    fig.savefig(join('summary_%s.png'% sim_name))
+
+def make_input_spiketrain(cell, section, n, spTimesFun, args):
+    """ Make and return spiketimes for each compartment that receives input """
+    cell_idxs = cell.get_rand_idx_area_norm(section=section, nidx=n)
+    spiketimes_dict = {}
+    for idx in cell_idxs:
+        spiketimes_dict[str(idx)] = spTimesFun(args[0], args[1], args[2], args[3])
+    return spiketimes_dict
+
+def set_input_spiketrain(cell, synparams, spiketimes_dict):
+    """ Find spiketimes """
+    for idx, spiketrain in spiketimes_dict.items():
+        synparams.update({'idx' : int(idx)})
+        s = LFPy.Synapse(cell, **synparams)
+        s.set_spike_times(spiketrain)
         
-    timestep = (tvec[1] - tvec[0])/1000.
-    np.save(join(ofolder, 'tvec.npy'), tvec)
+        
+def quickplot_vmem(cell, ofolder):
+    plt.plot(cell.tvec, cell.somav)
+    plt.savefig(join(ofolder, 'vmem.png'))
+    
 
-    mapping = np.load(join(ofolder, 'mapping.npy'))
-    sig = 1000 * np.dot(mapping, imem)
-    #sig_psd, freqs = find_LFP_PSD(sig, timestep)
-    #np.save(join(ofolder, 'sig_psd_%s.npy' %(sim_name)), sig_psd)
-    np.save(join(ofolder, 'sig_%s.npy' %(sim_name)), sig)
-    
-    linearized_quickplot(cell, sim_name, ofolder, static_Vm)
-    #vmem_psd, freqs = find_LFP_PSD(cell.vmem, timestep)
-    #np.save(join(ofolder, 'vmem_psd_%s.npy' %(sim_name)), vmem_psd)
-    np.save(join(ofolder, 'vmem_%s.npy' %(sim_name)), vmem)
-    
-    imem_psd, freqs = find_LFP_PSD(imem, timestep)
-    #np.save(join(ofolder, 'imem_psd_%s.npy' %(sim_name)), imem_psd)
-    np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), imem)
-    #np.save(join(ofolder, 'freqs.npy'), freqs)
+def plot_population(neuron_dict, elec_x, elec_y, elec_z):
+
+    fig = plt.figure(figsize=[3,6])
+    ax1 = fig.add_axes([0.1,0.5, 0.8, 0.4], frameon=False , yticks=[])
+    ax2 = fig.add_axes([0.1,0.05,0.8, 0.4], sharex=ax1, frameon=False, yticks=[])
+    ax1.scatter(elec_x, elec_z, s=10, c='r', edgecolor='none')
+    ax2.scatter(elec_x, elec_y, s=10, c='r', edgecolor='none')
+
+    ax1.set_ylim(np.min(elec_z) - 100 , np.max(elec_z) + 100)
+    #ax2.get_xaxis().tick_bottom()
+    ax1.get_xaxis().tick_top()
+    ax2.spines['top'].set_visible(False)
+    for neur in neuron_dict.values():
+        #set_trace()
+        ax1.scatter(neur['position']['xpos'], neur['position']['zpos'], 
+                    s=4, c=neur['clr'], clip_on=False, edgecolor='none')
+        ax2.scatter(neur['position']['xpos'], neur['position']['ypos'], 
+                    s=4, c=neur['clr'], clip_on=False, edgecolor='none')
+    fig.savefig('population.png')   
 
     
-def initialize_dummy_population(cell_params,  cell_name, 
-                    elec_x, elec_y, elec_z, ntsteps, ofolder, testing=False, make_WN_input=False):
+def initialize_dummy_population(population_dict, cell_params,
+                    elec_x, elec_y, elec_z, ntsteps, ofolder):
     """ Initializes and saves a dictionary with dummy cells. 
     Each cell entry in the dictionary contains a random x,y,z- position of the soma, as well
     as a random rotation, a color, a mapping, and a time window. The time windows is
-    in idxs and is meant to be used to extract imems from the cell simulation and add to the LFP. """
+    in idxs and is meant to be used to extract imems from the cell simulation and add to the LFP. 
+    """
 
-    pos_params, rot_params,
-
-    population_dict = {'r_limit': 200,
-                       'z_mid': 0,
-                       'numcells': 1,
-                       'window_length_ms': 200, 
-                       }
-
+    neur_clr = lambda idx: plt.cm.rainbow(int(256./population_dict['numcells'] * idx))  
     neuron_dict = {}
+    tvec = np.arange(population_dict['ntsteps']) * population_dict['timeres']
+    ntsteps_window = int(population_dict['window_length_ms'] / population_dict['timeres'])
+    max_idx = 0
     for cell_id in xrange(population_dict['numcells']):
-        neur = 'cell_%04i' % idx
-
-        xpos = population_dict['r_limit'] * np.random.random()
-        ypos = population_dict['r_limit'] * np.random.random()
+        neur = 'cell_%04i' % cell_id
+        print cell_id, '/', population_dict['numcells']
+        xpos = 2 * population_dict['r_limit'] * (np.random.random() - 0.5)
+        ypos = 2 * population_dict['r_limit'] * (np.random.random() - 0.5)
         while np.sqrt(xpos*xpos + ypos*ypos) > population_dict['r_limit']:
              xpos = population_dict['r_limit'] * np.random.random()
-             ypos = population_dict['r_limit'] * np.random.random()
-             
-        neuron_dict[neur]['position'] = {'xpos': xpos,
-                                         'ypos': ypos,
-                                         'zpos': np.random.normal(population_dict['z_mid'], 0.1}
-        neuron_dict[neur]['rotation'] = {'x': -np.pi/2, 
-                                         'y': 0, 
-                                         'z': 2*np.pi*np.random.random()
-                                         }
-        
-    neuron.h('forall delete_section()')
-    try:
-        os.mkdir(ofolder)
-    except OSError:
-        pass
-    foo_params = cell_params.copy()
-    foo_params['tstartms'] = 0
-    foo_params['tstopms'] = 1
-    cell = LFPy.Cell(**foo_params)
-    cell.set_rotation(**rot_params)
-    cell.set_pos(**pos_params)       
-    if testing:
-        aLFP.plot_comp_numbers(cell)
+             ypos = population_dict['r_limit'] * np.random.random()             
+        pos_dict = {'xpos': xpos,
+                    'ypos': ypos,
+                    'zpos': np.random.normal(population_dict['z_mid'], 100)
+                    }
+        rot_dict = {'x': -np.pi/2, 
+                    'y': 0, 
+                    'z': 2*np.pi*np.random.random()
+                    }    
+        neuron.h('forall delete_section()')
+        try:
+            os.mkdir(ofolder)
+        except OSError:
+            pass
+        foo_params = cell_params.copy()
+        foo_params['tstartms'] = 0
+        foo_params['tstopms'] = 0
+        cell = LFPy.Cell(**foo_params)
+        cell.set_rotation(**rot_dict)
+        cell.set_pos(**pos_dict)       
 
-    # Define electrode parameters
-    electrode_parameters = {
-        'sigma' : 0.3,      # extracellular conductivity
-        'x' : elec_x,  # electrode requires 1d vector of positions
-        'y' : elec_y,
-        'z' : elec_z
+        # Define electrode parameters
+        electrode_parameters = {
+            'sigma' : 0.3,      # extracellular conductivity
+            'x' : elec_x,  # electrode requires 1d vector of positions
+            'y' : elec_y,
+            'z' : elec_z,
+            'method': 'pointsource'
+            }
+
+        electrode = LFPy.RecExtElectrode(**electrode_parameters)
+        cell.simulate(electrode=electrode)
+        
+        window_start_idx = np.random.randint(0, len(tvec) - ntsteps_window + 1)
+        window_end_idx = window_start_idx + ntsteps_window
+        neuron_dict[neur] = {'position': pos_dict,
+                             'rotation': rot_dict,
+                             'clr': neur_clr(cell_id),
+                             'mapping': electrode.electrodecoeff,
+                             'time_window_idx': [window_start_idx, window_end_idx]
         }
-    dist_list = []
-    for elec in xrange(len(elec_x)):
-        for comp in xrange(len(cell.xmid)):
-            dist = np.sqrt((cell.xmid[comp] - elec_x[elec])**2 +
-                           (cell.ymid[comp] - elec_y[elec])**2 +
-                           (cell.zmid[comp] - elec_z[elec])**2)
-            dist_list.append(dist)
-    print "Minimum electrode-comp distance: %g" %(np.min(dist_list))
-    if np.min(dist_list) <= 1:
-        ERR = "Too close"
-        raise RuntimeError, ERR
     
-    electrode = LFPy.RecExtElectrode(**electrode_parameters)
-    cell.simulate(electrode=electrode)
-    pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder)
+    plot_population(neuron_dict, elec_x, elec_y, elec_z)
+    pickle.dump(neuron_dict, open(join(ofolder, 'neuron_dict.p'), "wb"))

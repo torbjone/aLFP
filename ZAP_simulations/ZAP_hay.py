@@ -79,7 +79,6 @@ def simulate():
     #aLFP.test_static_Vm_distribution(cell_params, model, conductance_type)
     #aLFP.find_static_Vm_distribution(cell_params, model, conductance_type)
     #sys.exit()
-    
     simulate = ['active', 'Ih_linearized', 'passive_vss', 'Ih_reduced'] 
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
@@ -106,7 +105,6 @@ def plot_synaptic():
     for epas in epas_array:
         aLFP.plot_synaptic_currents(model, input_scalings[0], input_idxs[1], plot_params, 
                                     simulation_params, plot_compartments, epas=epas)
-
 
 def plot_LFPs():
     conductance_list = ['active', 'Ih_linearized', 'passive_vss']

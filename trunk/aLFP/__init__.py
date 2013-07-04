@@ -4,3 +4,4 @@
 from plotting import *
 from tools import *
 from cell_simulation import *
+from population_sim import *
