@@ -14,13 +14,13 @@ try:
     from ipdb import set_trace
 except:
     pass
-import pylab as pl
+import pylab as plt
 from os.path import join
 import aLFP
+import pickle
 
 model = 'hay' 
-
-np.random.seed(1234)
+np.random.seed(None)
 
 if at_stallo:
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
@@ -32,7 +32,6 @@ else:
 plot_params = {'ymax': 1250,
                'ymin': -250,
                }
-
 
 elec_z = np.linspace(-300, 1500, 10)
 elec_x = np.zeros(len(elec_z))
@@ -46,12 +45,12 @@ else:
 tstopms = 20000
 ntsteps = round((tstopms - 0) / timeres)
 
-population_dict = {'r_limit': 200,
-                   'z_mid': 0,
-                   'numcells': 4,
+population_dict = {'r_limit': 200.,
+                   'z_mid': 000,
+                   'numcells': 100,
                    'timeres': timeres,
                    'ntsteps': ntsteps,
-                   'window_length_ms': 200, 
+                   'window_length_ms': 1000, 
                    }
 
 conductance_type = 'passive'
@@ -95,16 +94,20 @@ all_synaptic_params = {
                },                
         }
 
-
 def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
     """  
-
-    conductance_list = ['passive_vss']
+    conductance_list = ['Ih_linearized', 'Ih_reduced']
     aLFP.run_population_simulation(cell_params, conductance_list, model, model_path, 
                                    ntsteps, all_synaptic_params)
+    
+def calc_LFP():
+    conductance_list = ['active', 'Ih_linearized', 'Ih_reduced', 'passive_vss']
+    neuron_dict = pickle.load(open(join(model, 'neuron_dict.p'), "rb"))
+    aLFP.calculate_LFP(neuron_dict, conductance_list, model, population_dict, elec_x, elec_y, elec_z)
 
+    
 def create_population():
     """ Creates a dictionary containing positions of all dummy cells in the population """
 

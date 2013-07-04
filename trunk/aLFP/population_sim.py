@@ -8,7 +8,14 @@ try:
     from ipdb import set_trace
 except:
     pass
-from mpl_toolkits.mplot3d import Axes3D
+if not os.environ.has_key('DISPLAY'):
+    import matplotlib
+    matplotlib.use('Agg')
+    at_stallo = True
+else:
+    at_stallo = False
+
+
 import pylab as plt
 from os.path import join
 import cPickle
@@ -89,7 +96,7 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
         set_input_spiketrain(cell, synapseParameters_NMDA, NMDA_spiketimes_dict)
 
         cell.simulate(rec_imem=True)
-        f = tables.openFile(join(ofolder, 'signal.h5'), mode = "w")
+        f = tables.openFile(join(ofolder, 'signal_%s.h5' %conductance_type), mode = "w")
         filters = tables.Filters(complevel=5, complib='zlib')
 
         somav_array = f.createCArray('/', 'somav', tables.Float32Col(),
@@ -104,9 +111,90 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
         f.close()
         plot_example(cell, sim_name)
 
-def calculate_LFP():
-    pass
-        
+def calculate_LFP(neuron_dict, conductance_list, ofolder, population_dict, elec_x, elec_y, elec_z):
+
+    for conductance_type in conductance_list:
+        f = tables.openFile(join(ofolder, 'signal_%s.h5' %conductance_type), mode = "r")
+        ntsteps_window = int(population_dict['window_length_ms'] / population_dict['timeres'])    
+        somavs = np.zeros((len(neuron_dict), ntsteps_window))
+        imems = np.zeros((len(neuron_dict), ntsteps_window))
+        total_LFP = np.zeros((len(elec_x), ntsteps_window))
+
+        for idx, neur in enumerate(neuron_dict):
+            idx1, idx2 = neuron_dict[neur]['time_window_idx']
+            somavs[idx,:] = f.root.somav[idx1:idx2]
+            imems[idx,:] = f.root.imem[0,idx1:idx2]
+            total_LFP += 1000 * np.dot(neuron_dict[neur]['mapping'], f.root.imem[:,idx1:idx2])
+        f.close()    
+        timestep = population_dict['timeres']/ 1000.
+        total_LFP_psd, freqs = aLFP.find_LFP_PSD(total_LFP, timestep)
+        plot_population_LFP(somavs, imems, freqs, total_LFP, total_LFP_psd, neuron_dict, 
+                            population_dict, elec_x, elec_y, elec_z, conductance_type)
+
+def plot_population_LFP(somavs, imems, freqs, total_LFP, total_LFP_psd, neuron_dict,
+                        population_dict, elec_x, elec_y, elec_z, conductance_type):
+
+    numplots = np.min([10, len(neuron_dict)])
+    fig = plt.figure(figsize=[8,6])
+    fig.subplots_adjust(wspace=0.7, hspace=0.7)
+    ax1 = fig.add_subplot(141, frameon=False , yticks=[], xticks=[])
+    
+    ax1.set_ylim(np.min(elec_z) - 100 , np.max(elec_z) + 100)
+    ax1.set_title('Electrode and population')
+    ntsteps_window = int(population_dict['window_length_ms'] / population_dict['timeres'])
+    short_t = np.arange(ntsteps_window)*population_dict['timeres']
+
+    ax1.get_xaxis().tick_top()
+    for idx, neur in enumerate(neuron_dict):
+        ax1.scatter(neuron_dict[neur]['position']['xpos'], 
+                    neuron_dict[neur]['position']['zpos'], 
+                    s=4, c=neuron_dict[neur]['clr'], clip_on=False, edgecolor='none')
+        if idx < numplots:
+            ax = fig.add_subplot(numplots, 4, (idx*4 + 4))
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.get_xaxis().tick_bottom()
+            ax.get_yaxis().tick_left()      
+            if idx == 0:
+                ax.set_title("Some soma Vm's")    
+            ax.plot(short_t, somavs[idx], color=neuron_dict[neur]['clr'])
+            ax.set_xticks([0, int((short_t[-1] + 1)/2),  int(short_t[-1] + 1)])
+            ax.set_yticks([np.min(somavs[idx]), np.max(somavs[idx])])
+            if idx == numplots - 1:
+                ax.set_xlabel('[ms]')
+    elec_clr = lambda idx: plt.cm.jet(int(256./len(elec_x) * idx))  
+    
+    for elec in xrange(len(elec_x)):
+        ax1.scatter(elec_x[elec], elec_z[elec], s=10, c=elec_clr(elec), edgecolor='none')
+        ax = fig.add_subplot(len(elec_x), 4, ((len(elec_x) - elec - 1)*4 + 2))
+        if elec == len(elec_x) - 1: 
+            ax.set_title('LFP [$\mu V$]')      
+        if elec == 0:
+            ax.set_xlabel('[ms]')
+        ax.plot(short_t, total_LFP[elec,:], color=elec_clr(elec))
+        ax.set_xticks([0, int((short_t[-1] + 1)/2),  int(short_t[-1] + 1)])
+        ax.set_yticks([np.min(total_LFP[elec,:]), np.max(total_LFP[elec,:])])
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.get_xaxis().tick_bottom()
+        ax.get_yaxis().tick_left()      
+          
+        ax_psd = fig.add_subplot(len(elec_x), 4, ((len(elec_x) - elec - 1)*4 + 3))
+        if elec == len(elec_x) - 1: 
+            ax_psd.set_title('LFP PSD [$\mu V$]')      
+        if elec == 0:
+            ax.set_xlabel('[Hz]')
+        ax_psd.loglog(freqs, total_LFP_psd[elec,:], color=elec_clr(elec))
+        ax_psd.set_xlim(1,110)
+        ax_psd.set_ylim(1e-5,1e1)
+        ax_psd.set_xticks([1e0, 1e2])
+        ax_psd.set_yticks([1e-5, 1e-3, 1e-1, 1e1])
+        ax_psd.spines['top'].set_visible(False)
+        ax_psd.spines['right'].set_visible(False)
+        ax_psd.get_xaxis().tick_bottom()
+        ax_psd.get_yaxis().tick_left()
+    fig.savefig('population_LFP_%d_%s.png' % (population_dict['numcells'], conductance_type))   
+    
 def plot_example(cell, sim_name):
 
     plt.close('all')
@@ -152,12 +240,10 @@ def set_input_spiketrain(cell, synparams, spiketimes_dict):
         s = LFPy.Synapse(cell, **synparams)
         s.set_spike_times(spiketrain)
         
-        
 def quickplot_vmem(cell, ofolder):
     plt.plot(cell.tvec, cell.somav)
     plt.savefig(join(ofolder, 'vmem.png'))
     
-
 def plot_population(neuron_dict, elec_x, elec_y, elec_z):
 
     fig = plt.figure(figsize=[3,6])
@@ -192,19 +278,25 @@ def initialize_dummy_population(population_dict, cell_params,
     tvec = np.arange(population_dict['ntsteps']) * population_dict['timeres']
     ntsteps_window = int(population_dict['window_length_ms'] / population_dict['timeres'])
     max_idx = 0
+    plot_morphology = True
+    if plot_morphology:
+        fig = plt.figure()
+        ax1 = fig.add_subplot(121, aspect='equal', rasterized=True)
+        ax2 = fig.add_subplot(122, aspect='equal', rasterized=True)
+        
     for cell_id in xrange(population_dict['numcells']):
         neur = 'cell_%04i' % cell_id
         print cell_id, '/', population_dict['numcells']
         xpos = 2 * population_dict['r_limit'] * (np.random.random() - 0.5)
         ypos = 2 * population_dict['r_limit'] * (np.random.random() - 0.5)
         while np.sqrt(xpos*xpos + ypos*ypos) > population_dict['r_limit']:
-             xpos = population_dict['r_limit'] * np.random.random()
-             ypos = population_dict['r_limit'] * np.random.random()             
+             xpos = 2 * population_dict['r_limit'] * (np.random.random() - 0.5)
+             ypos = 2 * population_dict['r_limit'] * (np.random.random() - 0.5)  
         pos_dict = {'xpos': xpos,
                     'ypos': ypos,
                     'zpos': np.random.normal(population_dict['z_mid'], 100)
                     }
-        rot_dict = {'x': -np.pi/2, 
+        rot_dict = {'x': 0, 
                     'y': 0, 
                     'z': 2*np.pi*np.random.random()
                     }    
@@ -219,7 +311,19 @@ def initialize_dummy_population(population_dict, cell_params,
         cell = LFPy.Cell(**foo_params)
         cell.set_rotation(**rot_dict)
         cell.set_pos(**pos_dict)       
-
+        if plot_morphology:
+            for comp in xrange(len(cell.xmid)):
+                if comp == 0:
+                    ax1.scatter(cell.xmid[comp], cell.zmid[comp], 
+                                s=cell.diam[comp], c=neur_clr(cell_id), edgecolor='none')
+                    ax2.scatter(cell.xmid[comp], cell.ymid[comp], 
+                                c=neur_clr(cell_id), marker='^', edgecolor='none')
+                else:
+                    ax1.plot([cell.xstart[comp], cell.xend[comp]],
+                             [cell.zstart[comp], cell.zend[comp]], 
+                             lw=cell.diam[comp]/2, color=neur_clr(cell_id))
+                    
+                
         # Define electrode parameters
         electrode_parameters = {
             'sigma' : 0.3,      # extracellular conductivity
@@ -240,6 +344,9 @@ def initialize_dummy_population(population_dict, cell_params,
                              'mapping': electrode.electrodecoeff,
                              'time_window_idx': [window_start_idx, window_end_idx]
         }
-    
+    if plot_morphology:
+        ax1.scatter(elec_x, elec_z, c='r', s=20)
+        ax2.scatter(elec_x, elec_y, c='r', s=20) 
+    fig.savefig('morph.png')
     plot_population(neuron_dict, elec_x, elec_y, elec_z)
     pickle.dump(neuron_dict, open(join(ofolder, 'neuron_dict.p'), "wb"))

@@ -225,7 +225,6 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
                   np.load(join(ofolder, 'input_array.npy'))
     noiseVec = neuron.h.Vector(input_array)
     i = 0
-
     syn = None
     for sec in cell.allseclist:
         for seg in sec:
@@ -410,7 +409,8 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
     elif input_type == 'ZAP':
         cell, save_method = make_ZAP_stimuli(cell, input_idx, input_scaling)
     elif input_type == 'WN':
-        cell, save_method = make_WN_stimuli(cell, input_idx, input_scaling, ofolder)
+        print "WN!"
+        cell, save_method, syn, noiseVec = make_WN_stimuli(cell, input_idx, input_scaling, ofolder)
     else:
         raise RuntimeError("No known 'input_type'")
     cell.simulate(**simulation_params)
@@ -450,6 +450,7 @@ def make_ZAP_stimuli(cell, input_idx, input_scaling):
 
 def make_WN_stimuli(cell, input_idx, input_scaling, ofolder):
     input_array = input_scaling * np.load(join(ofolder, 'input_array.npy'))
+    print input_array
     noiseVec = neuron.h.Vector(input_array)
     i = 0
     syn = None
@@ -464,7 +465,7 @@ def make_WN_stimuli(cell, input_idx, input_scaling, ofolder):
     syn.delay = 0
     noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
     save_method = save_WN_data
-    return cell, save_method
+    return cell, save_method, syn, noiseVec
     
 def save_simple(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
 
@@ -490,12 +491,14 @@ def save_simple(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
 
 def save_WN_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     timestep = (cell.tvec[1] - cell.tvec[0])/1000.
-    np.save(join(ofolder, 'tvec.npy'), cell.tvec[:ntsteps])
-
-
+    
+    linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx, postfix='_uncut')
     cell.imem = cell.imem[:,-ntsteps:]
     cell.vmem = cell.vmem[:,-ntsteps:]
+    cell.somav = cell.somav[-ntsteps:]
+    cell.tvec = cell.tvec[-ntsteps:] - cell.tvec[-ntsteps]
     
+    np.save(join(ofolder, 'tvec.npy'), cell.tvec)
     mapping = np.load(join(ofolder, 'mapping.npy'))
     sig = 1000 * np.dot(mapping, cell.imem)
     sig_psd, freqs = find_LFP_PSD(sig, timestep)
@@ -513,7 +516,8 @@ def save_WN_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
 
     linearized_quickplot_frequency(cell, imem_psd, vmem_psd, freqs, sim_name, 
                                    ofolder, static_Vm, input_idx)
-
+    linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx)
+    
 def pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder):
     plt.close('all')
     plt.subplot(121)
@@ -529,8 +533,6 @@ def pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder):
     plt.ylabel('y')    
     plt.axis('equal')
     plt.savefig(join(ofolder, 'pos_%s.png' % cell_name))
-
-
 
 def linearized_quickplot_frequency(cell, imem_psd, vmem_psd, freqs, sim_name, 
                                    ofolder, static_Vm, input_idx):
@@ -551,34 +553,37 @@ def linearized_quickplot_frequency(cell, imem_psd, vmem_psd, freqs, sim_name,
     plt.subplot(243)
     plt.title('Soma imem amp [nA]')
     plt.xlabel('Hz')
-    plt.yscale('log')
-    plt.xlim(0,110)
-    plt.plot(freqs, imem_psd[0,:])
+    #plt.yscale('log')
+    plt.xlim(1,110)
+    plt.ylim(1e-5,1e1)
+    plt.loglog(freqs, imem_psd[0,:])
     
     plt.subplot(247)
     plt.title('Soma vmem amp')
     plt.xlabel('Hz')
-    plt.yscale('log')
-    plt.xlim(0,110)
-    plt.plot(freqs, vmem_psd[0,:])
-    plt.plot(0, static_Vm[0], 'ro')
+    #plt.yscale('log')
+    plt.xlim(1,110)
+    plt.ylim(1e-5,1e1)
+    plt.loglog(freqs, vmem_psd[0,:])
 
     plt.subplot(244)
     plt.title('Input imem amp [nA]')
     plt.xlabel('Hz')
-    plt.yscale('log')
-    plt.xlim(0,110)
-    plt.plot(freqs, imem_psd[input_idx,:])
+    #plt.yscale('log')
+    plt.xlim(1,110)
+    plt.ylim(1e-5,1e1)
+    plt.loglog(freqs, imem_psd[input_idx,:])
     
     plt.subplot(248)
     plt.title('Input vmem amp')    
     plt.xlabel('Hz')
-    plt.yscale('log')
-    plt.xlim(0,110)
-    plt.plot(freqs, vmem_psd[input_idx,:])
+    #plt.yscale('log')
+    plt.xlim(1,110)
+    plt.ylim(1e-5,1e1)
+    plt.loglog(freqs, vmem_psd[input_idx,:])
     plt.savefig(join(ofolder, 'current_psd_%s.png' %sim_name))
 
-def linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx):
+def linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx, postfix=''):
     plt.close('all')
     plt.subplots_adjust(hspace=0.3)
     ax0 = plt.subplot(161, aspect='equal', frameon=False, xticks=[], yticks=[],
@@ -615,7 +620,7 @@ def linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx):
         plt.plot(cell.tvec, cell.vmem[input_idx,:])
     except:
         pass    
-    plt.savefig(join(ofolder, 'current_%s.png' %sim_name))
+    plt.savefig(join(ofolder, 'current_%s%s.png' %(sim_name, postfix)))
 
 def vmem_quickplot(cell, sim_name, ofolder, input_array=None):
     plt.close('all')

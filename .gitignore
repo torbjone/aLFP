@@ -4,3 +4,7 @@ deprecated/
 klas/
 white_noise_ball_n_stick/
 *.png
+*.npy
+*.h5
+*.p
+*.asc
