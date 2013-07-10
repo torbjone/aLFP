@@ -31,7 +31,7 @@ plt.rcParams.update({'font.size' : 8,
 np.random.seed(1234)
 
 def run_population_simulation(cell_params, conductance_list, ofolder, model_path,
-                              ntsteps, all_synaptic_params):
+                              ntsteps, all_synaptic_params, numsimulations=1):
 
    # Excitatory synapse parameters:
     synapseParameters_AMPA = {
@@ -66,50 +66,50 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
         'marker' : '.',
         'record_current' : True
         }
-    
     static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
-    cell = LFPy.Cell(**cell_params)
-    
-    AMPA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['AMPA'])
-    GABA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['GABA_A'])
-    NMDA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['NMDA'])
-    
-    for conductance_type in conductance_list:
-        neuron.h('forall delete_section()')
-        neuron.h('secondorder=2')
-        del cell
-        cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                      join(model_path, 'biophys3_%s.hoc' % conductance_type)]        
-
-        cell_params['v_init'] = np.average(static_Vm)
+    for part in xrange(numsimulations):
         cell = LFPy.Cell(**cell_params)
-        sim_name = conductance_type
-        if not conductance_type == 'active':
-            comp_idx = 0
-            for sec in cell.allseclist:
-                for seg in sec:
-                    exec('seg.vss_%s = static_Vm[%d]'% (conductance_type, comp_idx))
-                    comp_idx += 1
-                    
-        set_input_spiketrain(cell, synapseParameters_AMPA, AMPA_spiketimes_dict)
-        set_input_spiketrain(cell, synapseParameters_GABA_A, GABA_spiketimes_dict)
-        set_input_spiketrain(cell, synapseParameters_NMDA, NMDA_spiketimes_dict)
+    
+        AMPA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['AMPA'])
+        GABA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['GABA_A'])
+        NMDA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['NMDA'])
 
-        cell.simulate(rec_imem=True)
-        f = tables.openFile(join(ofolder, 'signal_%s.h5' %conductance_type), mode = "w")
-        filters = tables.Filters(complevel=5, complib='zlib')
+        for conductance_type in conductance_list:
+            neuron.h('forall delete_section()')
+            neuron.h('secondorder=2')
+            del cell
+            cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                          join(model_path, 'biophys3_%s.hoc' % conductance_type)]        
 
-        somav_array = f.createCArray('/', 'somav', tables.Float32Col(),
-                                     [len(cell.somav)], filters=filters)
-        somav_array[:] = cell.somav
-        t_array = f.createCArray('/', 'tvec', tables.Float32Col(),
-                                 [len(cell.tvec)], filters=filters)
-        t_array[:] = cell.tvec
-        imem_array = f.createCArray('/', 'imem', tables.Float32Col(),
-                                    cell.imem.shape, filters=filters)
-        imem_array[:,:] = cell.imem
-        f.close()
-        plot_example(cell, sim_name)
+            cell_params['v_init'] = np.average(static_Vm)
+            cell = LFPy.Cell(**cell_params)
+            sim_name = conductance_type + '_%d' %part
+            if not conductance_type == 'active':
+                comp_idx = 0
+                for sec in cell.allseclist:
+                    for seg in sec:
+                        exec('seg.vss_%s = static_Vm[%d]'% (conductance_type, comp_idx))
+                        comp_idx += 1
+
+            set_input_spiketrain(cell, synapseParameters_AMPA, AMPA_spiketimes_dict)
+            set_input_spiketrain(cell, synapseParameters_GABA_A, GABA_spiketimes_dict)
+            set_input_spiketrain(cell, synapseParameters_NMDA, NMDA_spiketimes_dict)
+
+            cell.simulate(rec_imem=True)
+            f = tables.openFile(join(ofolder, 'signal_%s.h5' %sim_name), mode = "w")
+            filters = tables.Filters(complevel=5, complib='zlib')
+
+            somav_array = f.createCArray('/', 'somav', tables.Float32Col(),
+                                         [len(cell.somav)], filters=filters)
+            somav_array[:] = cell.somav
+            t_array = f.createCArray('/', 'tvec', tables.Float32Col(),
+                                     [len(cell.tvec)], filters=filters)
+            t_array[:] = cell.tvec
+            imem_array = f.createCArray('/', 'imem', tables.Float32Col(),
+                                        cell.imem.shape, filters=filters)
+            imem_array[:,:] = cell.imem
+            f.close()
+            plot_example(cell, sim_name)
 
 def calculate_LFP(neuron_dict, conductance_list, ofolder, population_dict, elec_x, elec_y, elec_z):
 

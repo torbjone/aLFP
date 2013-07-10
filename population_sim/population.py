@@ -20,7 +20,7 @@ import aLFP
 import pickle
 
 model = 'hay' 
-np.random.seed(None)
+np.random.seed(1234)
 
 if at_stallo:
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
@@ -42,7 +42,7 @@ if at_stallo:
 else:
     timeres = 2**-3
 
-tstopms = 20000
+tstopms = 10 * 1000
 ntsteps = round((tstopms - 0) / timeres)
 
 population_dict = {'r_limit': 200.,
@@ -98,9 +98,9 @@ def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
     """  
-    conductance_list = ['Ih_linearized', 'Ih_reduced']
+    conductance_list = ['passive_vss', 'Ih_linearized', 'Ih_reduced', 'active']
     aLFP.run_population_simulation(cell_params, conductance_list, model, model_path, 
-                                   ntsteps, all_synaptic_params)
+                                   ntsteps, all_synaptic_params, 6)
     
 def calc_LFP():
     conductance_list = ['active', 'Ih_linearized', 'Ih_reduced', 'passive_vss']
