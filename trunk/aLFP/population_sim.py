@@ -111,6 +111,35 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
             f.close()
             plot_example(cell, sim_name)
 
+
+def combine_parts(conductance_list, ofolder, ntsteps, numsimulations=1):
+    """ If simulations have been split into parts, they are combined again here"""
+
+    filters = tables.Filters(complevel=5)
+    sim_name_temp = conductance_list[0] + '_0'
+    f_temp = tables.openFile(join(ofolder, 'signal_%s.h5' %sim_name_temp) , mode = "r")
+    ncomps = f_temp.root.imem.shape[0]
+    f_temp.close()
+
+    for numb, conductance_type in enumerate(conductance_list):
+        
+        f_total = tables.openFile(join(ofolder, 'signal_%s.h5' %conductance_type), mode = "w")
+        tot_ntsteps = ntsteps * numsimulations
+        sig_array = f_total.createCArray('/', 'imem', tables.Float32Col(), 
+                                         [ncomps, tot_ntsteps], filters=filters)
+        somav_array = f_total.createCArray('/', 'somav', tables.Float32Col(),
+                                         [tot_ntsteps], filters=filters)
+        for partnumb in xrange(numsimulations):
+            print conductance_type, partnumb
+            sim_name = conductance_type + '_%d' %partnumb
+            part_filename = join(ofolder, 'signal_%s.h5' %sim_name)
+            f_part = tables.openFile(part_filename, mode = "r")
+            sig_array[:,partnumb*ntsteps:(partnumb+1)*ntsteps] = f_part.root.imem[:,:ntsteps]
+            somav_array[partnumb*ntsteps:(partnumb+1)*ntsteps] = f_part.root.somav[:ntsteps]  
+            f_part.close()
+        f_total.close()
+
+
 def calculate_LFP(neuron_dict, conductance_list, ofolder, population_dict, elec_x, elec_y, elec_z):
 
     for conductance_type in conductance_list:
@@ -278,7 +307,7 @@ def initialize_dummy_population(population_dict, cell_params,
     tvec = np.arange(population_dict['ntsteps']) * population_dict['timeres']
     ntsteps_window = int(population_dict['window_length_ms'] / population_dict['timeres'])
     max_idx = 0
-    plot_morphology = True
+    plot_morphology = False
     if plot_morphology:
         fig = plt.figure()
         ax1 = fig.add_subplot(121, aspect='equal', rasterized=True)
@@ -347,6 +376,6 @@ def initialize_dummy_population(population_dict, cell_params,
     if plot_morphology:
         ax1.scatter(elec_x, elec_z, c='r', s=20)
         ax2.scatter(elec_x, elec_y, c='r', s=20) 
-    fig.savefig('morph.png')
+        fig.savefig('morph.png')
     plot_population(neuron_dict, elec_x, elec_y, elec_z)
     pickle.dump(neuron_dict, open(join(ofolder, 'neuron_dict.p'), "wb"))

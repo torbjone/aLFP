@@ -47,7 +47,7 @@ ntsteps = round((tstopms - 0) / timeres)
 
 population_dict = {'r_limit': 200.,
                    'z_mid': 000,
-                   'numcells': 100,
+                   'numcells': 1000,
                    'timeres': timeres,
                    'ntsteps': ntsteps,
                    'window_length_ms': 1000, 
@@ -101,6 +101,7 @@ def simulate_single_cell():
     conductance_list = ['passive_vss', 'Ih_linearized', 'Ih_reduced', 'active']
     aLFP.run_population_simulation(cell_params, conductance_list, model, model_path, 
                                    ntsteps, all_synaptic_params, 6)
+    aLFP.combine_parts(conductance_list, model, ntsteps, numsimulations=6)
     
 def calc_LFP():
     conductance_list = ['active', 'Ih_linearized', 'Ih_reduced', 'passive_vss']
