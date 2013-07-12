@@ -150,7 +150,7 @@ def test_static_Vm_distribution(cell_params, ofolder, conductance_type):
         plt.plot(cell.tvec[-100:], cell.vmem[comp,-100:] - cell.vmem[comp,-100], 'k')
     #plt.ylim(-80, -62)
     plt.xlim(cell.tvec[-100], cell.tvec[-1] + 1)
-    plt.savefig(join(ofolder, 'Vm_distribution_set_to_static.png'))
+    plt.savefig(join(ofolder, 'Vm_distribution_active_vss.png'))
     
 def find_static_Vm_distribution(cell_params, ofolder, conductance_type, epas=None):
 
@@ -161,10 +161,9 @@ def find_static_Vm_distribution(cell_params, ofolder, conductance_type, epas=Non
     cell_params['timeres_NEURON'] = 2**-4
     cell_params['timeres_python'] = 2**-4
     cell = LFPy.Cell(**cell_params)
-    #if not epas == None:
-    #    for sec in cell.allseclist:
-    #        for seg in sec:
-    #            seg.pas.e = epas
+    for sec in cell.allseclist:
+        for seg in sec:
+            seg.vss_passive_vss = -77
     cell.simulate(rec_vmem=True)
     plt.subplot(131, aspect='equal', frameon=False, xticks=[], yticks=[])
     plt.title('Static Vm distribution after totally %d ms of rest' %(cell_params['tstopms'] - cell_params['tstartms']))
@@ -182,8 +181,8 @@ def find_static_Vm_distribution(cell_params, ofolder, conductance_type, epas=Non
     for comp in xrange(len(cell.xmid)):
         plt.plot(cell.tvec, cell.vmem[comp,:] - cell.vmem[comp,0] , 'k')
     plt.xlim(-5, cell.tvec[-1] + 5)
-    plt.savefig(join(ofolder, 'static_Vm_distribution.png'))
-    np.save(join(ofolder, 'static_Vm_distribution.npy'), cell.vmem[:,-1])
+    plt.savefig(join(ofolder, 'static_Vm_distribution_active_vss_homogeneous_Ih.png'))
+    np.save(join(ofolder, 'static_Vm_distribution_active_vss_homogeneous_Ih.npy'), cell.vmem[:,-1])
 
 def check_current_sum(cell, noiseVec):
     const = (1E-2 * cell.area)
