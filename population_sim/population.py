@@ -40,14 +40,14 @@ elec_y = np.zeros(len(elec_z))
 if at_stallo:
     timeres = 2**-5
 else:
-    timeres = 2**-3
+    timeres = 2**-5
 
 tstopms = 10 * 1000
 ntsteps = round((tstopms - 0) / timeres)
 
 population_dict = {'r_limit': 200.,
                    'z_mid': 000,
-                   'numcells': 1000,
+                   'numcells': 20,
                    'timeres': timeres,
                    'ntsteps': ntsteps,
                    'window_length_ms': 1000, 
@@ -106,7 +106,8 @@ def simulate_single_cell():
 def calc_LFP():
     conductance_list = ['active', 'Ih_linearized', 'Ih_reduced', 'passive_vss']
     neuron_dict = pickle.load(open(join(model, 'neuron_dict.p'), "rb"))
-    aLFP.calculate_LFP(neuron_dict, conductance_list, model, population_dict, elec_x, elec_y, elec_z)
+    aLFP.calculate_LFP(neuron_dict, conductance_list, model, 
+                       population_dict, elec_x, elec_y, elec_z, cell_params)
 
     
 def create_population():
