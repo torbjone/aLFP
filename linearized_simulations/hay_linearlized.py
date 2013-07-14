@@ -37,9 +37,10 @@ plot_params = {'ymax': 1250,
                'ymin': -250,
                }
 
+input_idxs = [791]
+input_scalings = [0.001]
 
-
-input_idxs = [0, 791]
+input_idxs = [0]
 input_scalings = [0.01]
 
 epas_array = [-90]#-100,-90, -80, -70]
@@ -83,9 +84,9 @@ def simulate_synaptic():
     #aLFP.find_static_Vm_distribution(cell_params, model, conductance_type)
     #sys.exit()
     
-    simulate = ['active', 'Ih_linearized', 'passive_vss', 'Ih_reduced'] 
+    simulate = ['active_vss_homogeneous_Ih_half'] 
     ntsteps = round((tstopms - 0) / timeres)
-    aLFP.initialize_synaptic_cell(cell_params, pos_params, rot_params, model, 
+    aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
     single_run = 0
     if single_run:
@@ -94,6 +95,7 @@ def simulate_synaptic():
         temp_sim_params = simulation_params.copy()
         aLFP.run_synaptic_simulation(cell_params, input_scalings[0], input_idxs[0], 
                             model, ntsteps, temp_sim_params, conductance_type, epas=-90)
+
     for conductance_type in simulate:
         temp_sim_params = simulation_params.copy()
             
@@ -165,7 +167,8 @@ def plot_synaptic():
 
 
 def plot_LFPs():
-    conductance_list = ['active', 'Ih_linearized', 'passive_vss']
+    conductance_list = ['active_vss_homogeneous_Ih', 'active_vss_homogeneous_Ih_half',
+                        'active']
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             aLFP.compare_LFPs(model, input_scaling, input_idx, elec_x, elec_y, elec_z, plot_params, 

@@ -1002,7 +1002,7 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
         ax_in_shifted.plot(tvec, vmem_dict[conductance_type][input_idx,:] - \
                          vmem_dict[conductance_type][input_idx,0], lw=2,
                          color=conductance_color_dict[conductance_type])
-    ax_vm_shifted.legend(bbox_to_anchor=[1.8,1])
+    ax_vm_shifted.legend(bbox_to_anchor=[2.1,1])
     for comp in xrange(len(xmid)):
         if comp == 0:
             ax_neur.scatter(xmid[comp], ymid[comp], s=diam[comp]*10, c='gray', edgecolor='none')
@@ -1037,9 +1037,9 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
         ax_temp.set_xticklabels([])
         ax_temp.set_yticklabels([])
         #ax_temp.grid(True)
-        for conductance_type in conductance_list:
+        for idx, conductance_type in enumerate(conductance_list):
             ax_temp.plot(tvec, sig_dict[conductance_type][elec] -sig_dict[conductance_type][elec,0], 
-            color=conductance_color_dict[conductance_type], lw=2)
+            color=conductance_color_dict[conductance_type], lw=1)
         pos = [elec_x[elec], elec_y[elec]]
         if elec == 0:
             #ax_temp.legend(bbox_to_anchor=[1.4, 1.22])
@@ -1050,6 +1050,7 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
         LFP_arrow_to_axis(pos, ax_neur, ax_temp, elec_clr_list[elec], ax_xpos)
     ax_neur.axis(neur_ax)
     plt.savefig('LFP_%s_%s.png' % (ifolder, sim_name))
+    #plt.show()
 
 def LFP_arrow_to_axis(pos, ax_origin, ax_target, clr, ax_xpos):
     if ax_xpos < 0.5:

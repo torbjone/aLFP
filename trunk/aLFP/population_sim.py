@@ -66,7 +66,7 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
         'marker' : '.',
         'record_current' : True
         }
-    static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
+    static_Vm = np.load(join(ofolder, 'static_Vm_distribution_active_vss.npy'))
     for part in xrange(numsimulations):
         cell = LFPy.Cell(**cell_params)
     
@@ -84,12 +84,23 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
             cell_params['v_init'] = np.average(static_Vm)
             cell = LFPy.Cell(**cell_params)
             sim_name = conductance_type + '_%d' %part
-            if not conductance_type == 'active':
+            if conductance_type in ['active', 'active_homogeneous_Ih']:
+                pass
+            elif conductance_type in ['active_vss', 'active_vss_homogeneous_Ih']:
+                comp_idx = 0
+                for sec in cell.allseclist:
+                    for seg in sec:
+                        exec('seg.vss_passive_vss = static_Vm[%d]'% (comp_idx))
+                        comp_idx += 1
+            elif conductance_type in ['Ih_reduced', 'Ih_linearized']:
                 comp_idx = 0
                 for sec in cell.allseclist:
                     for seg in sec:
                         exec('seg.vss_%s = static_Vm[%d]'% (conductance_type, comp_idx))
                         comp_idx += 1
+            else:
+                raise RuntimeError
+                        
             set_input_spiketrain(cell, synapseParameters_AMPA, AMPA_spiketimes_dict)
             set_input_spiketrain(cell, synapseParameters_GABA_A, GABA_spiketimes_dict)
             set_input_spiketrain(cell, synapseParameters_NMDA, NMDA_spiketimes_dict)
@@ -353,7 +364,8 @@ def initialize_dummy_population(population_dict, cell_params,
 
     neur_clr = lambda idx: plt.cm.rainbow(int(256./population_dict['numcells'] * idx))  
     neuron_dict = {}
-    tvec = np.arange(population_dict['ntsteps']) * population_dict['timeres']
+    tvec = np.arange(population_dict['ntsteps'] * population_dict['numsimulations']) * \
+      population_dict['timeres']
     ntsteps_window = int(population_dict['window_length_ms'] / population_dict['timeres'])
     max_idx = 0
     

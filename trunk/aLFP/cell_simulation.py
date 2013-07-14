@@ -392,18 +392,22 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
     static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
-    cell_params['v_init'] = np.average(static_Vm)
+    cell_params['v_init'] = 77#np.average(static_Vm)
     cell = LFPy.Cell(**cell_params)
     sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
     print sim_name
-    if not conductance_type == 'active':
+
+    if conductance_type in ['active', 'active_homogeneous_Ih']:
+        pass
+    if conductance_type in ['active_vss', 'active_vss_homogeneous_Ih', 
+                            'active_vss_homogeneous_Ih_half']:
         comp_idx = 0
         for sec in cell.allseclist:
             for seg in sec:
-                exec('seg.vss_%s = static_Vm[%d]'% (conductance_type, comp_idx))
+                exec('seg.vss_passive_vss = -80')
                 comp_idx += 1
 
-    if input_type == 'synapse':
+    if input_type == 'synaptic':
         cell, save_method = make_synapse_stimuli(cell, input_idx, input_scaling)
     elif input_type == 'ZAP':
         cell, save_method = make_ZAP_stimuli(cell, input_idx, input_scaling)
@@ -473,8 +477,8 @@ def save_simple(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
 
     mapping = np.load(join(ofolder, 'mapping.npy'))
     sig = 1000 * np.dot(mapping, cell.imem)
-    #sig_psd, freqs = find_LFP_PSD(sig, timestep)
-    #np.save(join(ofolder, 'sig_psd_%s.npy' %(sim_name)), sig_psd)
+    sig_psd, freqs = find_LFP_PSD(sig, timestep)
+    np.save(join(ofolder, 'sig_psd_%s.npy' %(sim_name)), sig_psd)
     np.save(join(ofolder, 'sig_%s.npy' %(sim_name)), sig)
     
     linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx)
@@ -483,8 +487,8 @@ def save_simple(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     np.save(join(ofolder, 'vmem_%s.npy' %(sim_name)), cell.vmem)
     #imem_psd, freqs = find_LFP_PSD(imem, timestep)
     #np.save(join(ofolder, 'imem_psd_%s.npy' %(sim_name)), imem_psd)
-    #np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), imem)
-    #np.save(join(ofolder, 'freqs.npy'), freqs)
+    np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), cell.imem)
+    np.save(join(ofolder, 'freqs.npy'), freqs)
 
     
 

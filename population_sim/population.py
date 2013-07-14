@@ -24,10 +24,10 @@ np.random.seed(1234)
 
 if at_stallo:
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
-    cut_off = 6000
+    cut_off = 1000
 else:
     neuron_model = join('..', 'neuron_models', model)
-    cut_off = 100
+    cut_off = 200
 
 plot_params = {'ymax': 1250,
                'ymin': -250,
@@ -47,10 +47,11 @@ ntsteps = round((tstopms - 0) / timeres)
 
 population_dict = {'r_limit': 200.,
                    'z_mid': 000,
-                   'numcells': 20,
+                   'numcells': 1000,
                    'timeres': timeres,
                    'ntsteps': ntsteps,
                    'window_length_ms': 1000, 
+                   'numsimulations': 3
                    }
 
 conductance_type = 'passive'
@@ -98,13 +99,16 @@ def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
     """  
-    conductance_list = ['passive_vss', 'Ih_linearized', 'Ih_reduced', 'active']
+    conductance_list = ['Ih_reduced', 'Ih_linearized', 'active_vss_homogeneous_Ih', 
+                        'active', 'active_vss', 'active_vss_homogeneous_Ih']
     aLFP.run_population_simulation(cell_params, conductance_list, model, model_path, 
-                                   ntsteps, all_synaptic_params, 6)
-    aLFP.combine_parts(conductance_list, model, ntsteps, numsimulations=6)
+                                   ntsteps, all_synaptic_params, 
+                                   population_dict['numsimulations'])
+    aLFP.combine_parts(conductance_list, model, ntsteps, 
+                       numsimulations=population_dict['numsimulations'])
     
 def calc_LFP():
-    conductance_list = ['active', 'Ih_linearized', 'Ih_reduced', 'passive_vss']
+    conductance_list = ['active', 'active_homogeneous_Ih']
     neuron_dict = pickle.load(open(join(model, 'neuron_dict.p'), "rb"))
     aLFP.calculate_LFP(neuron_dict, conductance_list, model, 
                        population_dict, elec_x, elec_y, elec_z, cell_params)
