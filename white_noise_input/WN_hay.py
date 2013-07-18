@@ -28,20 +28,21 @@ if at_stallo:
     cut_off = 6000
 else:
     neuron_model = join('..', 'neuron_models', model)
-    cut_off = 100
+    cut_off = 2000
 
 simulation_params = {'rec_imem': True,
-                     'rec_icap' : True,
-                     'rec_ipas': True,
-                     'rec_variables': ['ina', 'ik', 'ica', 'ihcn_Ih'],
+                     'rec_vmem': True,
+                     #'rec_icap' : True,
+                     #'rec_ipas': True,
+                     #'rec_variables': ['ina', 'ik', 'ica', 'ihcn_Ih'],
                      }
 
 plot_params = {'ymax': 1250,
                'ymin': -250,
                }
     
-input_idxs = [791]#, 791, 611, 681, 740]
-input_scalings = [0.01]#[0., 0.01, 0.1, 1.0]
+input_idxs = [0]#, 791, 611, 681, 740]
+input_scalings = [0.1]#[0., 0.01, 0.1, 1.0]
 epas_array = [-100, -90, -80, -70, -60, -50]
 
 n_plots = 10
@@ -82,11 +83,11 @@ def simulate():
     }
 
 
-    simulate = ['reduced_SKv3_1']
+    simulate = ['Ih_linearized', 'passive', 'active']
     
     ntsteps = round((tstopms - 0) / timeres)
-    aLFP.initialize_WN_cell(cell_params, pos_params, rot_params, model, 
-                         elec_x, elec_y, elec_z, ntsteps, model, testing=False)
+    aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
+                         elec_x, elec_y, elec_z, ntsteps, model, make_WN_input=True, testing=False)
     single_run = 0
     if single_run:
         temp_sim_params = simulation_params.copy()
@@ -101,17 +102,17 @@ def simulate():
         
     for conductance_type in simulate:
         temp_sim_params = simulation_params.copy()
-        if conductance_type == 'passive':
-            temp_sim_params['rec_variables'] = []
-        elif conductance_type == 'reduced_Ih':
-            temp_sim_params['rec_variables'] = ['ihcn_Ih']
-        elif conductance_type == 'reduced_SKv3_1':
-            temp_sim_params['rec_variables'] = ['ihcn_Ih', 'ik']            
+        #if conductance_type == 'passive':
+        #    temp_sim_params['rec_variables'] = []
+        #elif conductance_type == 'reduced_Ih':
+        #    temp_sim_params['rec_variables'] = ['ihcn_Ih']
+        #elif conductance_type == 'reduced_SKv3_1':
+        #    temp_sim_params['rec_variables'] = ['ihcn_Ih', 'ik']            
         
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
         aLFP.run_all_WN_simulations(cell_params, model, input_idxs, input_scalings, ntsteps, 
-                                 temp_sim_params, conductance_type, epas_array=epas_array)
+                                 temp_sim_params, conductance_type)
 
 def plot_transfer():
     aLFP.plot_transfer_functions(model, 0.1, 0, plot_params, 

@@ -1,4 +1,4 @@
-g// Author: Etay Hay, 2011
+// Author: Etay Hay, 2011
 //    Models of Neocortical Layer 5b Pyramidal Cells Capturing a Wide Range of
 //    Dendritic and Perisomatic Active Properties
 //    (Hay et al., PLoS Computational Biology, 2011) 
@@ -36,7 +36,7 @@ proc biophys() {
 		insert Ih
 		ek = -85
 		ena = 50
-		gIhbar_Ih = 0.0002
+		gIhbar_Ih = 0.0002/2
         	gl_passive_vss = 0.0000338 
   		decay_CaDynamics_E2 = 460.0 
 		gamma_CaDynamics_E2 = 0.000501 
@@ -69,15 +69,16 @@ proc biophys() {
   		gNaTa_tbar_NaTa_t = 0.0213 
   		gImbar_Im = 0.0000675 
   		gl_passive_vss = 0.0000589 
+		gIhbar_Ih = 0.0002/2
 	}
-	distribute_channels("apic","gIhbar_Ih",2,-0.8696,3.6161,0.0,2.0870,0.00020000000) 
+	//distribute_channels("apic","gIhbar_Ih",2,-0.8696,3.6161,0.0,2.0870,0.00020000000) 
 	distribute_channels("apic","gCa_LVAstbar_Ca_LVAst",3,1.000000,0.010000,685.000000,885.000000,0.0187000000) 
 	distribute_channels("apic","gCa_HVAbar_Ca_HVA",3,1.000000,0.100000,685.000000,885.000000,0.0005550000) 
 	
   	forsec "dend" {
 		cm = 2
 		insert Ih
-		gIhbar_Ih = 0.0002
+		gIhbar_Ih = 0.0002/2
   		gl_passive_vss = 0.0000467 
 	}
 

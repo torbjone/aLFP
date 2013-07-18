@@ -22,11 +22,15 @@ np.random.seed(1234)
 
 def run_all_WN_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
                            simulation_params, conductance_type, epas_array=[None]):
+    if conductance_type == 'Ih_linearized':
+        vss = -70
+    else:
+        vss = None
     for epas in epas_array:
         for input_idx in input_idxs:
             for input_scaling in input_scalings:
                 run_WN_simulation(cell_params, input_scaling, input_idx, model, ntsteps, 
-                                  simulation_params, conductance_type, epas)        
+                                  simulation_params, conductance_type, epas, vss=vss)        
 
 def run_all_synaptic_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
                                  simulation_params, conductance_type, epas_array=[None]):
@@ -36,12 +40,11 @@ def run_all_synaptic_simulations(cell_params, model, input_idxs, input_scalings,
                     run_synaptic_simulation(cell_params, input_scaling, input_idx, model, ntsteps,
                                             simulation_params, conductance_type)        
         
-def run_all_linearized_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
+def run_all_linearized_simulations(cell_params, model, input_idx_scale, ntsteps,
                                    simulation_params, conductance_type, input_type='synaptic'):
-    for input_idx in input_idxs:
-        for input_scaling in input_scalings:
-            run_linearized_simulation(cell_params, input_scaling, input_idx, model, ntsteps,
-                                      simulation_params, conductance_type, input_type)        
+    for input_idx, input_scaling in input_idx_scale:
+        run_linearized_simulation(cell_params, input_scaling, input_idx, model, ntsteps,
+                                  simulation_params, conductance_type, input_type)        
                     
 def find_LFP_PSD(sig, timestep):
     """ Returns the power and freqency of the input signal"""
@@ -210,7 +213,7 @@ def check_current_sum(cell, noiseVec):
     sys.exit()
     
 def run_WN_simulation(cell_params, input_scaling, input_idx, 
-                   ofolder, ntsteps, simulation_params, conductance_type, epas=None):
+                   ofolder, ntsteps, simulation_params, conductance_type, epas=None, vss=None):
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
     cell = LFPy.Cell(**cell_params)
@@ -229,6 +232,10 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
         for seg in sec:
             if not epas == None:
                 seg.pas.e = epas
+            if not vss == None:
+                #try:
+                exec('seg.vss_%s = %g'% (conductance_type, vss))
+            
             if i == input_idx:
                 syn = neuron.h.ISyn(seg.x, sec=sec)
             i += 1
@@ -238,11 +245,11 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
     syn.delay = 0
     noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
     #set_trace()    
-    #mapping = np.load(join(ofolder, 'mapping.npy'))
+    mapping = np.load(join(ofolder, 'mapping.npy'))
     cell.simulate(**simulation_params)
     # Cutting of start of simulations
     
-    cut_list = ['cell.imem', 'cell.somav', 'input_array', 'cell.ipas', 'cell.icap']
+    cut_list = ['cell.imem', 'cell.somav', 'input_array', 'cell.ipas', 'cell.icap', 'cell.vmem']
     if hasattr(cell, 'rec_variables'):
         for cur in cell.rec_variables:
             cut_list.append('cell.rec_variables["%s"]' % cur)
@@ -251,6 +258,8 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
             exec('%s = %s[:,-%d:]' %(cur, cur, ntsteps))
         except IndexError:
             exec('%s = %s[-%d:]' %(cur, cur, ntsteps))
+        except AttributeError:
+            pass
             #cur = cur[-ntsteps:]
     cell.tvec = cell.tvec[-ntsteps:] - cell.tvec[-ntsteps]
     timestep = (cell.tvec[1] - cell.tvec[0])/1000.
@@ -265,28 +274,29 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
             psd, freqs = find_LFP_PSD(active_current, timestep)
             np.save(join(ofolder, '%s_%s.npy' %(cur, sim_name)), active_current)
             np.save(join(ofolder, '%s_psd_%s.npy' %(cur, sim_name)), psd)
-        
-    #vmem_quickplot(cell, input_array, sim_name, ofolder)
-    #sig = np.dot(mapping, cell.imem)
-    #sig_psd, freqs = find_LFP_PSD(sig, timestep)
-    #np.save(join(ofolder, 'signal_%s.npy' %(sim_name)), sig)
-    #np.save(join(ofolder, 'psd_%s.npy' %(sim_name)), sig_psd)
     
-    somav_psd, freqs = find_LFP_PSD(np.array([cell.somav]), timestep)
-    np.save(join(ofolder, 'somav_psd_%s.npy' %(sim_name)), somav_psd[0])
-    np.save(join(ofolder, 'somav_%s.npy' %(sim_name)), cell.somav)
+    vmem_quickplot(cell, sim_name, ofolder, input_array=input_array)
+
+    sig = np.dot(mapping, cell.imem)
+    sig_psd, freqs = find_LFP_PSD(sig, timestep)
+    np.save(join(ofolder, 'signal_%s.npy' %(sim_name)), sig)
+    np.save(join(ofolder, 'psd_%s.npy' %(sim_name)), sig_psd)
+    
+    vmem_psd, freqs = find_LFP_PSD(np.array(cell.vmem), timestep)
+    np.save(join(ofolder, 'vmem_psd_%s.npy' %(sim_name)), vmem_psd)
+    np.save(join(ofolder, 'vmem_%s.npy' %(sim_name)), cell.vmem)
     
     imem_psd, freqs = find_LFP_PSD(cell.imem, timestep)
     np.save(join(ofolder, 'imem_psd_%s.npy' %(sim_name)), imem_psd)
     np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), cell.imem)
 
-    icap_psd, freqs = find_LFP_PSD(cell.icap, timestep)
-    np.save(join(ofolder, 'icap_psd_%s.npy' %(sim_name)), icap_psd)
-    np.save(join(ofolder, 'icap_%s.npy' %(sim_name)), cell.icap)
+    #icap_psd, freqs = find_LFP_PSD(cell.icap, timestep)
+    #np.save(join(ofolder, 'icap_psd_%s.npy' %(sim_name)), icap_psd)
+    #np.save(join(ofolder, 'icap_%s.npy' %(sim_name)), cell.icap)
 
-    ipas_psd, freqs = find_LFP_PSD(cell.ipas, timestep)
-    np.save(join(ofolder, 'ipas_psd_%s.npy' %(sim_name)), ipas_psd)
-    np.save(join(ofolder, 'ipas_%s.npy' %(sim_name)), cell.ipas)
+    #ipas_psd, freqs = find_LFP_PSD(cell.ipas, timestep)
+    #np.save(join(ofolder, 'ipas_psd_%s.npy' %(sim_name)), ipas_psd)
+    #np.save(join(ofolder, 'ipas_%s.npy' %(sim_name)), cell.ipas)
 
     #ymid = np.load(join(ofolder, 'ymid.npy'))
     #stick = aLFP.return_dipole_stick(cell.imem, ymid)
@@ -383,8 +393,6 @@ def run_synaptic_simulation(cell_params, input_scaling, input_idx,
     np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
     np.save(join(ofolder, 'freqs.npy'), freqs)
 
-
-
 def run_linearized_simulation(cell_params, input_scaling, input_idx, 
                    ofolder, ntsteps, simulation_params, conductance_type, 
                    input_type):
@@ -392,11 +400,11 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
     static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
-    cell_params['v_init'] = 77#np.average(static_Vm)
+    cell_params['v_init'] = -77#np.average(static_Vm)
     cell = LFPy.Cell(**cell_params)
-    sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, conductance_type)
+    sim_name = '%d_%1.3f_%s_%s' %(input_idx, input_scaling, input_type, conductance_type)
     print sim_name
-
+    vss = -70
     if conductance_type in ['active', 'active_homogeneous_Ih']:
         pass
     if conductance_type in ['active_vss', 'active_vss_homogeneous_Ih', 
@@ -404,12 +412,19 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
         comp_idx = 0
         for sec in cell.allseclist:
             for seg in sec:
-                exec('seg.vss_passive_vss = -80')
+                exec('seg.vss_passive_vss = -70')
                 comp_idx += 1
 
+    if conductance_type in ['Ih_linearized', 'passive_vss']:
+        for sec in cell.allseclist:
+            for seg in sec:
+                exec('seg.vss_%s = %g'% (conductance_type, vss))
+                
     if input_type == 'synaptic':
         cell, save_method = make_synapse_stimuli(cell, input_idx, input_scaling)
+        print 'Synaptic'
     elif input_type == 'ZAP':
+        print 'ZAP'
         cell, save_method = make_ZAP_stimuli(cell, input_idx, input_scaling)
     elif input_type == 'WN':
         print "WN!"
@@ -433,7 +448,7 @@ def make_synapse_stimuli(cell, input_idx, input_scaling):
     # Create synapse and set time of synaptic input
     synapse = LFPy.Synapse(cell, **synapse_parameters)
     synapse.set_spike_times(np.array([20.]))
-    save_method = save_simple
+    save_method = save_synaptic_data
     return cell, save_method
 
 def make_ZAP_stimuli(cell, input_idx, input_scaling):
@@ -448,12 +463,11 @@ def make_ZAP_stimuli(cell, input_idx, input_scaling):
         'pptype' : 'ZAPClamp',
         }
     current_clamp = LFPy.StimIntElectrode(cell, **ZAP_clamp)
-    save_method = save_simple
+    save_method = save_ZAP_data
     return cell, save_method
 
 def make_WN_stimuli(cell, input_idx, input_scaling, ofolder):
     input_array = input_scaling * np.load(join(ofolder, 'input_array.npy'))
-    print input_array
     noiseVec = neuron.h.Vector(input_array)
     i = 0
     syn = None
@@ -470,10 +484,10 @@ def make_WN_stimuli(cell, input_idx, input_scaling, ofolder):
     save_method = save_WN_data
     return cell, save_method, syn, noiseVec
     
-def save_simple(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
+def save_synaptic_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
 
     timestep = (cell.tvec[1] - cell.tvec[0])/1000.
-    np.save(join(ofolder, 'tvec.npy'), cell.tvec)
+    np.save(join(ofolder, 'tvec_synaptic.npy'), cell.tvec)
 
     mapping = np.load(join(ofolder, 'mapping.npy'))
     sig = 1000 * np.dot(mapping, cell.imem)
@@ -490,7 +504,16 @@ def save_simple(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), cell.imem)
     np.save(join(ofolder, 'freqs.npy'), freqs)
 
-    
+def save_ZAP_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
+
+    timestep = (cell.tvec[1] - cell.tvec[0])/1000.
+    np.save(join(ofolder, 'tvec_ZAP.npy'), cell.tvec)
+
+    mapping = np.load(join(ofolder, 'mapping.npy'))
+    sig = 1000 * np.dot(mapping, cell.imem)
+    np.save(join(ofolder, 'sig_%s.npy' %(sim_name)), sig)
+    linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx)
+    np.save(join(ofolder, 'vmem_%s.npy' %(sim_name)), cell.vmem)
 
 def save_WN_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     timestep = (cell.tvec[1] - cell.tvec[0])/1000.
@@ -501,7 +524,7 @@ def save_WN_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     cell.somav = cell.somav[-ntsteps:]
     cell.tvec = cell.tvec[-ntsteps:] - cell.tvec[-ntsteps]
     
-    np.save(join(ofolder, 'tvec.npy'), cell.tvec)
+    np.save(join(ofolder, 'tvec_WN.npy'), cell.tvec)
     mapping = np.load(join(ofolder, 'mapping.npy'))
     sig = 1000 * np.dot(mapping, cell.imem)
     sig_psd, freqs = find_LFP_PSD(sig, timestep)
@@ -632,9 +655,9 @@ def vmem_quickplot(cell, sim_name, ofolder, input_array=None):
     plt.title('Soma imem [nA]')
     #plt.ylim(-0.04, 0.04)    
     plt.plot(cell.tvec, cell.imem[0,:])
-    plt.ylim(-0.1, 0.02)
+    #plt.ylim(-0.1, 0.02)
     plt.subplot(312)
-    plt.ylim(-77, -74)
+    #plt.ylim(-77, -74)
     plt.title('Soma vmem')
     plt.plot(cell.tvec, cell.somav)
     if not input_array == None:
