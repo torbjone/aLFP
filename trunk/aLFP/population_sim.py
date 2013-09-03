@@ -15,7 +15,6 @@ if not os.environ.has_key('DISPLAY'):
 else:
     at_stallo = False
 
-
 import pylab as plt
 from os.path import join
 import cPickle
@@ -42,7 +41,7 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
         'weight' : 0.005,           #Synaptic weight
         'color' : 'r',              #for pl.plot
         'marker' : '.',             #for pl.plot
-        'record_current' : True,    #record synaptic currents
+        'record_current' : False,    #record synaptic currents
         }
     # Excitatory synapse parameters
     synapseParameters_NMDA = {         
@@ -50,10 +49,10 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
         'syntype' : 'Exp2Syn',
         'tau1' : 10.,
         'tau2' : 30.,
-        'weight' : 0.005,
+        'weight' : 0.001, #Scaled down from 0.005 to remove spiking!
         'color' : 'm',
         'marker' : '.',
-        'record_current' : True,
+        'record_current' : False,
         }
     # Inhibitory synapse parameters
     synapseParameters_GABA_A = {         
@@ -64,9 +63,10 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
         'weight' : 0.005,
         'color' : 'b',
         'marker' : '.',
-        'record_current' : True
+        'record_current' : False
         }
-    static_Vm = np.load(join(ofolder, 'static_Vm_distribution_active_vss.npy'))
+    #static_Vm = np.load(join(ofolder, 'static_Vm_distribution_active_vss.npy'))
+    vss = -70
     for part in xrange(numsimulations):
         cell = LFPy.Cell(**cell_params)
     
@@ -81,7 +81,7 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
             cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                           join(model_path, 'biophys3_%s.hoc' % conductance_type)]        
 
-            cell_params['v_init'] = np.average(static_Vm)
+            cell_params['v_init'] = -77#np.average(static_Vm)
             cell = LFPy.Cell(**cell_params)
             sim_name = conductance_type + '_%d' %part
             if conductance_type in ['active', 'active_homogeneous_Ih']:
@@ -96,7 +96,7 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
                 comp_idx = 0
                 for sec in cell.allseclist:
                     for seg in sec:
-                        exec('seg.vss_%s = static_Vm[%d]'% (conductance_type, comp_idx))
+                        exec('seg.vss_%s = %g'% (conductance_type, vss))
                         comp_idx += 1
             else:
                 raise RuntimeError

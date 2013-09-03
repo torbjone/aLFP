@@ -224,7 +224,7 @@ def plot_LFPs():
     conductance_list = ['active', 'Ih_linearized', 'passive_vss']
     for input_idx, input_scaling in input_idx_scale:
         aLFP.compare_LFPs(model, input_scaling, input_idx, elec_x, elec_y, elec_z, plot_params, 
-                          conductance_list, input_type='synaptic')
+                          conductance_list, input_type='WN')
             #sys.exit()
             
 def plot_transfer():
