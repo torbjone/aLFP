@@ -910,9 +910,9 @@ def stationary_currents(ifolder, plot_params, plot_compartments, name):
 
 def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z, 
                  plot_params, conductance_list, input_type=''):
-    
-    freqs = np.load(join(ifolder, 'freqs.npy'))    
-    tvec = np.load(join(ifolder, 'tvec.npy'))
+    if input_type == 'WN':
+        freqs = np.load(join(ifolder, 'freqs.npy'))    
+    tvec = np.load(join(ifolder, 'tvec_%s.npy' % input_type))
     xmid = np.load(join(ifolder, 'xmid.npy' ))
     ymid = np.load(join(ifolder, 'ymid.npy' ))
     zmid = np.load(join(ifolder, 'zmid.npy' ))
@@ -930,16 +930,17 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
     #imem_dict = {}
     vmem_dict = {}
     vmem_psd_dict = {}
-    conductance_color_dict = {}
-    
+    conductance_color_dict = {} 
+    print sim_name   
     for cond_number, conductance_type in enumerate(conductance_list):
         conductance_name = "%d_%1.3f_%s_%s" %(input_idx, input_scaling, input_type, conductance_type)
         #imem_dict[conductance_type] = np.load(join(ifolder, 'imem_%s.npy' %(conductance_name)))
         vmem_dict[conductance_type] = np.load(join(ifolder, 'vmem_%s.npy' %(conductance_name)))
         if input_type == 'WN':
             vmem_psd_dict[conductance_type] = np.load(join(ifolder, 'vmem_psd_%s.npy' %(conductance_name)))
+            sig_psd_dict[conductance_type] = np.load(join(ifolder, 'sig_psd_%s.npy' %(conductance_name)))
         sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
-        sig_psd_dict[conductance_type] = np.load(join(ifolder, 'sig_psd_%s.npy' %(conductance_name)))
+        
         if len(conductance_list) > 1:
             clr_number = 256. * cond_number/(len(conductance_list) - 1.)
         else:
@@ -953,9 +954,22 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
                  %(ifolder, input_scaling, input_idx))
 
     plt.subplots_adjust(hspace=0.5)
-    ax_vm = fig.add_axes([0.04, 0.80, 0.10, 0.15], title='Soma $V_m$')
-    ax_vm_shifted = fig.add_axes([0.04, 0.55, 0.10, 0.15], title='Shifted soma $V_m$')    
 
+    if input_type == 'ZAP':
+        ax_in = fig.add_axes([0.04, 0.3, 0.20, 0.15], title='Input compartment $V_m$')   
+        ax_in_shifted = fig.add_axes([0.04, 0.05, 0.20, 0.15], title='Shifted input compartment $V_m$')   
+
+        ax_vm = fig.add_axes([0.04, 0.80, 0.20, 0.15], title='Soma $V_m$')
+        ax_vm_shifted = fig.add_axes([0.04, 0.55, 0.20, 0.15], title='Shifted soma $V_m$')    
+    
+    else:
+        ax_vm = fig.add_axes([0.04, 0.80, 0.20, 0.15], title='Soma $V_m$')
+        ax_vm_shifted = fig.add_axes([0.04, 0.55, 0.20, 0.15], title='Shifted soma $V_m$')    
+
+        ax_in = fig.add_axes([0.04, 0.3, 0.10, 0.15], title='Input compartment $V_m$')   
+        ax_in_shifted = fig.add_axes([0.04, 0.05, 0.20, 0.15], title='Shifted input compartment $V_m$')   
+
+    
     if input_type == 'WN':
         ax_vm_psd = fig.add_axes([0.2, 0.55, 0.10, 0.40], title='Soma $V_m$ PSD')
         ax_in_psd = fig.add_axes([0.2, 0.05, 0.10, 0.40], title='Input compartment $V_m$ PSD')
@@ -970,8 +984,6 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
         ax_vm_psd.set_ylim(1e-6, 1e1)
 
         
-    ax_in = fig.add_axes([0.04, 0.3, 0.10, 0.15], title='Input compartment $V_m$')   
-    ax_in_shifted = fig.add_axes([0.04, 0.05, 0.10, 0.15], title='Shifted input compartment $V_m$')   
     
     ax_neur = fig.add_axes([0.5, 0.1, 0.1, 0.75], frameon=False, 
                             xticks=[], yticks=[])
@@ -1015,19 +1027,20 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
     
     # Starting plotting
     for conductance_type in conductance_list:
-        ax_vm.plot(tvec, vmem_dict[conductance_type][0,:], lw=2,
+        print conductance_type
+        ax_vm.plot(tvec, vmem_dict[conductance_type][0,:], lw=1,
                    color=conductance_color_dict[conductance_type], label=conductance_type)
         ax_vm_shifted.plot(tvec, vmem_dict[conductance_type][0,:] - vmem_dict[conductance_type][0,0], 
-                         lw=2, color=conductance_color_dict[conductance_type])
-        ax_in.plot(tvec, vmem_dict[conductance_type][input_idx,:], lw=2,
+                         lw=1, color=conductance_color_dict[conductance_type])
+        ax_in.plot(tvec, vmem_dict[conductance_type][input_idx,:], lw=1,
                    color=conductance_color_dict[conductance_type])
         ax_in_shifted.plot(tvec, vmem_dict[conductance_type][input_idx,:] - \
-                         vmem_dict[conductance_type][input_idx,0], lw=2,
+                         vmem_dict[conductance_type][input_idx,0], lw=1,
                          color=conductance_color_dict[conductance_type])
         if input_type == 'WN':
-            ax_vm_psd.loglog(freqs, vmem_psd_dict[conductance_type][0,:], lw=2,
+            ax_vm_psd.loglog(freqs, vmem_psd_dict[conductance_type][0,:], lw=1,
                              color=conductance_color_dict[conductance_type], label=conductance_type)
-            ax_in_psd.loglog(freqs, vmem_psd_dict[conductance_type][input_idx,:], lw=2,
+            ax_in_psd.loglog(freqs, vmem_psd_dict[conductance_type][input_idx,:], lw=1,
                          color=conductance_color_dict[conductance_type])
     
     if input_type == 'WN':
@@ -1072,10 +1085,10 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
         for idx, conductance_type in enumerate(conductance_list):
             if input_type == 'WN':
                 ax_temp.loglog(freqs, sig_psd_dict[conductance_type][elec], 
-                               color=conductance_color_dict[conductance_type], lw=1)
+                               color=conductance_color_dict[conductance_type], lw=0.7)
             else:
                 ax_temp.plot(tvec, sig_dict[conductance_type][elec] - sig_dict[conductance_type][elec][0], 
-                               color=conductance_color_dict[conductance_type], lw=1)
+                               color=conductance_color_dict[conductance_type], lw=0.7)
                 
         pos = [elec_x[elec], elec_y[elec]]
         if elec == 0:
@@ -1089,11 +1102,14 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
         if input_type == 'WN':
             ax_temp.set_xlim(1e0, 1e3)
             ax_temp.set_ylim(1e-6, 1e0)
-        else:
+        elif input_type == 'synaptic':
             ax_temp.set_xlim(0, 200)
+        elif input_type == 'ZAP':
+            ax_temp.set_xlim(0, 20000)
+
         LFP_arrow_to_axis(pos, ax_neur, ax_temp, elec_clr_list[elec], ax_xpos)
     ax_neur.axis(neur_ax)
-    plt.savefig('LFP_%s_%s.png' % (ifolder, sim_name))
+    plt.savefig('LFP_%s_%s.png' % (ifolder, sim_name), dpi=150)
     #plt.show()
 
 def LFP_arrow_to_axis(pos, ax_origin, ax_target, clr, ax_xpos):
