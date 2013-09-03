@@ -28,7 +28,7 @@ if at_stallo:
     cut_off = 6000
 else:
     neuron_model = join('..', 'neuron_models', model)
-    cut_off = 6000
+    cut_off = 3000
 
 simulation_params = {'rec_imem': True,
                      'rec_vmem':True
@@ -37,14 +37,10 @@ plot_params = {'ymax': 1250,
                'ymin': -250,
                }
 
-#input_idxs = [791]
-#input_scalings = [0.001]
-
-#input_idxs = [0]
-#input_scalings = [0.01]
 
 
 input_idx_scale = [[0, 0.01],
+                   [82, 0.001],
                    [611, 0.001], 
                    [681, 0.001],
                    [740, 0.001],
@@ -148,18 +144,21 @@ def simulate_synaptic():
     single_run = 0
     if single_run:
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
-                                      join(model_path, 'biophys3_passive_vss.hoc')]
+                                      join(model_path, 'biophys3_active.hoc')]
         temp_sim_params = simulation_params.copy()
-        aLFP.run_synaptic_simulation(cell_params, input_scalings[0], input_idxs[0], 
-                            model, ntsteps, temp_sim_params, conductance_type, epas=-90)
-
+        aLFP.run_linearized_simulation(cell_params, input_idx_scale[0][1], input_idx_scale[0][0], 
+                            model, ntsteps, temp_sim_params, conductance_type, 
+                            input_type='synaptic', Ih_distribution='uniform')
+        
+        sys.exit()
     for conductance_type in simulate:
         temp_sim_params = simulation_params.copy()
             
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
         aLFP.run_all_linearized_simulations(cell_params, model, input_idx_scale, ntsteps, 
-                                          temp_sim_params, conductance_type, input_type='synaptic')
+                                          temp_sim_params, conductance_type, 
+                                          input_type='synaptic', Ih_distribution='original')
 
 def simulate_WN():
     tstopms = 1000
@@ -197,7 +196,7 @@ def simulate_WN():
     #aLFP.find_static_Vm_distribution(cell_params, model, conductance_type)
     #sys.exit()
     
-    simulate = ['active', 'Ih_linearized', 'passive_vss']#, 'Ih_reduced'] 
+    simulate = ['Ih_linearized'] 
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False, make_WN_input=True)
@@ -206,27 +205,28 @@ def simulate_WN():
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                       join(model_path, 'biophys3_passive_vss.hoc')]
         temp_sim_params = simulation_params.copy()
-        aLFP.run_synaptic_simulation(cell_params, input_scalings[0], input_idxs[0], 
+        aLFP.run_synaptic_simulation(cell_params, input_idx_scale[0][0], input_idx_scale[0][1], 
                             model, ntsteps, temp_sim_params, conductance_type, epas=-90)
     for conductance_type in simulate:
         temp_sim_params = simulation_params.copy()
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
         aLFP.run_all_linearized_simulations(cell_params, model, input_idx_scale, ntsteps, 
-                                            temp_sim_params, conductance_type, input_type='WN')
-        
+                                            temp_sim_params, conductance_type, 
+                                            input_type='WN', Ih_distribution='original')
+
 def plot_synaptic():
     for epas in epas_array:
         aLFP.plot_synaptic_currents(model, input_scalings[0], input_idxs[1], plot_params, 
                                     simulation_params, plot_compartments, epas=epas)
 
-
 def plot_LFPs():
     conductance_list = ['active', 'Ih_linearized', 'passive_vss']
     for input_idx, input_scaling in input_idx_scale:
         aLFP.compare_LFPs(model, input_scaling, input_idx, elec_x, elec_y, elec_z, plot_params, 
-                          conductance_list, input_type='ZAP')
+                          conductance_list, input_type='WN')
             #sys.exit()
+            
 def plot_transfer():
     aLFP.plot_transfer_functions(model, 0.001, 0, plot_params, 
                               simulation_params, plot_compartments, -90)

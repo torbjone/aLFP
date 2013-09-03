@@ -32,8 +32,8 @@ proc biophys() {
 	  insert K_Pst 
 	  insert Nap_Et2 
 	  insert NaTa_t
-		insert CaDynamics_E2
-		insert Ih
+	  insert CaDynamics_E2
+        	insert Ih
 		ek = -85
 		ena = 50
 		gIhbar_Ih = 0.0002

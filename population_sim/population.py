@@ -42,7 +42,7 @@ if at_stallo:
 else:
     timeres = 2**-5
 
-tstopms = 10 * 1000
+tstopms = 10 * 500
 ntsteps = round((tstopms - 0) / timeres)
 
 population_dict = {'r_limit': 200.,
@@ -51,7 +51,7 @@ population_dict = {'r_limit': 200.,
                    'timeres': timeres,
                    'ntsteps': ntsteps,
                    'window_length_ms': 1000, 
-                   'numsimulations': 3
+                   'numsimulations': 1
                    }
 
 conductance_type = 'passive'
@@ -78,20 +78,20 @@ cell_params = {
 }
 
 all_synaptic_params = {
-    'AMPA':{'section': 'apic',
-            'n' : 50,
+    'AMPA':{'section': ['soma', 'apic', 'dend'],
+            'n' : 10,
             'spTimesFun' : LFPy.inputgenerators.stationary_gamma,
-            'args' : [cell_params['tstartms'], cell_params['tstopms'], 2, 400],
+            'args' : [cell_params['tstartms'], cell_params['tstopms'], 2, 100],
             },
     'NMDA': {'section' : ['apic'],
-             'n' : 2,
+             'n' : 5,
              'spTimesFun' : LFPy.inputgenerators.stationary_gamma,
              'args' : [cell_params['tstartms'], cell_params['tstopms'], 2, 400],
              },
-    'GABA_A': {'section' : ['soma', 'dend'],
-               'n' : 200,
+    'GABA_A': {'section' : ['soma', 'dend', 'apic'],
+               'n' : 10,
                'spTimesFun' : LFPy.inputgenerators.stationary_gamma,
-               'args' : [cell_params['tstartms'], cell_params['tstopms'], 2, 400],
+               'args' : [cell_params['tstartms'], cell_params['tstopms'], 2, 40],
                },                
         }
 
@@ -99,8 +99,7 @@ def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
     """  
-    conductance_list = ['Ih_reduced', 'Ih_linearized', 'active_vss_homogeneous_Ih', 
-                        'active', 'active_vss', 'active_vss_homogeneous_Ih']
+    conductance_list = ['active']#, 'Ih_linearized',  'passive_vss']
     aLFP.run_population_simulation(cell_params, conductance_list, model, model_path, 
                                    ntsteps, all_synaptic_params, 
                                    population_dict['numsimulations'])
