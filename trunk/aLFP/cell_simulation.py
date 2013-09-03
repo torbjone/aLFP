@@ -41,11 +41,12 @@ def run_all_synaptic_simulations(cell_params, model, input_idxs, input_scalings,
                                             simulation_params, conductance_type)        
         
 def run_all_linearized_simulations(cell_params, model, input_idx_scale, ntsteps,
-                                   simulation_params, conductance_type, input_type='synaptic'):
+                                   simulation_params, conductance_type, 
+                                   input_type='synaptic', Ih_distribution='original'):
     for input_idx, input_scaling in input_idx_scale:
         run_linearized_simulation(cell_params, input_scaling, input_idx, model, ntsteps,
-                                  simulation_params, conductance_type, input_type)        
-                    
+                                  simulation_params, conductance_type, input_type, Ih_distribution)
+    
 def find_LFP_PSD(sig, timestep):
     """ Returns the power and freqency of the input signal"""
     sample_freq = ff.fftfreq(sig.shape[1], d=timestep)
@@ -136,7 +137,8 @@ def test_static_Vm_distribution(cell_params, ofolder, conductance_type):
         
     cell.simulate(rec_vmem=True)
     plt.subplot(131, aspect='equal', frameon=False, xticks=[], yticks=[])
-    plt.title('Static Vm distribution after totally %d ms of rest' %(cell_params['tstopms'] - cell_params['tstartms']))
+    plt.title('Static Vm distribution after totally %d ms of rest' %(
+        cell_params['tstopms'] - cell_params['tstartms']))
     plt.scatter(cell.ymid, cell.zmid, c=cell.vmem[:,-1], s=5, edgecolor='none')
     #plt.subplot(222, aspect='equal', frameon=False, xticks=[], yticks=[])
     #plt.scatter(cell.xmid, cell.zmid, c=cell.vmem[:,-1], s=2, edgecolor='none')
@@ -159,14 +161,14 @@ def find_static_Vm_distribution(cell_params, ofolder, conductance_type, epas=Non
 
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
-    cell_params['tstartms'] = -6000
+    cell_params['tstartms'] = -3000
     cell_params['tstopms'] = 200
     cell_params['timeres_NEURON'] = 2**-4
     cell_params['timeres_python'] = 2**-4
     cell = LFPy.Cell(**cell_params)
-    for sec in cell.allseclist:
-        for seg in sec:
-            seg.vss_passive_vss = -77
+    #for sec in cell.allseclist:
+    #    for seg in sec:
+    #        seg.vss_passive_vss = -77
     cell.simulate(rec_vmem=True)
     plt.subplot(131, aspect='equal', frameon=False, xticks=[], yticks=[])
     plt.title('Static Vm distribution after totally %d ms of rest' %(cell_params['tstopms'] - cell_params['tstartms']))
@@ -184,8 +186,8 @@ def find_static_Vm_distribution(cell_params, ofolder, conductance_type, epas=Non
     for comp in xrange(len(cell.xmid)):
         plt.plot(cell.tvec, cell.vmem[comp,:] - cell.vmem[comp,0] , 'k')
     plt.xlim(-5, cell.tvec[-1] + 5)
-    plt.savefig(join(ofolder, 'static_Vm_distribution_active_vss_homogeneous_Ih.png'))
-    np.save(join(ofolder, 'static_Vm_distribution_active_vss_homogeneous_Ih.npy'), cell.vmem[:,-1])
+    plt.savefig(join(ofolder, 'static_Vm_distribution.png'))
+    np.save(join(ofolder, 'static_Vm_distribution.npy'), cell.vmem[:,-1])
 
 def check_current_sum(cell, noiseVec):
     const = (1E-2 * cell.area)
@@ -393,18 +395,77 @@ def run_synaptic_simulation(cell_params, input_scaling, input_idx,
     np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
     np.save(join(ofolder, 'freqs.npy'), freqs)
 
+
+def find_average_Ih_conductance(cell):
+    i = 0 
+    total_g_Ih = 0 
+    #plt.close('all')
+    total_area = 0
+    for sec in cell.allseclist:
+        for seg in sec:
+            try:
+                seg_area = neuron.h.area(seg.x)*1e-8 # cm2
+                total_area += seg_area
+                total_g_Ih += seg.gIhbar_Ih * seg_area
+                #plt.plot(cell.zmid[i], seg.gIhbar_Ih, 'o')
+            except NameError:
+                pass
+            i += 1
+    #plt.show()
+    print total_g_Ih / total_area
+
+
+def redistribute_Ih(cell, Ih_distribution):
+    # Original total conductance
+
+    average_g_Ih = 0.00211114619598
+    if Ih_distribution == 'uniform':
+        for sec in cell.allseclist:
+            for seg in sec:
+                try:
+                    seg.gIhbar_Ih = average_g_Ih
+                except NameError:
+                    pass          
+    elif Ih_distribution == 'uniform_half':
+        for sec in cell.allseclist:
+            for seg in sec:
+                try:
+                    seg.gIhbar_Ih = average_g_Ih / 2.0
+                except NameError:
+                    pass          
+
+    elif Ih_distribution == 'uniform_double':
+        for sec in cell.allseclist:
+            for seg in sec:
+                try:
+                    seg.gIhbar_Ih = average_g_Ih * 2.0
+                except NameError:
+                    pass            
+    else:
+        raise NotImplemented, "yet"
+    return cell
+    
 def run_linearized_simulation(cell_params, input_scaling, input_idx, 
                    ofolder, ntsteps, simulation_params, conductance_type, 
-                   input_type):
+                   input_type, Ih_distribution):
 
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
     static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
-    cell_params['v_init'] = -77#np.average(static_Vm)
+    #cell_params['v_init'] = -77#np.average(static_Vm)
     cell = LFPy.Cell(**cell_params)
     sim_name = '%d_%1.3f_%s_%s' %(input_idx, input_scaling, input_type, conductance_type)
+    
+    vss = -70 # This number is 'randomly' chosen because it's roughly average of active steady state
+
+    find_average_Ih_conductance(cell)
+
+    if not Ih_distribution == 'original':
+        cell = redistribute_Ih(cell, Ih_distribution)
+        sim_name += '_' + Ih_distribution
     print sim_name
-    vss = -70
+    find_average_Ih_conductance(cell)
+        
     if conductance_type in ['active', 'active_homogeneous_Ih']:
         pass
     if conductance_type in ['active_vss', 'active_vss_homogeneous_Ih', 
@@ -422,12 +483,9 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
                 
     if input_type == 'synaptic':
         cell, save_method = make_synapse_stimuli(cell, input_idx, input_scaling)
-        print 'Synaptic'
     elif input_type == 'ZAP':
-        print 'ZAP'
         cell, save_method = make_ZAP_stimuli(cell, input_idx, input_scaling)
     elif input_type == 'WN':
-        print "WN!"
         cell, save_method, syn, noiseVec = make_WN_stimuli(cell, input_idx, input_scaling, ofolder)
     else:
         raise RuntimeError("No known 'input_type'")
@@ -682,7 +740,7 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     cell.set_rotation(**rot_params)
     cell.set_pos(**pos_params)       
     if testing:
-        aLFP.plot_comp_numbers(cell)
+        aLFP.plot_comp_numbers(cell, elec_x, elec_y, elec_z)
 
     # Define electrode parameters
     electrode_parameters = {
@@ -723,7 +781,7 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     np.save(join(ofolder, 'diam.npy' ), cell.diam)
     
     if make_WN_input:
-        timestep = cell_params['timeres_NEURON']/1000
+        timestep = cell_params['timeres_NEURON']/1000.
         # Making unscaled white noise input array
         input_array = aLFP.make_WN_input(cell_params)
         sample_freq = ff.fftfreq(len(input_array[-ntsteps:]), d=timestep)
@@ -731,6 +789,6 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
         freqs = sample_freq[pidxs]
         Y = ff.fft(input_array[-ntsteps:])[pidxs]
         power = np.abs(Y)/len(Y)
-        np.save(join(ofolder, 'input_array.npy' ), input_array)
-        np.save(join(ofolder, 'input_array_psd.npy' ), power)
-        np.save(join(ofolder, 'freqs.npy' ), freqs)
+        np.save(join(ofolder, 'input_array.npy'), input_array)
+        np.save(join(ofolder, 'input_array_psd.npy'), power)
+        np.save(join(ofolder, 'freqs.npy'), freqs)

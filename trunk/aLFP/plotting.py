@@ -912,7 +912,7 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
                  plot_params, conductance_list, input_type=''):
     
     freqs = np.load(join(ifolder, 'freqs.npy'))    
-    tvec = np.load(join(ifolder, 'tvec.npy'))
+    tvec = np.load(join(ifolder, 'tvec_%s.npy' %input_type))
     xmid = np.load(join(ifolder, 'xmid.npy' ))
     ymid = np.load(join(ifolder, 'ymid.npy' ))
     zmid = np.load(join(ifolder, 'zmid.npy' ))
@@ -923,8 +923,8 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
     yend = np.load(join(ifolder, 'yend.npy' ))
     zend = np.load(join(ifolder, 'zend.npy' ))    
     diam = np.load(join(ifolder, 'diam.npy'))
-    
     sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, input_type)
+    
     sig_dict = {}
     sig_psd_dict = {}
     #imem_dict = {}
@@ -934,6 +934,7 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
     
     for cond_number, conductance_type in enumerate(conductance_list):
         conductance_name = "%d_%1.3f_%s_%s" %(input_idx, input_scaling, input_type, conductance_type)
+        
         #imem_dict[conductance_type] = np.load(join(ifolder, 'imem_%s.npy' %(conductance_name)))
         vmem_dict[conductance_type] = np.load(join(ifolder, 'vmem_%s.npy' %(conductance_name)))
         if input_type == 'WN':
