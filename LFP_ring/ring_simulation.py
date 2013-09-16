@@ -17,16 +17,18 @@ except:
 import pylab as plt
 from os.path import join
 import aLFP
-from params import *
+
 
 model = 'hay' 
 np.random.seed(1234)
 
 if at_stallo:
+    timeres = 2**-5
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
     cut_off = 3000
 else:
     neuron_model = join('..', 'neuron_models', model)
+    timeres = 2**-4
     cut_off = 3000
 
 simulation_params = {'rec_imem': True,
