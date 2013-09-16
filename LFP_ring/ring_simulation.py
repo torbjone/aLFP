@@ -35,6 +35,7 @@ simulation_params = {'rec_imem': True,
                      'rec_vmem':True
                      }
 
+print np.random.random()
 #input_idx_scale = [[0, 0.001],
 #                   [82, 0.001],
 #                   [611, 0.001], 

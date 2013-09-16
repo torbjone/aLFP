@@ -14,7 +14,7 @@ import aLFP
 plt.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
     'wspace' : 0.5, 'hspace' : 0.5})
-np.random.seed(1234)
+#np.random.seed(1234)
 
 def plot_comp_numbers(cell, elec_x, elec_y, elec_z):
     plt.axis('equal')

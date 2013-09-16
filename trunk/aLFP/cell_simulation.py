@@ -18,7 +18,7 @@ import scipy.signal
 plt.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
     'wspace' : 0.5, 'hspace' : 0.5})
-np.random.seed(1234)
+#np.random.seed(1234)
 
 def run_all_WN_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
                            simulation_params, conductance_type, epas_array=[None]):

@@ -27,7 +27,7 @@ import tables
 plt.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
     'wspace' : 0.5, 'hspace' : 0.5})
-np.random.seed(1234)
+#np.random.seed(1234)
 
 def run_population_simulation(cell_params, conductance_list, ofolder, model_path,
                               ntsteps, all_synaptic_params, numsimulations=1):

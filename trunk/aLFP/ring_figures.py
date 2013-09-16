@@ -18,7 +18,7 @@ plt.rcParams.update({'font.size' : 8,
                      'hspace' : 0.5,
                      'legend.fontsize' : 7,
                      })
-np.random.seed(1234)
+#np.random.seed(1234)
 
 
 
