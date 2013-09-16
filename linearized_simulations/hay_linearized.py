@@ -137,7 +137,7 @@ def simulate_synaptic():
     #aLFP.find_static_Vm_distribution(cell_params, model, conductance_type)
     #sys.exit()
 
-    simulate = ['active', 'Ih_linearized', 'passive_vss']
+    simulate = ['Ih_linearized']
     ntsteps = round((tstopms - 0) / timeres)
     aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
                          elec_x, elec_y, elec_z, ntsteps, model, testing=False)
@@ -158,7 +158,7 @@ def simulate_synaptic():
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
         aLFP.run_all_linearized_simulations(cell_params, model, input_idx_scale, ntsteps, 
                                           temp_sim_params, conductance_type, 
-                                          input_type='synaptic', Ih_distribution='original')
+                                          input_type='synaptic', Ih_distribution='apical_uniform')
 
 def simulate_WN():
     tstopms = 1000
@@ -173,7 +173,7 @@ def simulate_WN():
                   'ypos': 0,
                   'zpos': 0,
                   }        
-    conductance_type = 'active_vss_homogeneous_Ih'
+    conductance_type = 'active'
     
     cell_params = {
         'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
@@ -213,7 +213,7 @@ def simulate_WN():
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
         aLFP.run_all_linearized_simulations(cell_params, model, input_idx_scale, ntsteps, 
                                             temp_sim_params, conductance_type, 
-                                            input_type='WN', Ih_distribution='original')
+                                            input_type='WN', Ih_distribution='apical_uniform')
 
 def plot_synaptic():
     for epas in epas_array:
@@ -221,7 +221,7 @@ def plot_synaptic():
                                     simulation_params, plot_compartments, epas=epas)
 
 def plot_LFPs():
-    conductance_list = ['active', 'Ih_linearized', 'passive_vss']
+    conductance_list = ['Ih_linearized', 'Ih_linearized_apical_uniform', 'Ih_linearized_apical_linear']
     for input_idx, input_scaling in input_idx_scale:
         aLFP.compare_LFPs(model, input_scaling, input_idx, elec_x, elec_y, elec_z, plot_params, 
                           conductance_list, input_type='WN')

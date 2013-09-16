@@ -958,18 +958,18 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
     plt.subplots_adjust(hspace=0.5)
 
     if input_type == 'ZAP':
-        ax_in = fig.add_axes([0.04, 0.3, 0.20, 0.15], title='Input compartment $V_m$')   
-        ax_in_shifted = fig.add_axes([0.04, 0.05, 0.20, 0.15], title='Shifted input compartment $V_m$')   
+        ax_in = fig.add_axes([0.04, 0.3, 0.10, 0.15], title='Input compartment $V_m$')   
+        ax_in_shifted = fig.add_axes([0.04, 0.05, 0.10, 0.15], title='Shifted input compartment $V_m$')   
 
-        ax_vm = fig.add_axes([0.04, 0.80, 0.20, 0.15], title='Soma $V_m$')
-        ax_vm_shifted = fig.add_axes([0.04, 0.55, 0.20, 0.15], title='Shifted soma $V_m$')    
+        ax_vm = fig.add_axes([0.04, 0.80, 0.10, 0.15], title='Soma $V_m$')
+        ax_vm_shifted = fig.add_axes([0.04, 0.55, 0.10, 0.15], title='Shifted soma $V_m$')    
     
     else:
-        ax_vm = fig.add_axes([0.04, 0.80, 0.20, 0.15], title='Soma $V_m$')
-        ax_vm_shifted = fig.add_axes([0.04, 0.55, 0.20, 0.15], title='Shifted soma $V_m$')    
+        ax_vm = fig.add_axes([0.04, 0.80, 0.10, 0.15], title='Soma $V_m$')
+        ax_vm_shifted = fig.add_axes([0.04, 0.55, 0.10, 0.15], title='Shifted soma $V_m$')    
 
         ax_in = fig.add_axes([0.04, 0.3, 0.10, 0.15], title='Input compartment $V_m$')   
-        ax_in_shifted = fig.add_axes([0.04, 0.05, 0.20, 0.15], title='Shifted input compartment $V_m$')   
+        ax_in_shifted = fig.add_axes([0.04, 0.05, 0.10, 0.15], title='Shifted input compartment $V_m$')   
 
     
     if input_type == 'WN':

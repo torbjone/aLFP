@@ -69,7 +69,7 @@ def run_population_simulation(cell_params, conductance_list, ofolder, model_path
     vss = -70
     for part in xrange(numsimulations):
         cell = LFPy.Cell(**cell_params)
-    
+
         AMPA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['AMPA'])
         GABA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['GABA_A'])
         NMDA_spiketimes_dict = make_input_spiketrain(cell, **all_synaptic_params['NMDA'])
@@ -168,7 +168,8 @@ def calculate_LFP(neuron_dict, conductance_list, ofolder, population_dict,
         timestep = population_dict['timeres']/ 1000.
         total_LFP_psd, freqs = aLFP.find_LFP_PSD(total_LFP, timestep)
         plot_population_LFP(somavs, freqs, total_LFP, total_LFP_psd, neuron_dict, 
-                            population_dict, elec_x, elec_y, elec_z, conductance_type, cell_params)
+
+        population_dict, elec_x, elec_y, elec_z, conductance_type, cell_params)
 
 
 

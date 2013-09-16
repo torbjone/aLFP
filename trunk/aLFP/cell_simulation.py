@@ -397,7 +397,6 @@ def run_synaptic_simulation(cell_params, input_scaling, input_idx,
 
 
 def find_average_Ih_conductance(cell):
-    i = 0 
     total_g_Ih = 0 
     #plt.close('all')
     total_area = 0
@@ -406,11 +405,10 @@ def find_average_Ih_conductance(cell):
             try:
                 seg_area = neuron.h.area(seg.x)*1e-8 # cm2
                 total_area += seg_area
-                total_g_Ih += seg.gIhbar_Ih * seg_area
-                #plt.plot(cell.zmid[i], seg.gIhbar_Ih, 'o')
+                total_g_Ih += seg.gIhbar_Ih_linearized * seg_area
+                #plt.plot(neuron.h.distance(seg.x), seg.gIhbar_Ih, 'bo')
             except NameError:
                 pass
-            i += 1
     #plt.show()
     print total_g_Ih / total_area
 
@@ -444,6 +442,98 @@ def redistribute_Ih(cell, Ih_distribution):
     else:
         raise NotImplemented, "yet"
     return cell
+
+
+def find_apical_Ih_distributions(cell, ofolder):
+    total_apic_g_Ih = 0 
+    total_apic_area = 0
+    # foo is to calculate slope of linear distribution
+    foo = 0
+    plt.close('all')
+    original_apic_Ih_dist = np.zeros(len(cell.xmid))
+    i = 0
+    for sec in cell.allseclist:
+        for seg in sec:
+            if 'apic' in sec.name():
+                plt.plot(neuron.h.distance(seg.x), seg.gIhbar_Ih, 'bo')
+                seg_area = neuron.h.area(seg.x)*1e-8 # cm2
+                total_apic_area += seg_area
+                foo += neuron.h.distance(seg.x) * neuron.h.area(seg.x)*1e-8
+                total_apic_g_Ih += seg.gIhbar_Ih * seg_area
+                original_apic_Ih_dist[i] = seg.gIhbar_Ih
+            i += 1
+    np.save(join(ofolder, 'original_apic_Ih_dist.npy'), original_apic_Ih_dist)
+    
+    linear_slope = (total_apic_g_Ih - 0.0002 * total_apic_area)/foo
+    average_apic_g_Ih = total_apic_g_Ih / total_apic_area
+    uniform_apic_Ih_dist = np.zeros(len(cell.xmid))
+
+    uniform_total_g_Ih = 0 
+    i = 0
+    for sec in cell.allseclist:
+        for seg in sec:
+            if 'apic' in sec.name():
+                uniform_apic_Ih_dist[i] = average_apic_g_Ih
+                uniform_total_g_Ih += average_apic_g_Ih * neuron.h.area(seg.x)*1e-8 # cm2
+                #seg.gIhbar_Ih = average_apic_g_Ih
+                plt.plot(neuron.h.distance(seg.x), average_apic_g_Ih, 'ro')
+            i += 1
+    np.save(join(ofolder, 'uniform_apic_Ih_dist.npy'), uniform_apic_Ih_dist)
+
+    linear_total_g_Ih = 0 
+    i = 0
+    linear_apic_Ih_dist = np.zeros(len(cell.xmid))
+    for sec in cell.allseclist:
+        for seg in sec:
+            if 'apic' in sec.name():
+                g = 0.0002 + neuron.h.distance(seg.x)*linear_slope
+                linear_total_g_Ih += g * neuron.h.area(seg.x)*1e-8 # cm2
+                plt.plot(neuron.h.distance(seg.x), g, 'go')
+                #seg.gIhbar_Ih = 0.0002 + neuron.h.distance(seg.x)*linear_slope
+                linear_apic_Ih_dist[i] = g
+            i += 1
+    np.save(join(ofolder, 'linear_apic_Ih_dist.npy'), linear_apic_Ih_dist)
+
+    print linear_total_g_Ih, uniform_total_g_Ih, total_apic_g_Ih
+    
+    plt.savefig('Ih_distributions.png')
+    
+def redistribute_Ih_appical(cell, Ih_distribution, ofolder):
+
+
+    original_apic_Ih_dist = np.load(join(ofolder, 'original_apic_Ih_dist.npy'))
+    
+    if Ih_distribution == 'apical_uniform':
+        uniform_apic_Ih_dist = np.load(join(ofolder, 'uniform_apic_Ih_dist.npy'))
+        i = 0
+        for sec in cell.allseclist:
+            for seg in sec:
+                if 'apic' in sec.name():
+                    seg.gIhbar_Ih_linearized = uniform_apic_Ih_dist[i]
+                i += 1
+
+    elif Ih_distribution == 'apical_original':
+        uniform_apic_Ih_dist = np.load(join(ofolder, 'original_apic_Ih_dist.npy'))
+        i = 0
+        for sec in cell.allseclist:
+            for seg in sec:
+                if 'apic' in sec.name():
+                    seg.gIhbar_Ih_linearized = original_apic_Ih_dist[i]
+                i += 1
+
+                
+    elif Ih_distribution == 'apical_linear':
+        linear_apic_Ih_dist = np.load(join(ofolder, 'linear_apic_Ih_dist.npy'))
+        i = 0
+        for sec in cell.allseclist:
+            for seg in sec:
+                if 'apic' in sec.name():
+                    seg.gIhbar_Ih_linearized = linear_apic_Ih_dist[i]
+                i += 1
+    else:
+        raise NotImplemented, "yet"
+    return cell
+
     
 def run_linearized_simulation(cell_params, input_scaling, input_idx, 
                    ofolder, ntsteps, simulation_params, conductance_type, 
@@ -459,9 +549,14 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
     vss = -70 # This number is 'randomly' chosen because it's roughly average of active steady state
 
     find_average_Ih_conductance(cell)
-
+    #redistribute_Ih_appical(cell, Ih_distribution)
+    #find_average_Ih_conductance(cell)
+    #sys.exit()
     if not Ih_distribution == 'original':
-        cell = redistribute_Ih(cell, Ih_distribution)
+        if 'apical' in Ih_distribution:
+            cell = redistribute_Ih_appical(cell, Ih_distribution, ofolder)
+        else:
+            cell = redistribute_Ih(cell, Ih_distribution)
         sim_name += '_' + Ih_distribution
     print sim_name
     find_average_Ih_conductance(cell)
@@ -492,6 +587,59 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
     cell.simulate(**simulation_params)
     save_method(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps)
 
+def run_multiple_input_simulation(cell_params, ofolder, input_idx_scale, ntsteps, 
+                                  simulation_params, conductance_type, 
+                                  input_type, Ih_distribution, average_over_sims=1):
+    
+    for sim_idx in xrange(average_over_sims):
+        print "Sim idx", sim_idx
+        neuron.h('forall delete_section()')
+        neuron.h('secondorder=2')
+        #static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
+        #cell_params['v_init'] = -77#np.average(static_Vm)
+        cell = LFPy.Cell(**cell_params)
+
+        sim_name = 'multiple_input_%d_%s_%s' %(len(input_idx_scale), input_type, conductance_type)
+        if not average_over_sims == 1:
+            sim_name += '_average_%d' % sim_idx
+        
+        vss = -70 # This number is 'randomly' chosen because it's roughly average of active steady state
+
+        #find_average_Ih_conductance(cell)
+
+        if not Ih_distribution == 'original':
+            if 'apical' in Ih_distribution:
+                cell = redistribute_Ih_appical(cell, Ih_distribution, ofolder)
+            else:
+                cell = redistribute_Ih(cell, Ih_distribution)
+            sim_name += '_' + Ih_distribution
+        print sim_name
+        #find_average_Ih_conductance(cell)
+
+        if conductance_type in ['Ih_linearized', 'passive_vss']:
+            for sec in cell.allseclist:
+                for seg in sec:
+                    exec('seg.vss_%s = %g'% (conductance_type, vss))
+
+        tot_ntsteps = round((cell_params['tstopms'])/cell_params['timeres_NEURON'] + 1)
+
+        noise_vecs = []
+        syns = []
+        print "Making input ..."
+        for input_idx, input_scaling in input_idx_scale:
+            noise_vecs.append(neuron.h.Vector(input_scaling * aLFP.make_WN_input(cell_params)))
+            i = 0
+            for sec in cell.allseclist:
+                for seg in sec:
+                    if i == input_idx:
+                        syns.append(neuron.h.ISyn(seg.x, sec=sec))
+                    i += 1
+            syns[-1].dur = 1E9
+            syns[-1].delay = 0
+            noise_vecs[-1].play(syns[-1]._ref_amp, cell.timeres_NEURON)
+
+        cell.simulate(**simulation_params)
+        save_WN_data_sparse(cell, sim_name, ofolder, ntsteps)
 
 def make_synapse_stimuli(cell, input_idx, input_scaling):
     # Define synapse parameters
@@ -573,6 +721,22 @@ def save_ZAP_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx)
     np.save(join(ofolder, 'vmem_%s.npy' %(sim_name)), cell.vmem)
 
+def save_WN_data_sparse(cell, sim_name, ofolder, input_idx, ntsteps):
+    timestep = (cell.tvec[1] - cell.tvec[0])/1000.
+    
+    cell.imem = cell.imem[:,-ntsteps:]
+    cell.tvec = cell.tvec[-ntsteps:] - cell.tvec[-ntsteps]
+    
+    np.save(join(ofolder, 'tvec_WN.npy'), cell.tvec)
+    mapping = np.load(join(ofolder, 'mapping.npy'))
+    sig = 1000 * np.dot(mapping, cell.imem)
+    sig_psd, freqs = find_LFP_PSD(sig, timestep)
+    np.save(join(ofolder, 'sig_psd_%s.npy' %(sim_name)), sig_psd)
+    np.save(join(ofolder, 'sig_%s.npy' %(sim_name)), sig)
+    np.save(join(ofolder, 'freqs.npy'), freqs)
+
+
+    
 def save_WN_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     timestep = (cell.tvec[1] - cell.tvec[0])/1000.
     
@@ -726,7 +890,8 @@ def vmem_quickplot(cell, sim_name, ofolder, input_array=None):
     plt.savefig(join(ofolder, 'current_%s.png' %sim_name))
 
 def initialize_cell(cell_params, pos_params, rot_params, cell_name, 
-                    elec_x, elec_y, elec_z, ntsteps, ofolder, testing=False, make_WN_input=False):
+                    elec_x, elec_y, elec_z, ntsteps, ofolder, 
+                    testing=False, make_WN_input=False, input_idx_scale=None):
     """ Position and plot a cell """
     neuron.h('forall delete_section()')
     try:
@@ -741,7 +906,7 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     cell.set_pos(**pos_params)       
     if testing:
         aLFP.plot_comp_numbers(cell, elec_x, elec_y, elec_z)
-
+    find_apical_Ih_distributions(cell, ofolder)
     # Define electrode parameters
     electrode_parameters = {
         'sigma' : 0.3,      # extracellular conductivity
@@ -779,16 +944,24 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     np.save(join(ofolder, 'zmid.npy' ), cell.zmid)
     np.save(join(ofolder, 'length.npy' ), length)
     np.save(join(ofolder, 'diam.npy' ), cell.diam)
-    
     if make_WN_input:
         timestep = cell_params['timeres_NEURON']/1000.
         # Making unscaled white noise input array
-        input_array = aLFP.make_WN_input(cell_params)
-        sample_freq = ff.fftfreq(len(input_array[-ntsteps:]), d=timestep)
-        pidxs = np.where(sample_freq >= 0)
-        freqs = sample_freq[pidxs]
-        Y = ff.fft(input_array[-ntsteps:])[pidxs]
-        power = np.abs(Y)/len(Y)
-        np.save(join(ofolder, 'input_array.npy'), input_array)
-        np.save(join(ofolder, 'input_array_psd.npy'), power)
-        np.save(join(ofolder, 'freqs.npy'), freqs)
+        if input_idx_scale == None:
+            input_array = aLFP.make_WN_input(cell_params)
+            np.save(join(ofolder, 'input_array.npy'), input_array)
+            sample_freq = ff.fftfreq(len(input_array[-ntsteps:]), d=timestep)
+            pidxs = np.where(sample_freq >= 0)
+            freqs = sample_freq[pidxs]
+            Y = ff.fft(input_array[-ntsteps:])[pidxs]
+            power = np.abs(Y)/len(Y)
+            np.save(join(ofolder, 'input_array_psd.npy'), power)
+            np.save(join(ofolder, 'freqs.npy'), freqs)
+        else:
+            tot_ntsteps = round((cell_params['tstopms'])/cell_params['timeres_NEURON'] + 1)
+            #input_array = np.zeros((len(input_idx_scale), tot_ntsteps))
+            #counter_idx = 0
+            #for input_idx, input_scaling in input_idx_scale:
+            #    input_array[counter_idx,:] = aLFP.make_WN_input(cell_params)
+            #    counter_idx += 1
+            #np.save(join(ofolder, 'input_array_multiple_input_%d.npy' % len(input_idx_scale)), input_array)
