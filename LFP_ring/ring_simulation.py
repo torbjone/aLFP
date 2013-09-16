@@ -27,7 +27,7 @@ if at_stallo:
     cut_off = 3000
 else:
     neuron_model = join('..', 'neuron_models', model)
-    cut_off = 30
+    cut_off = 3000
 
 simulation_params = {'rec_imem': True,
                      'rec_vmem':True
