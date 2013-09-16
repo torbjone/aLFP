@@ -589,57 +589,62 @@ def run_linearized_simulation(cell_params, input_scaling, input_idx,
 
 def run_multiple_input_simulation(cell_params, ofolder, input_idx_scale, ntsteps, 
                                   simulation_params, conductance_type, 
-                                  input_type, Ih_distribution, average_over_sims=1):
-    
-    for sim_idx in xrange(average_over_sims):
-        print "Sim idx", sim_idx
-        neuron.h('forall delete_section()')
-        neuron.h('secondorder=2')
-        #static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
-        #cell_params['v_init'] = -77#np.average(static_Vm)
-        cell = LFPy.Cell(**cell_params)
+                                  input_type, Ih_distribution, simulation_idx=None):
+    simulation_params['rec_vmem'] = False
+    neuron.h('forall delete_section()')
+    neuron.h('secondorder=2')
+    #static_Vm = np.load(join(ofolder, 'static_Vm_distribution.npy'))
+    #cell_params['v_init'] = -77#np.average(static_Vm)
+    cell = LFPy.Cell(**cell_params)
 
-        sim_name = 'multiple_input_%d_%s_%s' %(len(input_idx_scale), input_type, conductance_type)
-        if not average_over_sims == 1:
-            sim_name += '_average_%d' % sim_idx
+    sim_name = 'multiple_input_%d_%s_%s' %(len(input_idx_scale), input_type, conductance_type)
+    if not simulation_idx == None:
+        sim_name += '_simulation_%d' % simulation_idx
+
+    vss = -70 # This number is 'randomly' chosen because it's roughly average of active steady state
+
+    #find_average_Ih_conductance(cell)
+
+    if not Ih_distribution == 'original':
+        if 'apical' in Ih_distribution:
+            cell = redistribute_Ih_appical(cell, Ih_distribution, ofolder)
+        else:
+            cell = redistribute_Ih(cell, Ih_distribution)
+        sim_name += '_' + Ih_distribution
+    print sim_name
+    #find_average_Ih_conductance(cell)
+
+    if conductance_type in ['Ih_linearized', 'passive_vss']:
+        for sec in cell.allseclist:
+            for seg in sec:
+                exec('seg.vss_%s = %g'% (conductance_type, vss))
+
+    tot_ntsteps = round((cell_params['tstopms'])/cell_params['timeres_NEURON'] + 1)
+
+    noise_vecs = []
+    syns = []
+
+    if simulation_idx == None:
+        input_name = join(ofolder, 'input_array_multiple_input_%d.npy' % len(input_idx_scale))
+    else: 
+        input_name = join(ofolder, 'input_array_multiple_input_%d_simulation_%d.npy' % (len(input_idx_scale), simulation_idx))
         
-        vss = -70 # This number is 'randomly' chosen because it's roughly average of active steady state
-
-        #find_average_Ih_conductance(cell)
-
-        if not Ih_distribution == 'original':
-            if 'apical' in Ih_distribution:
-                cell = redistribute_Ih_appical(cell, Ih_distribution, ofolder)
-            else:
-                cell = redistribute_Ih(cell, Ih_distribution)
-            sim_name += '_' + Ih_distribution
-        print sim_name
-        #find_average_Ih_conductance(cell)
-
-        if conductance_type in ['Ih_linearized', 'passive_vss']:
-            for sec in cell.allseclist:
-                for seg in sec:
-                    exec('seg.vss_%s = %g'% (conductance_type, vss))
-
-        tot_ntsteps = round((cell_params['tstopms'])/cell_params['timeres_NEURON'] + 1)
-
-        noise_vecs = []
-        syns = []
-        print "Making input ..."
-        for input_idx, input_scaling in input_idx_scale:
-            noise_vecs.append(neuron.h.Vector(input_scaling * aLFP.make_WN_input(cell_params)))
-            i = 0
-            for sec in cell.allseclist:
-                for seg in sec:
-                    if i == input_idx:
-                        syns.append(neuron.h.ISyn(seg.x, sec=sec))
-                    i += 1
-            syns[-1].dur = 1E9
-            syns[-1].delay = 0
-            noise_vecs[-1].play(syns[-1]._ref_amp, cell.timeres_NEURON)
-
-        cell.simulate(**simulation_params)
-        save_WN_data_sparse(cell, sim_name, ofolder, ntsteps)
+    input_array = np.load(input_name)
+    counter_idx = 0
+    for input_idx, input_scaling in input_idx_scale:
+        noise_vecs.append(neuron.h.Vector(input_scaling * input_array[counter_idx,:]))
+        i = 0
+        for sec in cell.allseclist:
+            for seg in sec:
+                if i == input_idx:
+                    syns.append(neuron.h.ISyn(seg.x, sec=sec))
+                i += 1
+        syns[-1].dur = 1E9
+        syns[-1].delay = 0
+        noise_vecs[-1].play(syns[-1]._ref_amp, cell.timeres_NEURON)
+        counter_idx += 1
+    cell.simulate(**simulation_params)
+    save_WN_data_sparse(cell, sim_name, ofolder, ntsteps)
 
 def make_synapse_stimuli(cell, input_idx, input_scaling):
     # Define synapse parameters
@@ -649,7 +654,7 @@ def make_synapse_stimuli(cell, input_idx, input_scaling):
         'syntype' : 'ExpSyn',       # synapse type
         'tau' : 10.,                # syn. time constant
         'weight' : input_scaling,            # syn. weight
-        'record_current' : True,
+        'record_current' : False,
         }
     # Create synapse and set time of synaptic input
     synapse = LFPy.Synapse(cell, **synapse_parameters)
@@ -891,7 +896,7 @@ def vmem_quickplot(cell, sim_name, ofolder, input_array=None):
 
 def initialize_cell(cell_params, pos_params, rot_params, cell_name, 
                     elec_x, elec_y, elec_z, ntsteps, ofolder, 
-                    testing=False, make_WN_input=False, input_idx_scale=None):
+                    testing=False, make_WN_input=False, input_idx_scale=None, simulation_idx=None):
     """ Position and plot a cell """
     neuron.h('forall delete_section()')
     try:
@@ -959,9 +964,15 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
             np.save(join(ofolder, 'freqs.npy'), freqs)
         else:
             tot_ntsteps = round((cell_params['tstopms'])/cell_params['timeres_NEURON'] + 1)
-            #input_array = np.zeros((len(input_idx_scale), tot_ntsteps))
-            #counter_idx = 0
-            #for input_idx, input_scaling in input_idx_scale:
-            #    input_array[counter_idx,:] = aLFP.make_WN_input(cell_params)
-            #    counter_idx += 1
-            #np.save(join(ofolder, 'input_array_multiple_input_%d.npy' % len(input_idx_scale)), input_array)
+            input_array = np.zeros((len(input_idx_scale), tot_ntsteps))
+            counter_idx = 0
+            for input_idx, input_scaling in input_idx_scale:
+                input_array[counter_idx,:] = aLFP.make_WN_input(cell_params)
+                counter_idx += 1
+            if simulation_idx == None:
+                input_name = join(ofolder, 'input_array_multiple_input_%d.npy' % len(input_idx_scale))
+            else: 
+                input_name = join(ofolder, 'input_array_multiple_input_%d_simulation_%d.npy' % (len(input_idx_scale), simulation_idx))
+
+            np.save(input_name, input_array)
+            
