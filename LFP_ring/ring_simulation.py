@@ -20,7 +20,7 @@ import aLFP
 
 
 model = 'hay' 
-np.random.seed(1234)
+#np.random.seed(1234)
 
 if at_stallo:
     timeres = 2**-5
