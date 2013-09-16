@@ -721,7 +721,7 @@ def save_ZAP_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
     linearized_quickplot(cell, sim_name, ofolder, static_Vm, input_idx)
     np.save(join(ofolder, 'vmem_%s.npy' %(sim_name)), cell.vmem)
 
-def save_WN_data_sparse(cell, sim_name, ofolder, input_idx, ntsteps):
+def save_WN_data_sparse(cell, sim_name, ofolder, ntsteps):
     timestep = (cell.tvec[1] - cell.tvec[0])/1000.
     
     cell.imem = cell.imem[:,-ntsteps:]
