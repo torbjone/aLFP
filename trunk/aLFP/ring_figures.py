@@ -85,7 +85,8 @@ def plot_all_circle_signals(xmid, ymid, zmid, xstart, ystart, zstart, xend, yend
                 %(height_idx, radius_idx, sim_name, conductance_type))
 
 
-def make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, multiple_input, input_idx_scale, input_idx):
+def make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, 
+                       multiple_input, input_idx_scale, input_idx, simulation_idx):
 
     sm = plt.cm.ScalarMappable(cmap=plt.cm.jet, norm=plt.normalize(vmin=1, vmax=1000))
     sm._A = []
@@ -118,18 +119,130 @@ def make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, r
             for freq_idx in xrange(1,len(freqs)):
                 if freqs[freq_idx] > 1000:
                     continue
-                ax.plot(ring_dict['radiuses'], psd_vs_dist_dict[conductance_type][height_idx,:,freq_idx] / np.max(psd_vs_dist_dict[conductance_type][height_idx,:,freq_idx]), 
-                             color=freq_clr(freq_idx), rasterized=True, zorder=1, lw=0.5)
+                ax.plot(ring_dict['radiuses'], psd_vs_dist_dict[conductance_type][height_idx,:,freq_idx] / 
+                        np.max(psd_vs_dist_dict[conductance_type][height_idx,:,freq_idx]), 
+                        color=freq_clr(freq_idx), rasterized=True, zorder=1, lw=0.5)
                 
                 #plt.colorbar()
     if multiple_input:
-        freq_distfig.savefig('freq_vs_dist_PSD_multiple_input_%d.png' % len(input_idx_scale), dpi=150)
+        filename = 'freq_vs_dist_PSD_multiple_input_%d' % len(input_idx_scale)
     else:
-        freq_distfig.savefig('freq_vs_dist_PSD_%d.png' %(input_idx), dpi=150)
+        filename = 'freq_vs_dist_PSD_%d' %(input_idx)
 
+    if type(simulation_idx) == np.ndarray:
+        filename += '_sim_avrg_%d' %len(simulation_idx)
+    elif not simulation_idx == None:
+        filename += '_simulation_%d' %simulation_idx
         
+        
+    freq_distfig.savefig(filename + '.png', dpi=150)
+
+
+def distance_n_height_PSD(xstart, ystart, zstart, xmid, ymid, zmid, xend, yend, zend, diam, multiple_input, 
+                          input_idx_scale, input_idx, elec_x, elec_y, elec_z, ring_dict, conductance_list, psd_vs_dist_dict, freqs,
+                          conductance_color_dict, simulation_idx):
+
+    plt.close('all')
+    bigfig = plt.figure(figsize=[10,6])
+    bigfig.suptitle(("PSD of potential averaged over %d points on circle around cell.\n"+
+                    "Columns correspond to different radii and rows to different heights "+
+                    "as indicated by colored circles. White noise input marked by star")
+                    % ring_dict['numpoints_on_ring'])
+    bigfig.subplots_adjust(wspace=0.5)
+
+    ax_side = bigfig.add_axes([0.01, 0.25, 0.2, 0.3], frameon=False, aspect='equal', xticks=[], yticks=[])
+    ax_side.axis([-1600, 1600, -1000, 2000])
+
+    ax_top = bigfig.add_axes([0.01, 0.55, 0.2, 0.3], frameon=False, aspect='equal', xticks=[], yticks=[])
+    ax_top.axis([-1600, 1600, -1600, 1600])
+ 
+    for comp in xrange(len(xmid)):
+        if comp == 0:
+            ax_side.scatter(xmid[comp], ymid[comp], s=diam[comp], c='gray', 
+                                  edgecolor='none')
+            ax_top.scatter(xmid[comp], zmid[comp], s=diam[comp], c='gray', 
+                                  edgecolor='none')
+        else:
+            ax_side.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], 
+                               lw=diam[comp]/2, color='gray')
+            ax_top.plot([xstart[comp], xend[comp]], [zstart[comp], zend[comp]], 
+                               lw=diam[comp]/2, color='gray')
+    if multiple_input:
+        for input_idx, input_scaling in input_idx_scale:
+            ax_side.scatter(xmid[input_idx], ymid[input_idx], s=100, c='y', marker='*',
+                            edgecolor='none', zorder=1000)
+            ax_top.scatter(xmid[input_idx], zmid[input_idx], s=100, c='y', marker='*',
+                           edgecolor='none', zorder=1000)
+    else:
+        ax_side.scatter(xmid[input_idx], ymid[input_idx], s=100, c='y', marker='*',
+                        edgecolor='none', zorder=1000)
+        ax_top.scatter(xmid[input_idx], zmid[input_idx], s=100, c='y', marker='*',
+                       edgecolor='none', zorder=1000)
+    ax_top.text(0, np.max(elec_z) + 50, 'R=%g $\mu m$' %np.max(ring_dict['radiuses']))
+    ax_side.text(0, np.max(ring_dict['heights']) + 250, 'H=%g $\mu m$' %np.max(ring_dict['heights']))
+    num_heights = len(ring_dict['heights'])
+    num_radii = len(ring_dict['radiuses'])
+    numrings = num_heights * num_radii
+
+    ring_clr = lambda ring_idx: plt.cm.rainbow(int(256. * ring_idx/(numrings - 1.)))
+    ring_idx = 0
+
+    for height_idx in xrange(num_heights):
+        for radius_idx in xrange(num_radii):
+
+            side_c = mpatches.Ellipse((0, ring_dict['heights'][height_idx]), 
+                                 2*ring_dict['radiuses'][radius_idx], ring_dict['radiuses'][radius_idx]/10, 
+                                 fc="none", ec=ring_clr(ring_idx), lw=1, zorder=100)
+            ax_side.add_patch(side_c)
+            if height_idx == num_heights -1:
+                top_c = mpatches.Ellipse((0, 0), 
+                                         2*ring_dict['radiuses'][radius_idx], 
+                                         2*ring_dict['radiuses'][radius_idx], 
+                                         fc="none", ec=ring_clr(ring_idx), lw=1, zorder=100)
+                ax_top.add_patch(top_c)
+        
+            plotnumber = (num_radii + 1) * (num_heights - height_idx - 1) + radius_idx + 2
+            for cond_number, conductance_type in enumerate(conductance_list):    
+
+                ax = bigfig.add_subplot(num_heights, num_radii + 1, plotnumber)
+                ax.grid(True)
+                ax.tick_params(color=ring_clr(ring_idx))
+                for spine in ax.spines.values():
+                    spine.set_edgecolor(ring_clr(ring_idx))
+                ax.loglog(freqs, psd_vs_dist_dict[conductance_type][height_idx, radius_idx, :], lw=1, 
+                          color=conductance_color_dict[conductance_type], label=conductance_type)
+                
+                if height_idx == num_heights -1:
+                    ax.set_title('R=%g $\mu m$' % (ring_dict['radiuses'][radius_idx]))
+                if radius_idx == num_radii - 1:
+                    ax.text(1200,1e-6, "H=%g $\mu m$" %ring_dict['heights'][height_idx])
+                    
+                ax.set_xlim(1e0,1.1e3)
+                ax.set_ylim(1e-8,1e-4)       
+                if height_idx == 0 and radius_idx == 0:
+                    ax.set_ylabel('Amplitude')
+                    ax.set_xlabel('Hz')
+                if radius_idx == num_radii - 1 and height_idx == num_heights -1:
+                    ax.legend(bbox_to_anchor=[1.5, 1.]) 
+                #plot_all_circle_signals(xmid, ymid, zmid, xstart, ystart, zstart, xend, yend, zend, 
+                #                        diam, circle_idxs, elec_x,elec_y, elec_z, tvec, freqs, sig_psd, 
+                #                        sig_dict, circle_avrg_sig, circle_avrg_sig_psd, 
+                #                        ring_dict, sim_name, height_idx, radius_idx, conductance_type)
+            ring_idx += 1
+    
+    if multiple_input:
+        filename = 'distance_n_height_PSD_multiple_input_%d' % len(input_idx_scale)
+    else:
+        filename = 'distance_n_height_PSD_%d' %(input_idx)
+    if type(simulation_idx) == np.ndarray:
+        filename += '_sim_avrg_%d' %len(simulation_idx)
+    elif not simulation_idx == None:
+        filename += '_simulation_%d' %simulation_idx
+        
+    bigfig.savefig(filename + '.png', dpi=150)
+    
 def average_circle(ifolder, conductance_list, input_idx_scale, 
-                   ring_dict, elec_x, elec_y, elec_z):
+                   ring_dict, elec_x, elec_y, elec_z, simulation_idx=None):
 
     xmid = np.load(join(ifolder, 'xmid.npy' ))
     ymid = np.load(join(ifolder, 'ymid.npy' ))
@@ -150,10 +263,11 @@ def average_circle(ifolder, conductance_list, input_idx_scale,
         multiple_input = False
     except ValueError:
         multiple_input = True
+        input_idx = None
     input_type = 'WN'
     sig_dict = {}
-    vmem_dict = {}
-    vmem_psd_dict = {}
+    #vmem_dict = {}
+    #vmem_psd_dict = {}
     conductance_color_dict = {} 
     psd_vs_dist_dict = {}
     
@@ -161,15 +275,22 @@ def average_circle(ifolder, conductance_list, input_idx_scale,
         sim_name = 'multiple_input_%d_%s' %(len(input_idx_scale), input_type)
     else:
         sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, input_type)
+
     tvec = np.load(join(ifolder, 'tvec_%s.npy' % input_type))
     timestep = (tvec[1] - tvec[0])/1000.
     print sim_name   
     for cond_number, conductance_type in enumerate(conductance_list):
         conductance_name = "%s_%s" %(sim_name, conductance_type)
-        #vmem_dict[conductance_type] = np.load(join(ifolder, 'vmem_%s.npy' %(conductance_name)))
-        #if input_type == 'WN':
-        #    vmem_psd_dict[conductance_type] = np.load(join(ifolder, 'vmem_psd_%s.npy' %(conductance_name)))
-        sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
+        if type(simulation_idx) == np.ndarray:
+            sig_dict[conductance_type] = np.zeros((len(elec_x), len(tvec)))
+            for simidx in simulation_idx:
+                sig_dict[conductance_type] += np.load(join(ifolder, 'sig_%s_simulation_%d.npy' %(conductance_name, simidx))) / len(simulation_idx)
+            
+        elif not simulation_idx == None:
+            conductance_name += '_simulation_%d' % simulation_idx
+            sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
+        else:
+            sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
         psd_vs_dist_dict[conductance_type] = np.zeros((num_heights, num_radii, len(freqs)))
         if len(conductance_list) > 1:
             clr_number = 256. * cond_number/(len(conductance_list) - 1.)
@@ -177,45 +298,6 @@ def average_circle(ifolder, conductance_list, input_idx_scale,
             clr_number = 256. * cond_number/(len(conductance_list))
         conductance_color_dict[conductance_type] = plt.cm.jet(int(clr_number))
 
-    ## plt.close('all')
-    ## bigfig = plt.figure(figsize=[10,6])
-    ## bigfig.suptitle(("PSD of potential averaged over %d points on circle around cell.\n"+
-    ##                 "Columns correspond to different radii and rows to different heights "+
-    ##                 "as indicated by colored circles. White noise input marked by star""")
-    ##                 % ring_dict['numpoints_on_ring'])
-    ## bigfig.subplots_adjust(wspace=0.5)
-
-    ## ax_side = bigfig.add_axes([0.01, 0.25, 0.2, 0.3], frameon=False, aspect='equal', xticks=[], yticks=[])
-    ## ax_side.axis([-1600, 1600, -1000, 2000])
-
-    ## ax_top = bigfig.add_axes([0.01, 0.55, 0.2, 0.3], frameon=False, aspect='equal', xticks=[], yticks=[])
-    ## ax_top.axis([-1600, 1600, -1600, 1600])
- 
-    ## for comp in xrange(len(xmid)):
-    ##     if comp == 0:
-    ##         ax_side.scatter(xmid[comp], ymid[comp], s=diam[comp], c='gray', 
-    ##                               edgecolor='none')
-    ##         ax_top.scatter(xmid[comp], zmid[comp], s=diam[comp], c='gray', 
-    ##                               edgecolor='none')
-    ##     else:
-    ##         ax_side.plot([xstart[comp], xend[comp]], [ystart[comp], yend[comp]], 
-    ##                            lw=diam[comp]/2, color='gray')
-    ##         ax_top.plot([xstart[comp], xend[comp]], [zstart[comp], zend[comp]], 
-    ##                            lw=diam[comp]/2, color='gray')
-    ## if multiple_input:
-    ##     for input_idx, input_scaling in input_idx_scale:
-    ##         ax_side.scatter(xmid[input_idx], ymid[input_idx], s=100, c='y', marker='*',
-    ##                         edgecolor='none', zorder=1000)
-    ##         ax_top.scatter(xmid[input_idx], zmid[input_idx], s=100, c='y', marker='*',
-    ##                        edgecolor='none', zorder=1000)
-    ## else:
-    ##     ax_side.scatter(xmid[input_idx], ymid[input_idx], s=100, c='y', marker='*',
-    ##                     edgecolor='none', zorder=1000)
-    ##     ax_top.scatter(xmid[input_idx], zmid[input_idx], s=100, c='y', marker='*',
-    ##                    edgecolor='none', zorder=1000)
-    ## ax_top.text(0, np.max(elec_z) + 50, 'R=%g $\mu m$' %np.max(ring_dict['radiuses']))
-    ## ax_side.text(0, np.max(ring_dict['heights']) + 250, 'H=%g $\mu m$' %np.max(ring_dict['heights']), angle=90)
-    
     numrings = num_heights * num_radii
 
     ring_clr = lambda ring_idx: plt.cm.rainbow(int(256. * ring_idx/(numrings - 1.)))
@@ -223,62 +305,22 @@ def average_circle(ifolder, conductance_list, input_idx_scale,
 
     for height_idx in xrange(num_heights):
         for radius_idx in xrange(num_radii):
-
-            ## side_c = mpatches.Ellipse((0, ring_dict['heights'][height_idx]), 
-            ##                      2*ring_dict['radiuses'][radius_idx], ring_dict['radiuses'][radius_idx]/10, 
-            ##                      fc="none", ec=ring_clr(ring_idx), lw=1, zorder=100)
-            ## ax_side.add_patch(side_c)
-            ## if height_idx == num_heights -1:
-            ##     top_c = mpatches.Ellipse((0, 0), 
-            ##                              2*ring_dict['radiuses'][radius_idx], 
-            ##                              2*ring_dict['radiuses'][radius_idx], 
-            ##                              fc="none", ec=ring_clr(ring_idx), lw=1, zorder=100)
-            ##     ax_top.add_patch(top_c)
-        
-            ## plotnumber = (num_radii + 1) * (num_heights - height_idx - 1) + radius_idx + 2
             for cond_number, conductance_type in enumerate(conductance_list):    
-                
                 circle_idxs = return_circle_idxs(ring_dict, radius_idx, height_idx, elec_x, elec_y, elec_z)
-
                 circle_avrg_sig = np.average(sig_dict[conductance_type][circle_idxs], axis=0)
-
-                sig_psd, freqs = aLFP.find_LFP_PSD(sig_dict[conductance_type], timestep)
+                #sig_psd, freqs = aLFP.find_LFP_PSD(sig_dict[conductance_type], timestep)
                 circle_avrg_sig_psd, freqs = aLFP.find_LFP_PSD(np.array([circle_avrg_sig]), timestep)
                 psd_vs_dist_dict[conductance_type][height_idx, radius_idx, :] = circle_avrg_sig_psd
-    ##             ax = bigfig.add_subplot(num_heights, num_radii + 1, plotnumber)
-    ##             ax.grid(True)
-    ##             ax.tick_params(color=ring_clr(ring_idx))
-    ##             for spine in ax.spines.values():
-    ##                 spine.set_edgecolor(ring_clr(ring_idx))
-    ##             ax.loglog(freqs, circle_avrg_sig_psd[0,:], lw=1, 
-    ##                       color=conductance_color_dict[conductance_type], label=conductance_type)
-                
-    ##             if height_idx == num_heights -1:
-    ##                 ax.set_title('R=%g $\mu m$' % (ring_dict['radiuses'][radius_idx]))
-    ##             if radius_idx == num_radii - 1:
-    ##                 ax.text(1200,1e-6, "H=%g $\mu m$" %ring_dict['heights'][height_idx])
-                    
-    ##             ax.set_xlim(1e0,1.1e3)
-    ##             ax.set_ylim(1e-8,1e-4)       
-    ##             if height_idx == 0 and radius_idx == 0:
-    ##                 ax.set_ylabel('Amplitude')
-    ##                 ax.set_xlabel('Hz')
-    ##             if radius_idx == num_radii - 1 and height_idx == num_heights -1:
-    ##                 ax.legend(bbox_to_anchor=[1.5, 1.]) 
-    ##             #plot_all_circle_signals(xmid, ymid, zmid, xstart, ystart, zstart, xend, yend, zend, 
-    ##             #                        diam, circle_idxs, elec_x,elec_y, elec_z, tvec, freqs, sig_psd, 
-    ##             #                        sig_dict, circle_avrg_sig, circle_avrg_sig_psd, 
-    ##             #                        ring_dict, sim_name, height_idx, radius_idx, conductance_type)
-    ##         ring_idx += 1
-    
-    ## if multiple_input:
-    ##     bigfig.savefig('distance_n_height_PSD_multiple_input_%d.png' % len(input_idx_scale), dpi=150)
-    ## else:
-    ##     bigfig.savefig('distance_n_height_PSD_%d.png' %(input_idx), dpi=150)
+
+    distance_n_height_PSD(xstart, ystart, zstart, xmid, ymid, zmid, xend, yend, zend, diam, multiple_input, 
+                          input_idx_scale, input_idx, elec_x, elec_y, elec_z, ring_dict, conductance_list, 
+                          psd_vs_dist_dict, freqs, conductance_color_dict, simulation_idx)  
     if multiple_input:
-        make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, multiple_input, input_idx_scale, input_idx=None)
+        make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, 
+                           multiple_input, input_idx_scale, input_idx=None, simulation_idx=simulation_idx)
     else:
-        make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, multiple_input, input_idx_scale, input_idx)
+        make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, 
+                           multiple_input, input_idx_scale, input_idx, simulation_idx=simulation_idx)
                 
 def plot_ring(ifolder,elec_x, elec_y, elec_z):
 
