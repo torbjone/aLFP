@@ -235,7 +235,7 @@ def distance_n_height_PSD(xstart, ystart, zstart, xmid, ymid, zmid, xend, yend, 
     else:
         filename = 'distance_n_height_PSD_%d' %(input_idx)
     if type(simulation_idx) == np.ndarray:
-        filename += '_sim_avrg_%d' %len(simulation_idx)
+        filename += '_sim_PSD_avrg_%d' %len(simulation_idx)
     elif not simulation_idx == None:
         filename += '_simulation_%d' %simulation_idx
         
@@ -321,7 +321,96 @@ def average_circle(ifolder, conductance_list, input_idx_scale,
     else:
         make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, 
                            multiple_input, input_idx_scale, input_idx, simulation_idx=simulation_idx)
+
+
+def average_PSD_over_circle(ifolder, conductance_list, input_idx_scale, 
+                            ring_dict, elec_x, elec_y, elec_z, simulation_idx=None):
+
+    xmid = np.load(join(ifolder, 'xmid.npy' ))
+    ymid = np.load(join(ifolder, 'ymid.npy' ))
+    zmid = np.load(join(ifolder, 'zmid.npy' ))
+    xstart = np.load(join(ifolder, 'xstart.npy' ))
+    ystart = np.load(join(ifolder, 'ystart.npy' ))
+    zstart = np.load(join(ifolder, 'zstart.npy' ))
+    xend = np.load(join(ifolder, 'xend.npy' ))
+    yend = np.load(join(ifolder, 'yend.npy' ))
+    zend = np.load(join(ifolder, 'zend.npy' ))    
+    diam = np.load(join(ifolder, 'diam.npy'))    
+    freqs = np.load(join(ifolder, 'freqs.npy'))    
+    num_heights = len(ring_dict['heights'])
+    num_radii = len(ring_dict['radiuses'])
+    
+    try:
+        input_idx, input_scaling = input_idx_scale
+        multiple_input = False
+    except ValueError:
+        multiple_input = True
+        input_idx = None
+    input_type = 'WN'
+    sig_dict = {}
+    #vmem_dict = {}
+    #vmem_psd_dict = {}
+    conductance_color_dict = {} 
+    psd_vs_dist_dict = {}
+    
+    if multiple_input:
+        sim_name = 'multiple_input_%d_%s' %(len(input_idx_scale), input_type)
+    else:
+        sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, input_type)
+
+    tvec = np.load(join(ifolder, 'tvec_%s.npy' % input_type))
+    timestep = (tvec[1] - tvec[0])/1000.
+    print sim_name   
+    ## for cond_number, conductance_type in enumerate(conductance_list):
+    ##     conductance_name = "%s_%s" %(sim_name, conductance_type)
+    ##     if type(simulation_idx) == np.ndarray:
+    ##         sig_dict[conductance_type] = np.zeros((len(elec_x), len(tvec)))
+    ##         for simidx in simulation_idx:
+    ##             sig_dict[conductance_type] += np.load(join(ifolder, 'sig_%s_simulation_%d.npy' %(conductance_name, simidx))) / len(simulation_idx)
+            
+    ##     elif not simulation_idx == None:
+    ##         conductance_name += '_simulation_%d' % simulation_idx
+    ##         sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
+    ##     else:
+    ##         sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
+    ##     psd_vs_dist_dict[conductance_type] = np.zeros((num_heights, num_radii, len(freqs)))
+
+
+    numrings = num_heights * num_radii
+
+    ring_clr = lambda ring_idx: plt.cm.rainbow(int(256. * ring_idx/(numrings - 1.)))
+    ring_idx = 0
+    
+    psd_vs_dist_dict = {}
+    for cond_number, conductance_type in enumerate(conductance_list):    
+        if len(conductance_list) > 1:
+            clr_number = 256. * cond_number/(len(conductance_list) - 1.)
+        else:
+            clr_number = 256. * cond_number/(len(conductance_list))
+        conductance_color_dict[conductance_type] = plt.cm.jet(int(clr_number))
+        conductance_name = "%s_%s" %(sim_name, conductance_type)
+        psd_vs_dist_dict[conductance_type] = np.zeros((num_heights, num_radii, len(freqs)))
+        for height_idx in xrange(num_heights):
+            for radius_idx in xrange(num_radii):
+                circle_idxs = return_circle_idxs(ring_dict, radius_idx, height_idx, elec_x, elec_y, elec_z)
+                if type(simulation_idx) == np.ndarray:
+                    for simidx in simulation_idx:
+                        sig_ = np.load(join(ifolder, 'sig_%s_simulation_%d.npy' %(conductance_name, simidx)))
+                        sig_psd, freqs = aLFP.find_LFP_PSD(sig_, timestep)
+                        sig_psd = np.average(sig_psd[circle_idxs], axis=0)
+                        psd_vs_dist_dict[conductance_type][height_idx, radius_idx, :] += sig_psd
+    distance_n_height_PSD(xstart, ystart, zstart, xmid, ymid, zmid, xend, yend, zend, diam, multiple_input, 
+                          input_idx_scale, input_idx, elec_x, elec_y, elec_z, ring_dict, conductance_list, 
+                          psd_vs_dist_dict, freqs, conductance_color_dict, simulation_idx)  
+    #if multiple_input:
+    #    make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, 
+    #                       multiple_input, input_idx_scale, input_idx=None, simulation_idx=simulation_idx)
+    #else:
+    #    make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, ring_dict, 
+    #                       multiple_input, input_idx_scale, input_idx, simulation_idx=simulation_idx)
                 
+
+        
 def plot_ring(ifolder,elec_x, elec_y, elec_z):
 
     xmid = np.load(join(ifolder, 'xmid.npy' ))

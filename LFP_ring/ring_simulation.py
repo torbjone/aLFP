@@ -175,7 +175,7 @@ def average_circle():
     #    aLFP.average_circle(model, conductance_list, idx_scale, 
     #                        ring_dict, elec_x, elec_y, elec_z)
 
-    aLFP.average_circle(model, conductance_list, input_idx_scale, 
+    aLFP.average_PSD_over_circle(model, conductance_list, input_idx_scale, 
                         ring_dict, elec_x, elec_y, elec_z, simulation_idx=np.arange(3))    
         
 def plot_setup():
