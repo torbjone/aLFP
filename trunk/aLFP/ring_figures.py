@@ -218,7 +218,7 @@ def distance_n_height_PSD(xstart, ystart, zstart, xmid, ymid, zmid, xend, yend, 
                     ax.text(1200,1e-6, "H=%g $\mu m$" %ring_dict['heights'][height_idx])
                     
                 ax.set_xlim(1e0,1.1e3)
-                ax.set_ylim(1e-8,1e-4)       
+                ax.set_ylim(1e-8,1e-3)       
                 if height_idx == 0 and radius_idx == 0:
                     ax.set_ylabel('Amplitude')
                     ax.set_xlabel('Hz')
@@ -325,7 +325,7 @@ def average_circle(ifolder, conductance_list, input_idx_scale,
 
 def average_PSD_over_circle(ifolder, conductance_list, input_idx_scale, 
                             ring_dict, elec_x, elec_y, elec_z, simulation_idx=None):
-
+    """Takes the average over the PSDs instead of the signals"""
     xmid = np.load(join(ifolder, 'xmid.npy' ))
     ymid = np.load(join(ifolder, 'ymid.npy' ))
     zmid = np.load(join(ifolder, 'zmid.npy' ))
@@ -348,8 +348,6 @@ def average_PSD_over_circle(ifolder, conductance_list, input_idx_scale,
         input_idx = None
     input_type = 'WN'
     sig_dict = {}
-    #vmem_dict = {}
-    #vmem_psd_dict = {}
     conductance_color_dict = {} 
     psd_vs_dist_dict = {}
     
@@ -357,30 +355,13 @@ def average_PSD_over_circle(ifolder, conductance_list, input_idx_scale,
         sim_name = 'multiple_input_%d_%s' %(len(input_idx_scale), input_type)
     else:
         sim_name = '%d_%1.3f_%s' %(input_idx, input_scaling, input_type)
-
     tvec = np.load(join(ifolder, 'tvec_%s.npy' % input_type))
     timestep = (tvec[1] - tvec[0])/1000.
     print sim_name   
-    ## for cond_number, conductance_type in enumerate(conductance_list):
-    ##     conductance_name = "%s_%s" %(sim_name, conductance_type)
-    ##     if type(simulation_idx) == np.ndarray:
-    ##         sig_dict[conductance_type] = np.zeros((len(elec_x), len(tvec)))
-    ##         for simidx in simulation_idx:
-    ##             sig_dict[conductance_type] += np.load(join(ifolder, 'sig_%s_simulation_%d.npy' %(conductance_name, simidx))) / len(simulation_idx)
-            
-    ##     elif not simulation_idx == None:
-    ##         conductance_name += '_simulation_%d' % simulation_idx
-    ##         sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
-    ##     else:
-    ##         sig_dict[conductance_type] = np.load(join(ifolder, 'sig_%s.npy' %(conductance_name)))
-    ##     psd_vs_dist_dict[conductance_type] = np.zeros((num_heights, num_radii, len(freqs)))
-
-
     numrings = num_heights * num_radii
 
     ring_clr = lambda ring_idx: plt.cm.rainbow(int(256. * ring_idx/(numrings - 1.)))
-    ring_idx = 0
-    
+    debug = True
     psd_vs_dist_dict = {}
     for cond_number, conductance_type in enumerate(conductance_list):    
         if len(conductance_list) > 1:
@@ -394,11 +375,51 @@ def average_PSD_over_circle(ifolder, conductance_list, input_idx_scale,
             for radius_idx in xrange(num_radii):
                 circle_idxs = return_circle_idxs(ring_dict, radius_idx, height_idx, elec_x, elec_y, elec_z)
                 if type(simulation_idx) == np.ndarray:
+                    fig_allsim = plt.figure()
+                    fig_allsim.suptitle('Gray: All individual lines, Red: Average over signal, Black: Average over PSD')
+                    t_axis_allsim = fig_allsim.add_subplot(211, xlabel='ms', ylabel='Amplitude')
+                    f_axis_allsim = fig_allsim.add_subplot(212, yscale='log', xscale='log', ylim=[1e-8, 1e-3], xlim=[1e0,1e3],
+                                                           xlabel='Hz', ylabel='Amplitude')
+                    f_axis_allsim.set_rasterization_zorder(1)
+                    t_axis_allsim.set_rasterization_zorder(1)
+                    f_avrg = []
+                    t_avrg = []
                     for simidx in simulation_idx:
                         sig_ = np.load(join(ifolder, 'sig_%s_simulation_%d.npy' %(conductance_name, simidx)))
                         sig_psd, freqs = aLFP.find_LFP_PSD(sig_, timestep)
-                        sig_psd = np.average(sig_psd[circle_idxs], axis=0)
-                        psd_vs_dist_dict[conductance_type][height_idx, radius_idx, :] += sig_psd
+                        sig_psd_avrg = np.average(sig_psd[circle_idxs], axis=0)
+                        psd_vs_dist_dict[conductance_type][height_idx, radius_idx, :] += sig_psd_avrg
+                        f_avrg.append(sig_psd_avrg)
+                        t_avrg.append(np.average(sig_[circle_idxs], axis=0))
+                        if 1:
+                            #fig_onesim = plt.figure()
+                            #t_axis = fig_onesim.add_subplot(211)
+                            #f_axis = fig_onesim.add_subplot(212, yscale='log', ylim=[1e-9, 1e-3], xlim=[0,1e3])
+                            for circle_idx in circle_idxs:
+                                #t_axis.plot(tvec, sig_[circle_idx], lw=0.5, color='gray')
+                                #f_axis.plot(freqs, sig_psd[circle_idx], lw=0.5, color='gray')
+                                t_axis_allsim.plot(tvec, sig_[circle_idx], lw=0.5, color='gray', rasterized=True)
+                                f_axis_allsim.plot(freqs, sig_psd[circle_idx], lw=0.5, color='gray', rasterized=True)
+                                #set_trace()
+                                    
+                            #t_axis.plot(tvec, np.average(sig_[circle_idxs], axis=0), 'red', lw=2)
+                            #f_axis.plot(freqs, sig_psd_avrg, 'k', lw=2)
+                            #sig_avrg_psd, freqs = aLFP.find_LFP_PSD(np.array([np.average(sig_[circle_idxs], axis=0)]), timestep)
+                            #f_axis.plot(freqs, sig_avrg_psd[0], 'red', lw=2)
+                            #fig_onesim.savefig('debug_averaging_%s_h%d_r%d_s%d.png' %(conductance_type, height_idx, radius_idx, simidx))
+                            #plt.close(fig_onesim)
+                    sim_avrg_f = np.average(np.array(f_avrg), axis=0)
+                    sim_avrg_t = np.average(np.array(t_avrg), axis=0)
+                    sim_avrg_t_PSD, freqs = aLFP.find_LFP_PSD(np.array([sim_avrg_t]), timestep)
+                    psd_vs_dist_dict[conductance_type][height_idx, radius_idx] = sim_avrg_f
+                    f_axis_allsim.plot(freqs, sim_avrg_f, 'k', lw=1)
+                    f_axis_allsim.plot(freqs, sim_avrg_t_PSD[0], 'r', lw=1)
+                    t_axis_allsim.plot(tvec, sim_avrg_t, 'r', lw=1)
+                    
+                    fig_allsim.savefig('debug_averaging_%s_h%d_r%d_all_sim.png' %(conductance_type, height_idx, radius_idx))
+                    plt.close(fig_allsim)                    
+                else:
+                    raise RuntimeError, "Need modification/implementation"
     distance_n_height_PSD(xstart, ystart, zstart, xmid, ymid, zmid, xend, yend, zend, diam, multiple_input, 
                           input_idx_scale, input_idx, elec_x, elec_y, elec_z, ring_dict, conductance_list, 
                           psd_vs_dist_dict, freqs, conductance_color_dict, simulation_idx)  
