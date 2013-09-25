@@ -18,7 +18,6 @@ import pylab as plt
 from os.path import join
 import aLFP
 
-
 model = 'hay' 
 #np.random.seed(1234)
 
@@ -175,8 +174,12 @@ def average_circle():
     #    aLFP.average_circle(model, conductance_list, idx_scale, 
     #                        ring_dict, elec_x, elec_y, elec_z)
 
+    if at_stallo: 
+        simulation_idx = np.arange(100)
+    else:
+        simulation_idx = np.arange(3)
     aLFP.average_PSD_over_circle(model, conductance_list, input_idx_scale, 
-                                 ring_dict, elec_x, elec_y, elec_z, simulation_idx=np.arange(100))    
+                                 ring_dict, elec_x, elec_y, elec_z, simulation_idx=simulation_idx)    
         
 def plot_setup():
     aLFP.plot_ring(model, elec_x, elec_y, elec_z)

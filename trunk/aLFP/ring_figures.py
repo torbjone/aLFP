@@ -20,8 +20,6 @@ plt.rcParams.update({'font.size' : 8,
                      })
 #np.random.seed(1234)
 
-
-
 def return_circle_idxs(ring_dict, radius_idx, height_idx, elec_x, elec_y, elec_z):
     circle_idxs = []
     circle_R = ring_dict['radiuses'][radius_idx]
@@ -106,8 +104,9 @@ def make_freq_dist_fig(freqs, psd_vs_dist_dict, conductance_list, num_heights, r
             x = np.array([1000, 1500])
             ax.plot(x, 1e0 * 1000**2/x**2, color='k', lw=2, label='$R^2$')
             ax.set_xlim(200, 1600)
-            ax.set_ylim(1e-3,1.2)
+            ax.set_ylim(1e-2,1.1)
             ax.set_yscale('log')
+            ax.set_xscale('log')
             if height_idx == 0 and cond_number == 0:
                 ax.legend(bbox_to_anchor=[1.1,1.2])
                 cbar_ax = freq_distfig.add_axes([0.93, 0.25, 0.01, 0.5])
@@ -388,7 +387,7 @@ def average_PSD_over_circle(ifolder, conductance_list, input_idx_scale,
                         sig_ = np.load(join(ifolder, 'sig_%s_simulation_%d.npy' %(conductance_name, simidx)))
                         sig_psd, freqs = aLFP.find_LFP_PSD(sig_, timestep)
                         sig_psd_avrg = np.average(sig_psd[circle_idxs], axis=0)
-                        psd_vs_dist_dict[conductance_type][height_idx, radius_idx, :] += sig_psd_avrg
+                        #psd_vs_dist_dict[conductance_type][height_idx, radius_idx, :] += sig_psd_avrg
                         f_avrg.append(sig_psd_avrg)
                         t_avrg.append(np.average(sig_[circle_idxs], axis=0))
                         if 0:
