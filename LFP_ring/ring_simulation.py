@@ -34,7 +34,7 @@ simulation_params = {'rec_imem': True,
                      'rec_vmem':True
                      }
 
-print np.random.random()
+#print np.random.random()
 #input_idx_scale = [[0, 0.001],
 #                   [82, 0.001],
 #                   [611, 0.001], 
@@ -180,7 +180,22 @@ def average_circle():
         simulation_idx = np.arange(3)
     aLFP.average_PSD_over_circle(model, conductance_list, input_idx_scale, 
                                  ring_dict, elec_x, elec_y, elec_z, simulation_idx=simulation_idx)    
+
+def new_ring_plot():
+    conductance_list = ['active', 'Ih_linearized', 'passive_vss']
+    folder = join('stallo', 'data')
+    #aLFP.average_PSD_on_rings(folder, conductance_list)
+    aLFP.new_ring_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)    
         
+def new_ring_dist_decay_plot():
+    conductance_list = ['active', 'Ih_linearized', 'passive_vss']
+    folder = join('stallo', 'data')
+    #aLFP.average_PSD_on_rings(folder, conductance_list)
+    aLFP.new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)    
+        
+
+    
+    
 def plot_setup():
     aLFP.plot_ring(model, elec_x, elec_y, elec_z)
 

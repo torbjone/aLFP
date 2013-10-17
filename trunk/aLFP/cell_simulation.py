@@ -911,7 +911,7 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
     cell.set_pos(**pos_params)       
     if testing:
         aLFP.plot_comp_numbers(cell, elec_x, elec_y, elec_z)
-    find_apical_Ih_distributions(cell, ofolder)
+    #find_apical_Ih_distributions(cell, ofolder)
     # Define electrode parameters
     electrode_parameters = {
         'sigma' : 0.3,      # extracellular conductivity
