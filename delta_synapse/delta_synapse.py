@@ -92,15 +92,18 @@ synaptic_params = {'section': ['soma', 'apic', 'dend'],
                    'args' : [1, 5, cell_params['tstartms'], cell_params['tstopms']]
                    }
 
+def initialize_cell():
+
+    aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
+                         elec_x, elec_y, elec_z, ntsteps, model, 
+                         testing=False, make_WN_input=False)
+
+    
 def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
     """  
     conductance_list = ['active', 'Ih_linearized',  'passive_vss']
-
-    #aLFP.initialize_cell(cell_params, pos_params, rot_params, model, 
-    #                     elec_x, elec_y, elec_z, ntsteps, model, 
-    #                     testing=False, make_WN_input=False)
 
     aLFP.run_delta_synapse_simulation(cell_params, conductance_list, model, model_path, 
                                    ntsteps, synaptic_params, simulation_idx=int(sys.argv[2]))
