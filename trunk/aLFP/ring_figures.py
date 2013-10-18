@@ -100,13 +100,119 @@ def new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x,
     ring_clr = lambda ring_idx: plt.cm.rainbow(int(256. * ring_idx/(numrings - 1.)))
     conductance_clr = lambda cond_number: plt.cm.jet(int(256. * cond_number/(len(conductance_list) - 1.)))
 
-    plot_all_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
+    #plot_all_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
+    #                            conductance_list, conductance_clr, elec_x, elec_y, elec_z)
+    plot_chosen_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
                                 conductance_list, conductance_clr, elec_x, elec_y, elec_z)
+    fig.savefig('dist_decay_chosen_frequencies.png', dpi=150)
 
-    fig.savefig('new_ring_plot_averaged_dist_decay_simplified_not_normalized.png', dpi=150)
+def plot_chosen_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
+                                conductance_list, conductance_clr, elec_x, elec_y, elec_z):
+
+    freqs = np.load(join(folder, 'freqs.npy'))
+
+    freq_idx_1 = np.argmin(np.abs(freqs - 1))
+    freq_idx_60 = np.argmin(np.abs(freqs - 60))
+    freq_idx_500 = np.argmin(np.abs(freqs - 500))
+    
+    axes = []
+    for height_idx in xrange(num_heights):
+        axes.append([])
+        axes[height_idx] = []
+        for cond_number, conductance_type in enumerate(conductance_list):
+            plotnumber = (len(conductance_list)) * (num_heights - height_idx - 1) + cond_number +1
+            ax = fig.add_subplot(num_heights, len(conductance_list), plotnumber, xlim=(1e1,2e3), ylim=(1e-5,2e-2),
+                                 yscale='log', xscale='log', title="%s H=%g $\mu m$" %(conductance_type, ring_dict['heights'][height_idx]))
+            ax.grid(True)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.get_xaxis().tick_bottom()
+            ax.get_yaxis().tick_left()
+
+            xbar = np.array([1000, 1500])
+            ybar = 5e-1* xbar[0]**2 /xbar**2
+            ax.plot(xbar, ybar, lw=2, color='k')
+            if height_idx == 0:
+                ax.set_ylabel('Amplitude')
+                ax.set_xlabel('Distance')
+            #if radius_idx == num_radii - 1 and height_idx == num_heights -1:
+            #    ax.legend(bbox_to_anchor=[1.5, 1.]) 
+            axes[height_idx].append(ax)
+
+            if conductance_type == 'passive_vss' and height_idx == 0:
+                ax.plot(0,0, color='m', label='1 Hz')
+                ax.plot(0,0, color='g', label='60 Hz')
+                ax.plot(0,0, color='y', label='500 Hz')
+                plt.legend(frameon=False, bbox_to_anchor=(1.5, 1.1))
+            
+
+    psd_vs_dist_dict = {}
+    filename = 'signal_psd_%s_averaged.npy'
+    
+    for cond_number, conductance_type in enumerate(conductance_list):
+        cond_sig = np.load(join(folder, filename %conductance_type))
+        psd_vs_dist_dict[conductance_type] = np.zeros((num_heights, num_radii, len(freqs)))
+        for height_idx in xrange(num_heights):
+            for radius_idx in xrange(num_radii):
+                circle_idxs = return_circle_idxs(ring_dict, radius_idx, height_idx, elec_x, elec_y, elec_z)
+                psd_vs_dist_dict[conductance_type][height_idx, radius_idx,:] = np.average(cond_sig[circle_idxs], axis=0)
+
+    
+    errors = np.zeros((num_heights, len(psd_vs_dist_dict[conductance_type][height_idx, :, freq_idx_1])))
+    error_fig = plt.figure()        
+    error_fig.subplots_adjust(hspace=0.5)    
+    for height_idx in xrange(num_heights):
+        for cond_number, conductance_type in enumerate(conductance_list):
+            ax = axes[height_idx][cond_number]        
+            ax.plot(ring_dict['radiuses'], psd_vs_dist_dict[conductance_type][height_idx, :, freq_idx_1], 
+                    color='m', lw=1.)
+            ax.plot(ring_dict['radiuses'], psd_vs_dist_dict[conductance_type][height_idx, :, freq_idx_60], 
+                    color='g', lw=1.)            
+            ax.plot(ring_dict['radiuses'], psd_vs_dist_dict[conductance_type][height_idx, :, freq_idx_500], 
+                    color='y', lw=1.)
+            
+        error_ax = error_fig.add_subplot(3,2, 2*(num_heights - height_idx), yscale='log', xscale='log', 
+                                         title="Passive rel. error H=%g $\mu m$" %(ring_dict['heights'][height_idx]), ylim=[1e-3, 1e0], xlabel='Distance')
+        errors_1 = np.abs(psd_vs_dist_dict['active'][height_idx, :, freq_idx_1] - psd_vs_dist_dict['passive_vss'][height_idx, :, freq_idx_1]) / psd_vs_dist_dict['active'][height_idx, :, freq_idx_1]
+        errors_60 = np.abs(psd_vs_dist_dict['active'][height_idx, :, freq_idx_60] - psd_vs_dist_dict['passive_vss'][height_idx, :, freq_idx_60]) / psd_vs_dist_dict['active'][height_idx, :, freq_idx_60]
+        errors_500 = np.abs(psd_vs_dist_dict['active'][height_idx, :, freq_idx_500] - psd_vs_dist_dict['passive_vss'][height_idx, :, freq_idx_500]) / psd_vs_dist_dict['active'][height_idx, :, freq_idx_500]
+
+        error_ax.plot(ring_dict['radiuses'], errors_1, color='m')
+        error_ax.plot(ring_dict['radiuses'], errors_60, color='g')
+        error_ax.plot(ring_dict['radiuses'], errors_500, color='y')
+
+
+        error_ax2 = error_fig.add_subplot(3,2, 2*(num_heights - height_idx) -1, yscale='log', xscale='log', 
+                                          title="Ih_linearized rel. error H=%g $\mu m$" %(ring_dict['heights'][height_idx]), ylim=[1e-3, 1e0], xlabel='Distance')
+        errors_1 = np.abs(psd_vs_dist_dict['active'][height_idx, :, freq_idx_1] - psd_vs_dist_dict['Ih_linearized'][height_idx, :, freq_idx_1]) / psd_vs_dist_dict['active'][height_idx, :, freq_idx_1]
+        errors_60 = np.abs(psd_vs_dist_dict['active'][height_idx, :, freq_idx_60] - psd_vs_dist_dict['Ih_linearized'][height_idx, :, freq_idx_60]) / psd_vs_dist_dict['active'][height_idx, :, freq_idx_60]
+        errors_500 = np.abs(psd_vs_dist_dict['active'][height_idx, :, freq_idx_500] - psd_vs_dist_dict['Ih_linearized'][height_idx, :, freq_idx_500])/ psd_vs_dist_dict['active'][height_idx, :, freq_idx_500]
+
+        error_ax2.plot(ring_dict['radiuses'], errors_1, color='m')
+        error_ax2.plot(ring_dict['radiuses'], errors_60, color='g')
+        error_ax2.plot(ring_dict['radiuses'], errors_500, color='y')
+
+        error_ax.grid(True)
+        error_ax.spines['top'].set_visible(False)
+        error_ax.spines['right'].set_visible(False)
+        error_ax.get_xaxis().tick_bottom()
+        error_ax.get_yaxis().tick_left()
+
+        error_ax2.grid(True)
+        error_ax2.spines['top'].set_visible(False)
+        error_ax2.spines['right'].set_visible(False)
+        error_ax2.get_xaxis().tick_bottom()
+        error_ax2.get_yaxis().tick_left()
+                
+        if height_idx == 0:
+            error_ax.plot(0,0, color='m', label='1 Hz')
+            error_ax.plot(0,0, color='g', label='60 Hz')
+            error_ax.plot(0,0, color='y', label='500 Hz')
+            error_ax.legend(frameon=False, bbox_to_anchor=(1.3, 1.1))
         
-
-
+        
+    error_fig.savefig('errors_rel_with_dist.png')
+        
 def plot_all_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
                                 conductance_list, conductance_clr, elec_x, elec_y, elec_z):
 

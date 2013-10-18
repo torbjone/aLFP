@@ -4,7 +4,7 @@ import numpy as np
 import sys, os
 from os.path import join
 from ipdb import set_trace
-folder = 'hay'
+folder = 'stallo'
 
 filelist = os.listdir(folder)
 xmid = np.load(join(folder, 'xmid.npy'))

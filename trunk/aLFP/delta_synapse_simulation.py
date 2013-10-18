@@ -36,7 +36,7 @@ def run_delta_synapse_simulation(cell_params, conductance_list, ofolder, model_p
         'e' : 0,   
         'syntype' : 'ExpSyn',      #conductance based exponential synapse
         'tau' : .1,                #Time constant, rise           #Time constant, decay
-        'weight' : 0.005,           #Synaptic weight
+        'weight' : 0.001,           #Synaptic weight
         'color' : 'r',              #for pl.plot
         'marker' : '.',             #for pl.plot
         'record_current' : True,    #record synaptic currents
@@ -54,8 +54,13 @@ def run_delta_synapse_simulation(cell_params, conductance_list, ofolder, model_p
 
         cell_params['v_init'] = -77
         cell = LFPy.Cell(**cell_params)
-        sim_name = '%s_sim_%d' %(conductance_type, simulation_idx)
-        
+        if len(synaptic_params['section']) == 3:
+            sim_name = '%s_homogeneous_sim_%d' %(conductance_type, simulation_idx)
+        elif len(synaptic_params['section']) == 1:
+            sim_name = '%s_%s_sim_%d' %(conductance_type, synaptic_params['section'][0], simulation_idx)
+        else:
+            raise RuntimeError, "Wrong synaptic_params"
+        print sim_name
         if conductance_type in ['passive_vss', 'Ih_linearized']:
             for comp_idx, sec in enumerate(cell.allseclist):
                 for seg in sec:
@@ -69,7 +74,6 @@ def run_delta_synapse_simulation(cell_params, conductance_list, ofolder, model_p
         mapping = np.load(join(ofolder, 'mapping.npy'))
         sig = 1000 * np.dot(mapping, cell.imem)
         sig_psd, freqs = aLFP.find_LFP_PSD(sig, (cell.tvec[1] - cell.tvec[0])/1000.)
-
         np.save(join(ofolder, 'signal_psd_%s.npy' %sim_name), sig_psd)
         np.save(join(ofolder, 'signal_%s.npy' %sim_name), sig)
         np.save(join(ofolder, 'somav_%s.npy' %sim_name), cell.somav)

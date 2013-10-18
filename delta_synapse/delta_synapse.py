@@ -34,7 +34,7 @@ else:
 tstopms = 1000
 ntsteps = round((tstopms - 0) / timeres)
 
-ring_dict = {'radiuses': np.array([10., 50., 100., 500., 1000., 5000]),
+ring_dict = {'radiuses': np.array([10., 25, 50., 100., 250., 500., 1000., 2500., 5000.]),
              'numpoints_on_ring': 30,
              'heights': np.array([0., 500., 1000.]),
              }
@@ -98,7 +98,7 @@ def initialize_cell():
                          elec_x, elec_y, elec_z, ntsteps, model, 
                          testing=False, make_WN_input=False)
 
-    
+
 def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
@@ -116,7 +116,7 @@ def test_plots():
 
 def ring_plot():
     conductance_list = ['active', 'Ih_linearized', 'passive_vss']
-    folder = join('hay')
+    folder = join('stallo')
     filename_root = 'signal_psd'
     #aLFP.average_PSD_on_rings(folder, conductance_list, filename_root)
     aLFP.new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)
