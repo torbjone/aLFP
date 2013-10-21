@@ -19,19 +19,21 @@ plt.rcParams.update({'font.size' : 8,
                      'legend.fontsize' : 7,
                      })
 
-def average_PSD_on_rings(folder, conductance_list, filename_root='sig_psd_multiple_input_100_WN'):
+def average_PSD_on_rings(folder, conductance_list, input_pos, filename_root='sig_psd_multiple_input_100_WN'):
 
     sig_psd_shape = (540, 501)
-    num_simulations = 100
+    num_simulations = 500
     
     for cond_number, conductance_type in enumerate(conductance_list):
         print conductance_type
         average_sig = np.zeros(sig_psd_shape)
         for simulation_idx in xrange(num_simulations):
 
-            average_sig += np.load(join(folder, '%s_%s_sim_%d.npy' % (filename_root, conductance_type, simulation_idx)))
+            average_sig += np.load(join(folder, '%s_%s_%s_sim_%d.npy' % 
+                                        (filename_root, conductance_type, input_pos, simulation_idx)))
         average_sig /= num_simulations
-        np.save(join(folder, '%s_%s_averaged.npy' % (filename_root, conductance_type)), average_sig)
+        np.save(join(folder, '%s_%s_%s_averaged.npy' % (filename_root, conductance_type, input_pos)), 
+                average_sig)
 
         
 def plot_rings_and_cell_to_fig(fig, pos1, pos2, ifolder, ring_dict, ring_clr):
