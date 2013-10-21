@@ -118,8 +118,11 @@ def ring_plot():
     conductance_list = ['active', 'Ih_linearized', 'passive_vss']
     folder = join('stallo')
     filename_root = 'signal_psd'
-    #aLFP.average_PSD_on_rings(folder, conductance_list, filename_root)
-    aLFP.new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)
+    aLFP.average_PSD_on_rings(folder, conductance_list, 'apic', filename_root)
+    aLFP.average_PSD_on_rings(folder, conductance_list, 'dend', filename_root)
+    aLFP.average_PSD_on_rings(folder, conductance_list, 'homogeneous', filename_root)
+    
+    #aLFP.new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)
     #aLFP.new_ring_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)
     
 if __name__ == '__main__':
