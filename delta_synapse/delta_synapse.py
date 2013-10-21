@@ -24,7 +24,7 @@ model = 'hay'
 print np.random.random()
 if at_stallo:
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
-    cut_off = 1000
+    cut_off = 200
     timeres = 2**-6
 else:
     neuron_model = join('..', 'neuron_models', model)
