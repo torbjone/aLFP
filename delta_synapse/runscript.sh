@@ -18,10 +18,11 @@ cd /global/work/torbness/aLFP/delta_synapse/
 maxpartasks=64
 CELLS=500
 
-tasks=$(seq 0 $(($CELLS-1)))
+python $filename initialize_cell
 
+tasks=$(seq 0 $(($CELLS-1)))
 for t in $tasks; do
-        python $filename $t &		
+        python $filename simulate_single_cell $t &		
         activetasks=$(jobs | wc -l)
         while [ $activetasks -ge $maxpartasks ]; do
                sleep 1
