@@ -87,7 +87,7 @@ def plot_rings_and_cell_to_fig(fig, pos1, pos2, ifolder, ring_dict, ring_clr):
 
 
 
-def new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z):
+def new_ring_dist_decay_plot(folder, model, conductance_list, input_pos, ring_dict, elec_x, elec_y, elec_z):
     
     fig = plt.figure(figsize=[10,5])
     fig.subplots_adjust(wspace=0.5, hspace=0.5)
@@ -105,11 +105,11 @@ def new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x,
     #plot_all_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
     #                            conductance_list, conductance_clr, elec_x, elec_y, elec_z)
     plot_chosen_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
-                                conductance_list, conductance_clr, elec_x, elec_y, elec_z)
-    fig.savefig('dist_decay_chosen_frequencies.png', dpi=150)
+                                conductance_list, conductance_clr, input_pos, elec_x, elec_y, elec_z)
+    fig.savefig('dist_decay_chosen_frequencies_%s.png' % input_pos, dpi=150)
 
 def plot_chosen_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
-                                conductance_list, conductance_clr, elec_x, elec_y, elec_z):
+                                conductance_list, conductance_clr, input_pos, elec_x, elec_y, elec_z):
 
     freqs = np.load(join(folder, 'freqs.npy'))
 
@@ -149,10 +149,10 @@ def plot_chosen_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights
             
 
     psd_vs_dist_dict = {}
-    filename = 'signal_psd_%s_averaged.npy'
+    filename = 'signal_psd_%s_%s_averaged.npy'
     
     for cond_number, conductance_type in enumerate(conductance_list):
-        cond_sig = np.load(join(folder, filename %conductance_type))
+        cond_sig = np.load(join(folder, filename %(conductance_type, input_pos)))
         psd_vs_dist_dict[conductance_type] = np.zeros((num_heights, num_radii, len(freqs)))
         for height_idx in xrange(num_heights):
             for radius_idx in xrange(num_radii):
@@ -213,7 +213,7 @@ def plot_chosen_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights
             error_ax.legend(frameon=False, bbox_to_anchor=(1.3, 1.1))
         
         
-    error_fig.savefig('errors_rel_with_dist.png')
+    error_fig.savefig('errors_rel_with_dist_%s.png' %input_pos)
         
 def plot_all_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
                                 conductance_list, conductance_clr, elec_x, elec_y, elec_z):
@@ -272,7 +272,7 @@ def plot_all_dist_decays_to_fig(fig, folder, ring_clr, ring_dict, num_heights, n
     cbar = plt.colorbar(sm, cax=cbar_ax)
             
 
-def new_ring_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z):
+def new_ring_plot(folder, model, conductance_list, input_pos, ring_dict, elec_x, elec_y, elec_z):
     
     fig = plt.figure(figsize=[10,5])
     fig.subplots_adjust(wspace=0.5, hspace=0.5)
@@ -290,12 +290,12 @@ def new_ring_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, el
     plot_rings_and_cell_to_fig(fig, pos_top_ax, pos_side_ax, folder, ring_dict, ring_clr)
 
     plot_PSD_from_all_rings_to_fig(fig, folder, ring_clr, ring_dict, num_heights, 
-                                   num_radii, conductance_list, conductance_clr, elec_x, elec_y, elec_z)    
-    fig.savefig('new_ring_plot_averaged.png', dpi=150)
+                                   num_radii, conductance_list, input_pos, conductance_clr, elec_x, elec_y, elec_z)    
+    fig.savefig('new_ring_plot_averaged_%s.png' % input_pos, dpi=150)
         
 
 def plot_PSD_from_all_rings_to_fig(fig, folder, ring_clr, ring_dict, num_heights, num_radii, 
-                                   conductance_list, conductance_clr, elec_x, elec_y, elec_z):
+                                   conductance_list, input_pos, conductance_clr, elec_x, elec_y, elec_z):
 
     ring_idx = 0
     freqs = np.load(join(folder, 'freqs.npy'))
@@ -307,7 +307,7 @@ def plot_PSD_from_all_rings_to_fig(fig, folder, ring_clr, ring_dict, num_heights
         axes[height_idx] = []
         for radius_idx in xrange(num_radii):
             plotnumber = (num_radii + 1) * (num_heights - height_idx - 1) + radius_idx + 2
-            ax = fig.add_subplot(num_heights, num_radii + 1, plotnumber, xlim=(1e0,1.1e3), ylim=(1e-5,1e-1))
+            ax = fig.add_subplot(num_heights, num_radii + 1, plotnumber, xlim=(1e0,1.1e3), ylim=(1e-7,1e-2))
             ax.grid(True)
             ax.tick_params(color=ring_clr(ring_idx))
             for spine in ax.spines.values():
@@ -335,9 +335,9 @@ def plot_PSD_from_all_rings_to_fig(fig, folder, ring_clr, ring_dict, num_heights
 
             ring_idx += 1
 
-    filename = 'signal_psd_%s_averaged.npy'
+    filename = 'signal_psd_%s_%s_averaged.npy'
     for cond_number, conductance_type in enumerate(conductance_list):
-        psd_dict[conductance_type] = np.load(join(folder, filename %conductance_type))
+        psd_dict[conductance_type] = np.load(join(folder, filename %(conductance_type, input_pos)))
 
     ring_idx = 0
     for height_idx in xrange(num_heights):
