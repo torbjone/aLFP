@@ -108,7 +108,6 @@ def simulate_single_cell():
     aLFP.run_delta_synapse_simulation(cell_params, conductance_list, model, model_path, 
                                    ntsteps, synaptic_params, simulation_idx=int(sys.argv[2]))
 
-
 def test_plots():
     aLFP.delta_synapse_PSD(model, 'active')
     aLFP.delta_synapse_PSD(model, 'Ih_linearized')
@@ -116,14 +115,14 @@ def test_plots():
 
 def ring_plot():
     conductance_list = ['active', 'Ih_linearized', 'passive_vss']
-    folder = join('stallo')
+    folder = join('hay')
     filename_root = 'signal_psd'
-    aLFP.average_PSD_on_rings(folder, conductance_list, 'apic', filename_root)
-    aLFP.average_PSD_on_rings(folder, conductance_list, 'dend', filename_root)
-    aLFP.average_PSD_on_rings(folder, conductance_list, 'homogeneous', filename_root)
-    
-    #aLFP.new_ring_dist_decay_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)
-    #aLFP.new_ring_plot(folder, model, conductance_list, ring_dict, elec_x, elec_y, elec_z)
+    input_pos = 'dend'
+    #aLFP.average_PSD_on_rings(folder, conductance_list, 'apic', filename_root)
+    #aLFP.average_PSD_on_rings(folder, conductance_list, 'dend', filename_root)
+    #aLFP.average_PSD_on_rings(folder, conductance_list, 'homogeneous', filename_root)
+    #aLFP.new_ring_dist_decay_plot(folder, model, conductance_list, input_pos, ring_dict, elec_x, elec_y, elec_z)
+    aLFP.new_ring_plot(folder, model, conductance_list, input_pos, ring_dict, elec_x, elec_y, elec_z)
     
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -131,3 +130,5 @@ if __name__ == '__main__':
         raise SystemExit(1)
     func = eval('%s' % sys.argv[1])
     func()
+
+    
