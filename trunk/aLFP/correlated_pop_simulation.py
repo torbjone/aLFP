@@ -23,6 +23,7 @@ import aLFP
 import scipy.fftpack as ff
 import scipy.signal
 import tables
+import random
 
 plt.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
@@ -153,8 +154,8 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
         # The spiketrain indexes are drawn from a common pool without replacement. 
         # The size of the common pool descides the average correlation
         all_spike_trains = np.load(join(ofolder, 'all_spike_trains.npy')).item()
-        spike_train_idxs = np.random.choice(int(spiketrain_params['n']/correlation), 
-                                            size=spiketrain_params['n'], replace=False)
+        spike_train_idxs = random.sample(np.arange(int(spiketrain_params['n']/correlation)), 
+                                            spiketrain_params['n'])
     else:
         num_trains = spiketrain_params['n']
         all_spike_trains = {}
