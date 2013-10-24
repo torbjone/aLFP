@@ -126,7 +126,7 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
         'weight' : 0.001,           #Synaptic weight
         'color' : 'r',              #for pl.plot
         'marker' : '.',             #for pl.plot
-        'record_current' : True,    #record synaptic currents
+        'record_current' : False,    #record synaptic currents
         }
     vss = -77
     cell = LFPy.Cell(**cell_params)
@@ -171,7 +171,7 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]        
         cell_params['v_init'] = -77
         cell = LFPy.Cell(**cell_params)
-        electrode = LFPy.RecExtElectrode(**electrode_parameters)
+        
         cell.set_rotation(**rot_params)
         cell.set_pos(**pos_params)       
         
@@ -192,7 +192,9 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
             pass
             
         set_input_spiketrain(cell, all_spike_trains, cell_input_idxs, spike_train_idxs, synapse_params)
-        cell.simulate(electrode=electrode, rec_imem=True, rec_isyn=False, rec_vmem=False)
+        cell.simulate(rec_imem=True)
+        electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
+        electrode.calc_lfp()
         if not at_stallo:
             np.save(join(ofolder, 'imem_%s.npy' %sim_name), cell.imem)
             np.save(join(ofolder, 'somav_%s.npy' %sim_name), cell.somav)
@@ -219,7 +221,7 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
                 plt.scatter(cell.xmid, cell.zmid, edgecolor='none', s=2, c='r')
                 plt.scatter(elec_x, elec_z, s=4, c='b')
                 plt.savefig('cell_%05d.png' %simulation_idx)
-        np.save(join(ofolder, 'signal_%s.npy' %sim_name), 1000*np.dot(electrode.electrodecoeff, cell.imem))
+        np.save(join(ofolder, 'signal_%s.npy' %sim_name), 1000*electrode.LFP)
         
 def set_input_spiketrain(cell, all_spike_trains, cell_input_idxs, spike_train_idxs, synapse_params):
     """ Makes synapses and feeds them predetermined spiketimes """
