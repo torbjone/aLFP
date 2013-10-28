@@ -8,3 +8,9 @@ white_noise_ball_n_stick/
 *.h5
 *.p
 *.asc
+*.pdf
+*.avi
+*#
+*.zip
+../neuron_models/hay/lfpy_version/*.py
+*.txt
