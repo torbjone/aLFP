@@ -52,7 +52,6 @@ def plot_correlated_population_signals(ofolder, signal_dict, signal_psd_dict, fr
     zend = np.load(join(ofolder, 'zend.npy' ))    
     diam = np.load(join(ofolder, 'diam.npy'))
     
-    
     ax = fig.add_subplot(1, 3, 1, aspect='equal', frameon=False, xticks=[], yticks=[])
     for comp in xrange(len(xstart)):
         if comp == 0:
@@ -116,6 +115,31 @@ def sum_signals(ofolder, conductance_type, num_cells, num_elecs, input_pos, corr
         total_signal += np.load('%s_sim_%d.npy' %(session_name, simulation_idx))
     np.save('%s_total.npy' %session_name, total_signal)
 
+    
+def sum_signals_population_sizes(ofolder, conductance_list, num_cells,
+                                 num_elecs, input_pos, correlations, population_radius):
+
+    x, y, rotation = np.load('x_y_rotation_%d_%d.npy' %(num_cells, population_radius))
+    population_radii = np.linspace(50, population_radius, 51)
+
+    for conductance_type in conductance_list:
+        for correlation in correlations:
+            session_name = join(ofolder, 'signal_%s_%s_%1.2f' %(conductance_type, input_pos, correlation))
+            for radius in population_radii:
+                #use_idxs = np.array([idx for idx in xrange(len(x)) if np.sqrt(x[idx]**2 + y[idx]**2) < radius])
+                #plt.close('all')
+                #plt.title('Population radius: %04d, Number of cells: %d ' %(int(radius), len(use_idxs)))
+                #plt.scatter(x[use_idxs], y[use_idxs], edgecolor='none', s=4)
+                #plt.xlim(-1000, 1000)
+                #plt.ylim(-1000, 1000)
+                #plt.savefig('population_radius%04d.png' % int(radius))
+                total_signal = np.zeros((num_elecs, 1001))
+                for simulation_idx in xrange(num_cells):
+                    total_signal += np.load('%s_sim_%d.npy' %(session_name, simulation_idx))
+                np.save('%s_total_pop_size_%04d.npy' %(session_name, int(population_radius)), total_signal)
+
+
+    
 def run_correlated_population_simulation(cell_params, conductance_list, ofolder, model_path, 
                                          elec_x, elec_y, elec_z, ntsteps, spiketrain_params, 
                                          correlation, num_cells, population_radius, simulation_idx):

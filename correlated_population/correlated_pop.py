@@ -112,6 +112,13 @@ def sum_all_signals():
     conductance_type = sys.argv[4]
     aLFP.sum_signals(model, conductance_type, num_cells, n_elecs, input_pos, correlation)
 
+def sum_population_sizes():
+    correlations = [0., 1.0]
+    input_pos = 'dend'
+    conductance_list = ['active', 'Ih_linearized',  'passive_vss']
+    aLFP.sum_signals_population_sizes(model, conductance_list, num_cells, n_elecs,
+                                        input_pos, correlations, population_radius)
+    
 def plot():
     correlation = float(sys.argv[2])
     input_pos = sys.argv[3]
