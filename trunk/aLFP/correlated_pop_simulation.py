@@ -126,7 +126,7 @@ def sum_signals_population_sizes(ofolder, conductance_list, num_cells,
         for correlation in correlations:
             session_name = join(ofolder, 'signal_%s_%s_%1.2f' %(conductance_type, input_pos, correlation))
             for radius in population_radii:
-                #use_idxs = np.array([idx for idx in xrange(len(x)) if np.sqrt(x[idx]**2 + y[idx]**2) < radius])
+                use_idxs = np.array([idx for idx in xrange(len(x)) if np.sqrt(x[idx]**2 + y[idx]**2) < radius])
                 #plt.close('all')
                 #plt.title('Population radius: %04d, Number of cells: %d ' %(int(radius), len(use_idxs)))
                 #plt.scatter(x[use_idxs], y[use_idxs], edgecolor='none', s=4)
@@ -134,9 +134,9 @@ def sum_signals_population_sizes(ofolder, conductance_list, num_cells,
                 #plt.ylim(-1000, 1000)
                 #plt.savefig('population_radius%04d.png' % int(radius))
                 total_signal = np.zeros((num_elecs, 1001))
-                for simulation_idx in xrange(num_cells):
+                for simulation_idx in use_idxs:
                     total_signal += np.load('%s_sim_%d.npy' %(session_name, simulation_idx))
-                np.save('%s_total_pop_size_%04d.npy' %(session_name, int(population_radius)), total_signal)
+                np.save('%s_total_pop_size_%04d.npy' %(session_name, int(radius)), total_signal)
 
 
     
