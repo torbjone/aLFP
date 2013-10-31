@@ -29,7 +29,7 @@ if at_stallo:
     timeres = 2**-6
 else:
     neuron_model = join('..', 'neuron_models', model)
-    cut_off = 200
+    cut_off = 2000
     timeres = 2**-6
 
 num_cells = 10000
@@ -38,20 +38,10 @@ population_radius = 1000
 tstopms = 1000
 ntsteps = round((tstopms - 0) / timeres)
 
-n_elecs_center = 8
-elec_x_center = np.zeros(n_elecs_center)
-elec_y_center = np.zeros(n_elecs_center)
-elec_z_center = np.linspace(-200, 1200, n_elecs_center)
-
-n_elecs_lateral = 41
-elec_x_lateral = np.linspace(0, 10000, n_elecs_lateral)
-elec_y_lateral = np.zeros(n_elecs_lateral)
-elec_z_lateral = np.zeros(n_elecs_lateral)
-
-elec_x = np.r_[elec_x_center, elec_x_lateral]
-elec_y = np.r_[elec_y_center, elec_y_lateral]
-elec_z = np.r_[elec_z_center, elec_z_lateral]
-
+n_elecs = 8
+elec_x = np.zeros(n_elecs)
+elec_y = np.zeros(n_elecs)
+elec_z = np.linspace(-200, 1200, n_elecs)
 #np.save(join(model, 'elec_x.npy'), elec_x)
 #np.save(join(model, 'elec_y.npy'), elec_y)
 #np.save(join(model, 'elec_z.npy'), elec_z)
@@ -95,7 +85,7 @@ def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
     """  
-    conductance_list = ['active', 'Ih_linearized',  'passive_vss']
+    conductance_list = ['active', 'Ih_linearized', 'passive_vss']
 
     if sys.argv[3] == 'homogeneous':
         spiketrain_params = {'section': ['apic', 'dend'],
@@ -116,6 +106,9 @@ def simulate_single_cell():
                                               correlation, num_cells, population_radius, 
                                               simulation_idx=int(sys.argv[4]))
 
+def input_study():
+    aLFP.compare_psd_of_input()
+    
 def sum_all_signals():
     correlation = float(sys.argv[2])
     input_pos = sys.argv[3]

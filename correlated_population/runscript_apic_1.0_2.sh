@@ -9,8 +9,8 @@
 folder=correlated_population
 filename=correlated_pop.py
 
-stimuli_pos=dend
-correlation=0.0
+stimuli_pos=apic
+correlation=1.0
 
 cd /home/torbness/work/aLFP/$folder/
 

@@ -22,8 +22,8 @@ cd /global/work/torbness/aLFP/$folder/
 
 maxpartasks=16
 #CELLS=10000
-START_CELL=5001
-END_CELL=7000
+START_CELL=5000
+END_CELL=7499
 
 python $filename make_population
 
@@ -38,8 +38,8 @@ for t in $tasks; do
 done
 wait
 
-python $filename sum_all_signals $correlation $stimuli_pos active &
-python $filename sum_all_signals $correlation $stimuli_pos Ih_linearized &
-python $filename sum_all_signals $correlation $stimuli_pos passive_vss &
-
-wait
+#python $filename sum_all_signals $correlation $stimuli_pos active &
+#python $filename sum_all_signals $correlation $stimuli_pos Ih_linearized &
+#python $filename sum_all_signals $correlation $stimuli_pos passive_vss &
+#
+#wait
