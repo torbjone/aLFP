@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -lnodes=8:ppn=16
+#PBS -lnodes=1:ppn=16
 #PBS -lwalltime=100:00:00
 #PBS -lpmem=2000MB
 #PBS -m abe
@@ -10,7 +10,7 @@ folder=correlated_population
 filename=correlated_pop.py
 
 stimuli_pos=apic
-correlation=1.0
+correlation=0.0
 
 cd /home/torbness/work/aLFP/$folder/
 
@@ -20,12 +20,14 @@ mkdir /global/work/torbness/aLFP/$folder/hay
 cp $filename /global/work/torbness/aLFP/$folder
 cd /global/work/torbness/aLFP/$folder/
 
-maxpartasks=128
-CELLS=10000
+maxpartasks=16
+#CELLS=10000
+START_CELL=0
+END_CELL=2499
 
-python $filename make_population
+#python $filename make_population
 
-tasks=$(seq 0 $(($CELLS-1)))
+tasks=$(seq $START_CELL $END_CELL)
 for t in $tasks; do
         python $filename simulate_single_cell $correlation $stimuli_pos $t &	
         activetasks=$(jobs | wc -l)
@@ -36,8 +38,8 @@ for t in $tasks; do
 done
 wait
 
-python $filename sum_all_signals $correlation $stimuli_pos active &
-python $filename sum_all_signals $correlation $stimuli_pos Ih_linearized &
-python $filename sum_all_signals $correlation $stimuli_pos passive_vss &
-
-wait
+#python $filename sum_all_signals $correlation $stimuli_pos active &
+#python $filename sum_all_signals $correlation $stimuli_pos Ih_linearized &
+#python $filename sum_all_signals $correlation $stimuli_pos passive_vss &
+#
+#wait

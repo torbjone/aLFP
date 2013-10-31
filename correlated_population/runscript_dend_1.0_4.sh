@@ -22,10 +22,10 @@ cd /global/work/torbness/aLFP/$folder/
 
 maxpartasks=16
 #CELLS=10000
-START_CELL=7001
+START_CELL=7500
 END_CELL=9999
 
-python $filename make_population
+#python $filename make_population
 
 tasks=$(seq $START_CELL $END_CELL)
 for t in $tasks; do

@@ -9,7 +9,7 @@
 folder=correlated_population
 filename=correlated_pop.py
 
-stimuli_pos=dend
+stimuli_pos=apic
 correlation=1.0
 
 cd /home/torbness/work/aLFP/$folder/
@@ -22,8 +22,8 @@ cd /global/work/torbness/aLFP/$folder/
 
 maxpartasks=16
 #CELLS=10000
-START_CELL=2500
-END_CELL=4999
+START_CELL=7500
+END_CELL=9999
 
 #python $filename make_population
 
@@ -38,8 +38,8 @@ for t in $tasks; do
 done
 wait
 
-#python $filename sum_all_signals $correlation $stimuli_pos active &
-#python $filename sum_all_signals $correlation $stimuli_pos Ih_linearized &
-#python $filename sum_all_signals $correlation $stimuli_pos passive_vss &
+python $filename sum_all_signals $correlation $stimuli_pos active &
+python $filename sum_all_signals $correlation $stimuli_pos Ih_linearized &
+python $filename sum_all_signals $correlation $stimuli_pos passive_vss &
 
-#wait
+wait
