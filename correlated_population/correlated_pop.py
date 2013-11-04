@@ -124,13 +124,14 @@ def sum_all_signals():
 
 def sum_population_sizes():
     correlations = [0., 1.0]
-    input_pos = 'dend'
+    input_pos = ['dend', 'apic']
+    syn_strength = 0.015
     conductance_list = ['active', 'Ih_linearized',  'passive_vss']
-    aLFP.population_size_summary(conductance_list, elec_x, elec_y, elec_z)
+    #aLFP.population_size_summary(conductance_list, elec_x, elec_y, elec_z)
     #aLFP.population_size_frequency_dependence(conductance_list, input_pos, correlations)
     #aLFP.population_size_amp_dependence(conductance_list, input_pos, correlations)
-    #aLFP.sum_signals_population_sizes(model, conductance_list, num_cells, n_elecs,
-    #                                    input_pos, correlations, population_radius)
+    aLFP.sum_signals_population_sizes(model, conductance_list, num_cells, n_elecs,
+                                        input_positions, correlations, population_radius, syn_strength)
     
 def plot():
     correlation = float(sys.argv[2])

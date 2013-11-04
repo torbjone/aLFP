@@ -27,6 +27,7 @@ END_CELL=4999
 
 #python $filename make_population
 
+
 tasks=$(seq $START_CELL $END_CELL)
 for t in $tasks; do
         python $filename simulate_single_cell $correlation $stimuli_pos $t &	
