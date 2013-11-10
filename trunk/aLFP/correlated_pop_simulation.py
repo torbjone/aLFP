@@ -165,24 +165,21 @@ def compare_psd_of_input():
     fig.legend(lines, line_names, frameon=False, fontsize=12)
     fig.savefig('input_study.png', dpi=150)
                 
-def population_size_summary(conductance_list, elec_x, elec_y, elec_z, syn_strength, center_idxs):
+def population_size_summary(folder, conductance_list, elec_x, elec_y, elec_z, syn_strength, center_idxs, population_radii):
 
-    folder = 'hay'
-    xmid = np.load(join(folder, 'xmid.npy' ))
-    ymid = np.load(join(folder, 'ymid.npy' ))
-    xstart = np.load(join(folder, 'xstart.npy' ))
-    ystart = np.load(join(folder, 'ystart.npy' ))
-    zstart = np.load(join(folder, 'zstart.npy' ))
-    xend = np.load(join(folder, 'xend.npy' ))
-    yend = np.load(join(folder, 'yend.npy' ))
-    zend = np.load(join(folder, 'zend.npy' ))    
+    xmid = np.load(join(folder, 'xmid.npy'))
+    ymid = np.load(join(folder, 'ymid.npy'))
+    xstart = np.load(join(folder, 'xstart.npy'))
+    ystart = np.load(join(folder, 'ystart.npy'))
+    zstart = np.load(join(folder, 'zstart.npy'))
+    xend = np.load(join(folder, 'xend.npy'))
+    yend = np.load(join(folder, 'yend.npy'))
+    zend = np.load(join(folder, 'zend.npy'))    
     diam = np.load(join(folder, 'diam.npy'))
     n_elecs = len(elec_z[center_idxs])
     elec_clr = lambda elec_idx: plt.cm.rainbow(int(256. * elec_idx/(n_elecs - 1.)))
     conductance_clr = lambda conductance_idx: plt.cm.jet(int(256. * conductance_idx/
                                                              (len(conductance_list) - 1.)))
-    population_radius = 1000
-    population_radii = np.linspace(50, population_radius, 39)
     divide_into_welch = 8
 
     for input_pos in ['dend', 'apic']:
@@ -502,7 +499,7 @@ def sum_signals_population_sizes(ofolder, conductance_list, num_cells,
                                  num_elecs, input_positions, correlations, population_radius, syn_strength):
 
     x, y, rotation = np.load('x_y_rotation_%d_%d.npy' %(num_cells, population_radius))
-    population_radii = np.linspace(50, population_radius, 39)
+    population_radii = np.arange(50, population_radius +1, 25)
 
     for conductance_type in conductance_list:
         for correlation in correlations:
