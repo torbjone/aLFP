@@ -94,7 +94,7 @@ def plot_somavs(folder, syn_strength):
                 fig = plt.figure(figsize=[12,6])
                 fig.suptitle('Conductance: %s, Input: %s, Correlation: %1.2f, Synapse strenght: %1.3f'
                              % (conductance_type, input_pos, correlation, syn_strength))
-                ax1 = fig.add_subplot(211, xlabel='ms', ylabel='Somatic Vm', ylim=[-75, -50])
+                ax1 = fig.add_subplot(211, xlabel='ms', ylabel='Somatic Vm', ylim=[-77, -60])
                 ax2 = fig.add_subplot(212, xlabel='ms', ylabel='Shifted Somatic Vm', ylim=[-10, 10])
                 current_list = [f for f in all_files if (input_pos in f) 
                                                     and ('%1.2f_' % correlation in f)
@@ -165,7 +165,8 @@ def compare_psd_of_input():
     fig.legend(lines, line_names, frameon=False, fontsize=12)
     fig.savefig('input_study.png', dpi=150)
                 
-def population_size_summary(folder, conductance_list, elec_x, elec_y, elec_z, syn_strength, center_idxs, population_radii):
+def population_size_summary(folder, conductance_list, elec_x, elec_y, elec_z, syn_strength,
+                            center_idxs, population_radius):
 
     xmid = np.load(join(folder, 'xmid.npy'))
     ymid = np.load(join(folder, 'ymid.npy'))
@@ -182,6 +183,7 @@ def population_size_summary(folder, conductance_list, elec_x, elec_y, elec_z, sy
                                                              (len(conductance_list) - 1.)))
     divide_into_welch = 8
 
+    population_radii = np.arange(50, population_radius +1, 25)
     for input_pos in ['dend', 'apic']:
         for radius in population_radii:
 
@@ -263,12 +265,11 @@ def population_size_summary(folder, conductance_list, elec_x, elec_y, elec_z, sy
                                                                       int(radius)), dpi=150)
             #plt.show()
 
-def population_size_frequency_dependence(conductance_list, input_pos, correlations, syn_strength):
+def population_size_frequency_dependence(folder, conductance_list, input_pos, correlations, syn_strength,
+                                         population_radius):
 
-    folder = 'hay'
-    pop_sizes = np.array([100, 300, 1000])
-    
-    population_radius = 1000
+    pop_sizes = np.array([100, 200, population_radius])
+
     plt.close('all')
     fig = plt.figure(figsize=[5,7])
     fig.subplots_adjust(wspace=0.5, hspace=0.5)
@@ -281,7 +282,7 @@ def population_size_frequency_dependence(conductance_list, input_pos, correlatio
         for cor_number, correlation in enumerate(correlations):
             plot_number = len(correlations) * cond_number + cor_number + 1
             ax = fig.add_subplot(3, 2, plot_number, title='%s $c_{in}$=%g'
-                                 %(conductance_type, correlation), xlabel='Hz', ylabel='Amp', ylim=[1e-3, 1e1])
+                                 %(conductance_type, correlation), xlabel='Hz', ylabel='Amp', ylim=[1e-3, 1e0])
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.get_xaxis().tick_bottom()
@@ -306,12 +307,12 @@ def population_size_frequency_dependence(conductance_list, input_pos, correlatio
     fig.savefig('population_size_freq_%s_%1.3f.png' %(input_pos, syn_strength))
 
 
-def population_size_amp_dependence(conductance_list, input_pos, correlations, syn_strength):
+def population_size_amp_dependence(folder, conductance_list, input_pos, correlations, syn_strength,
+                                   population_radius):
 
-    folder = 'hay'
+
     plot_freqs = np.array([8., 32., 400.])
-    population_radius = 1000
-    population_radii = np.linspace(50, population_radius, 39)
+    population_radii = np.arange(50, population_radius +1, 25)
     
     plt.close('all')
     fig = plt.figure(figsize=[5,7])
@@ -325,7 +326,7 @@ def population_size_amp_dependence(conductance_list, input_pos, correlations, sy
             plot_number = len(correlations) * cond_number + cor_number + 1
             ax = fig.add_subplot(3, 2, plot_number, title='%s $c_{in}$=%g'
                                  %(conductance_type, correlation), xlabel='Pop. size',
-                                 ylabel='Amp', ylim=[1e-2, 1e1], yscale='log')
+                                 ylabel='Amp', ylim=[1e-3, 1e0], yscale='log')
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.get_xaxis().tick_bottom()
@@ -360,9 +361,8 @@ def population_size_amp_dependence(conductance_list, input_pos, correlations, sy
 
 
 def plot_decay_with_dist_from_pop(folder, elec_x, elec_y, elec_z, correlation, syn_strength,
-                                  input_pos, lateral_idxs, conductance_list):
+                                  input_pos, lateral_idxs, conductance_list, population_radius):
 
-    
     conductance_clr = lambda cond_number: plt.cm.jet(int(256. * cond_number/(len(conductance_list) - 1.)))
     divide_into_welch = 8
 
@@ -376,7 +376,7 @@ def plot_decay_with_dist_from_pop(folder, elec_x, elec_y, elec_z, correlation, s
     line_names = []
     for cond_number, conductance_type in enumerate(conductance_list):
         stem = 'signal_%s_%s_%1.2f_%1.3f_total_pop_size_%04d' %(conductance_type, input_pos,
-                                                                correlation, syn_strength, 1000)
+                                                                correlation, syn_strength, population_radius)
         sig_dict[conductance_type] = np.load(join(folder, '%s.npy' %stem))
         sig_psd_dict[conductance_type], freqs = aLFP.find_LFP_PSD(sig_dict[conductance_type], timestep=1./1000)
         l, = plt.plot(0,0, color=conductance_clr(cond_number))
@@ -393,8 +393,8 @@ def plot_decay_with_dist_from_pop(folder, elec_x, elec_y, elec_z, correlation, s
                 elecnum = lateral_idxs[plotnum - 1]
             except:
                 pass
-            ax = fig.add_subplot(numrows, numcols, plotnum, ylim=[1e-8, 1e1], xlabel='Hz', ylabel='Power',
-                                 title='X pos: %d $\mu m$' %(elec_x[elecnum]))
+            ax = fig.add_subplot(numrows, numcols, plotnum, ylim=[1e-11, 1e0], xlabel='Hz', ylabel='Power',
+                                 title='X pos: %d $\mu m$' %(elec_x[elecnum]), xlim=[1e0, 1e3])
             ax.grid(True)
             for cond_number, conductance_type in enumerate(conductance_list):
                 welch_psd, freqs_welch = mlab.psd(sig_dict[conductance_type][elecnum,:], Fs=1000.,
@@ -402,12 +402,12 @@ def plot_decay_with_dist_from_pop(folder, elec_x, elec_y, elec_z, correlation, s
                                                 noverlap=int(1001./divide_into_welch/2),
                                                 window=plt.window_hanning, detrend=plt.detrend_mean)
                 ax.loglog(freqs, sig_psd_dict[conductance_type][elecnum]**2, color=conductance_clr(cond_number),
-                          alpha=0.5)
-                ax.loglog(freqs_welch, welch_psd, color=conductance_clr(cond_number))
+                          alpha=1)
+                #ax.loglog(freqs_welch, welch_psd, color=conductance_clr(cond_number))
             plotnum += 1
 
     fig.legend(lines, line_names, frameon=False)
-    fig.savefig('population_from_distance_%s_%1.2f_%1.3f.png' %(input_pos, correlation, syn_strength), dpi=150)
+    fig.savefig('population_from_distance_%s_%1.2f_%1.3f_duplicate.png' %(input_pos, correlation, syn_strength), dpi=150)
     
 def plot_correlated_population_signals(ofolder, signal_dict, signal_psd_dict, freqs, num_cells, 
                                        elec_x, elec_y, elec_z, input_pos, correlation, conductance_list):
@@ -598,7 +598,12 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
                     exec('seg.vss_%s = %g'% (conductance_type, vss))
         else:
             pass
-            
+        
+        if os.path.isfile(join(ofolder, 'signal_%s.npy' %sim_name))
+            print "Skipping %s" %name
+            continue
+        else:
+            pass
         set_input_spiketrain(cell, all_spike_trains, cell_input_idxs, spike_train_idxs, synapse_params)
         cell.simulate(rec_imem=True, rec_vmem=True)
 
