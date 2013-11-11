@@ -20,6 +20,8 @@ mkdir /global/work/torbness/aLFP/$folder/hay
 cp $filename /global/work/torbness/aLFP/$folder
 cd /global/work/torbness/aLFP/$folder/
 
+# Should be commited as qsub -t 0-4 <filename>
+
 maxpartasks=16
 CELLS_EACH=500
 START_CELL=$(($PBS_ARRAYID*$CELLS_EACH))
