@@ -525,7 +525,7 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
                                          elec_x, elec_y, elec_z, ntsteps, spiketrain_params, 
                                          correlation, num_cells, population_radius, simulation_idx):
    # Excitatory synapse parameters:
-    syn_strength = 0.01
+    syn_strength = 0.015
     synapse_params = {
         'e' : 0,   
         'syntype' : 'ExpSyn',      #conductance based exponential synapse
