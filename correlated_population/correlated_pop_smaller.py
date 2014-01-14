@@ -120,10 +120,12 @@ def simulate_single_cell():
                              'args' : [1, 5, cell_params['tstartms'], cell_params['tstopms']]
                              }
     correlation = float(sys.argv[2])
+    syn_strength = 0.015
+    simulation_idx=int(sys.argv[4])
     aLFP.run_correlated_population_simulation(cell_params, conductance_list, folder, model_path, 
                                               elec_x, elec_y, elec_z, ntsteps, spiketrain_params, 
-                                              correlation, num_cells, population_radius, 
-                                              simulation_idx=int(sys.argv[4]))
+                                              correlation, num_cells, population_radius, simulation_idx,
+                                              syn_strength)
 
 def population_at_distance():
 
@@ -134,36 +136,34 @@ def population_at_distance():
     for correlation in correlations:
         for input_pos in input_positions:
             aLFP.plot_decay_with_dist_from_pop(folder, elec_x, elec_y, elec_z, correlation, syn_strength,
-                                               input_pos, lateral_idxs, conductance_list)
+                                               input_pos, lateral_idxs, conductance_list, population_radius)
 
-    
 def sum_all_signals():
     correlation = float(sys.argv[2])
     input_pos = sys.argv[3]
     conductance_type = sys.argv[4]
     aLFP.sum_signals(folder, conductance_type, num_cells, n_elecs, input_pos, correlation)
 
-
-
-
-
     
 def sum_population_sizes():
     correlations = [0., 1.0]
     input_positions = ['dend', 'apic']
-    syn_strength = 0.015
+    syn_strength = 0.01
     conductance_list = ['active', 'Ih_linearized',  'passive_vss']
-    aLFP.population_size_summary(conductance_list, elec_x, elec_y, elec_z, syn_strength, center_idxs)
+    
     #aLFP.sum_signals_population_sizes(folder, conductance_list, num_cells, n_elecs,
     #                                    input_positions, correlations, population_radius, syn_strength)
-    #for input_pos in input_positions:
-    #    aLFP.population_size_frequency_dependence(conductance_list, input_pos, correlations, syn_strength)
-    #    aLFP.population_size_amp_dependence(conductance_list, input_pos, correlations, syn_strength)
-
+    #aLFP.population_size_summary(folder, conductance_list, elec_x, elec_y, elec_z,
+    #                             syn_strength, center_idxs, population_radius)
+    for input_pos in input_positions:
+        aLFP.population_size_frequency_dependence(folder, conductance_list, input_pos,
+                                                  correlations, syn_strength, population_radius)
+        aLFP.population_size_amp_dependence(folder, conductance_list, input_pos, correlations,
+                                            syn_strength, population_radius)
 
 def plot_vm():
 
-    syn_strength = 0.015
+    syn_strength = 0.001
     aLFP.plot_somavs(folder, syn_strength)
     
 def plot():

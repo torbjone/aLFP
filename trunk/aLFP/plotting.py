@@ -8,8 +8,8 @@ try:
 except:
     pass
 from os.path import join
-
 import aLFP
+import matplotlib.mlab as mlab
 
 plt.rcParams.update({'font.size' : 8,
     'figure.facecolor' : '1',
@@ -19,9 +19,9 @@ plt.rcParams.update({'font.size' : 8,
 def plot_comp_numbers(cell, elec_x, elec_y, elec_z):
     plt.axis('equal')
     for comp_idx in xrange(len(cell.xmid)):
-        plt.plot(cell.zmid[comp_idx], cell.ymid[comp_idx],\
+        plt.plot(cell.xmid[comp_idx], cell.zmid[comp_idx],\
                 marker='$%i$'%comp_idx, color='b', markersize=10)
-    plt.scatter(elec_z, elec_y)
+    plt.scatter(elec_x, elec_z)
     plt.show()
     plt.close('all')
     sys.exit()
@@ -187,7 +187,199 @@ def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulat
     #ax_neur.add_artist(plt.Line2D((xmin, xmin), (np.min(ymid), np.max(ymid)), color='b', linewidth=3))
     plt.savefig('%s_%s.png' % (ifolder, cur_name), dpi=150)
 
+
+def plot_cell_probe(folder, simulation_params, syn_strength, shift):
+
+
+    name = '%s_probe_%1.2f_%d.npy' %('%s', syn_strength, shift)
+
+    # Loading all needed data
+    xmid = np.load(join(folder, 'xmid.npy' ))
+    ymid = np.load(join(folder, 'ymid.npy' ))
+    zmid = np.load(join(folder, 'zmid.npy' ))
+    xstart = np.load(join(folder, 'xstart.npy' ))
+    ystart = np.load(join(folder, 'ystart.npy' ))
+    zstart = np.load(join(folder, 'zstart.npy' ))
+    xend = np.load(join(folder, 'xend.npy' ))
+    yend = np.load(join(folder, 'yend.npy' ))
+    zend = np.load(join(folder, 'zend.npy' ))    
+    diam = np.load(join(folder, 'diam.npy'))
     
+    imem = np.load(join(folder, name % 'imem'))
+    vmem = np.load(join(folder, name % 'vmem'))
+    icap = np.load(join(folder, name % 'icap'))
+    ipas = np.load(join(folder, name % 'ipas'))
+
+    ionic_currents = {}
+    clr_list = ['r', 'b', 'g', 'm']
+
+    clrs = {'imem': 'grey',
+            'ipas': 'y',
+            'icap': 'k',
+            'ik':  'r',
+            'ina': 'm',
+            'i_hd': 'g',
+            'ica': 'b'
+            }
+    names = ['ipas', 'icap', 'ina', 'ik', 'ica', 'i_hd']
+
+
+    ion_names = ['ina', 'ik', 'ica', 'i_hd']
+    
+    ik_names = ['ik_km', 'ik_KahpM95', 'ik_kad', 'ik_kap', 'ik_kdr']
+    
+    colors = ['y','k','m','r', 'b', 'g']
+
+    
+    norm = lambda f: np.abs(f - np.mean(f))
+    rms = lambda f: np.sqrt(np.average((f- np.mean(f))**2)) 
+    
+    for ion in simulation_params['rec_variables']:
+        ionic_currents[ion] = np.load(join(folder, name % ion))
+
+    comp_list = [0, 20, 100, 275, 282, 433, 452, 470, 475]
+        
+    for comp in comp_list:
+
+        plt.close('all')
+        plt.subplots_adjust(hspace=0.5, wspace=0.5)
+        ax1 = plt.subplot(121, frameon=False, xticks=[], yticks=[], aspect='equal')
+        [ax1.plot([xstart[i], xend[i]], [zstart[i], zend[i]], 'k') for i in xrange(len(diam))]
+        ax1.plot([xstart[comp], xend[comp]], [zstart[comp], zend[comp]], 'r', lw=2)
+
+        
+        ax2 = plt.subplot(422, title='vmem', ylim=[np.min(vmem), np.max(vmem)])
+        ax2.plot(np.arange(len(vmem[comp])), vmem[comp])
+
+        ax2 = plt.subplot(424, ylim=[np.min(imem), np.max(imem)])
+        ax2.plot(np.arange(len(imem[comp])), imem[comp], label='imem', color=clrs['imem'])
+        ax2.plot(np.arange(len(ipas[comp])), ipas[comp], label='ipas', color=clrs['ipas'])
+        ax2.plot(np.arange(len(icap[comp])), icap[comp], label='icap', color=clrs['icap'])
+        
+        for ion in ion_names:
+            ax2.plot(np.arange(len(imem[comp])), ionic_currents[ion][comp], label=ion, color=clrs[ion])
+        plt.legend(frameon=False, bbox_to_anchor=[1.25,1])
+
+        ax3 = plt.subplot(426)
+        ax3.plot(np.arange(len(ipas[comp])), ipas[comp] - ipas[comp, 0], label='ipas', color=clrs['ipas'])
+        ax3.plot(np.arange(len(icap[comp])), icap[comp] - icap[comp, 0], label='icap', color=clrs['icap'])
+        
+        for ion in ion_names:
+            ax3.plot(np.arange(len(imem[comp])), ionic_currents[ion][comp] - ionic_currents[ion][comp, 0],
+                     label=ion, color=clrs[ion])
+        
+        ax4 = plt.subplot(4, 4, 15, title='Imem Fractions', aspect='equal')
+        
+        stack = [rms(ipas[comp]), rms(icap[comp]), rms(ionic_currents['ina'][comp]),
+                 rms(ionic_currents['ik'][comp]), rms(ionic_currents['ica'][comp]),
+                 rms(ionic_currents['i_hd'][comp])]
+        stack /= np.sum(stack)
+        ax4.pie(stack, labels=names, colors=colors)
+        
+
+        ax5 = plt.subplot(4, 4, 16, title='Ik Fractions', aspect='equal')
+        ik_stack = []
+        for ik in ik_names:
+            ik_stack.append(rms(ionic_currents[ik][comp]))
+        ik_stack /= np.sum(ik_stack)
+        ax5.pie(ik_stack, labels=ik_names, colors=colors)
+        plt.savefig(join('comps', '%04d_%1.2f_%d.png' % (comp, syn_strength, shift)))
+
+
+def compare_cell_currents(folder, syn_strength, shift, conductance_list):
+
+    # Loading all needed data
+    xmid = np.load(join(folder, 'xmid.npy' ))
+    ymid = np.load(join(folder, 'ymid.npy' ))
+    zmid = np.load(join(folder, 'zmid.npy' ))
+    xstart = np.load(join(folder, 'xstart.npy' ))
+    ystart = np.load(join(folder, 'ystart.npy' ))
+    zstart = np.load(join(folder, 'zstart.npy' ))
+    xend = np.load(join(folder, 'xend.npy' ))
+    yend = np.load(join(folder, 'yend.npy' ))
+    zend = np.load(join(folder, 'zend.npy' ))    
+    diam = np.load(join(folder, 'diam.npy'))
+
+    comp_markers = '*osD^<>+x'
+    cond_colors = 'kgbmr'
+    
+    imem_dict = {}
+    vmem_dict = {}
+
+    for conductance_type in conductance_list:
+        stem = 'probe_%1.2f_%d_%s.npy' %(syn_strength, shift, conductance_type)
+        imem_dict[conductance_type] = np.load(join(folder, 'imem_%s' % stem))
+        vmem_dict[conductance_type] = np.load(join(folder, 'vmem_%s' % stem))
+
+    divide_into_welch = 8.
+    comp_list = np.array([0, 20, 282, 433, 452, 475])
+    argsort = np.argsort(-zmid[comp_list])
+    nrows = len(comp_list)
+
+    plt.close('all')
+    fig = plt.figure(figsize=[9,10])
+    fig.subplots_adjust(hspace=0.5, wspace=0.6, bottom=0.05, top=0.90, right=0.98)
+    
+    ax0 = fig.add_axes([0, 0, 0.25, 0.9], frameon=False, xticks=[], yticks=[], aspect='equal')
+    [ax0.plot([xstart[i], xend[i]], [zstart[i], zend[i]], 'grey') for i in xrange(len(diam))]
+
+    fig.suptitle('Synaptic strength: %1.2f\nPassive reversal potential shift: %+d' %(syn_strength, shift))
+    
+    lines = []
+    line_names = []
+    for numb, comp in enumerate(comp_list[argsort]):
+        ax0.plot(xmid[comp], zmid[comp], comp_markers[numb], color='k')
+        ax1 = fig.add_subplot(nrows, 5, 5 * numb + 2, ylim=[-2, 2])
+        ax2 = fig.add_subplot(nrows, 5, 5 * numb + 3)
+        ax3 = fig.add_subplot(nrows, 5, 5 * numb + 4)
+        ax4 = fig.add_subplot(nrows, 5, 5 * numb + 5)
+
+        ax2.grid(True)
+        ax4.grid(True)
+        if numb == 0:
+            ax1.set_title('Vmem')
+            ax2.set_title('Vmem PSD')
+            ax3.set_title('Imem')
+            ax4.set_title('Imem PSD')
+            ax1.set_xlabel('ms')
+            ax1.set_ylabel('mV')
+            ax2.set_xlabel('Hz')
+            ax2.set_ylabel('mV$^2$/Hz')
+            ax3.set_xlabel('ms')
+            ax3.set_ylabel('nA')
+            ax4.set_xlabel('Hz')
+            ax4.set_ylabel('mV$^2$/Hz')
+        for cond_number, conductance_type in enumerate(conductance_list):
+            vmem = vmem_dict[conductance_type][comp, :] - vmem_dict[conductance_type][comp, 0]
+            imem = imem_dict[conductance_type][comp, :]
+            
+            vmem_psd, freqs = mlab.psd(vmem, Fs=1000., NFFT=int(len(vmem)/divide_into_welch),
+                                                        noverlap=int(len(vmem)/divide_into_welch/2),
+                                                        window=plt.window_hanning, detrend=plt.detrend_mean)
+
+            imem_psd, freqs = mlab.psd(imem, Fs=1000., NFFT=int(len(imem)/divide_into_welch),
+                                                        noverlap=int(len(imem)/divide_into_welch/2),
+                                                        window=plt.window_hanning, detrend=plt.detrend_mean)
+            l, = ax1.plot(np.arange(len(imem)), vmem, color=cond_colors[cond_number])
+            ax2.loglog(freqs, vmem_psd, color=cond_colors[cond_number], lw=0.5)
+            ax3.plot(np.arange(len(imem)), imem, color=cond_colors[cond_number], lw=0.5)
+            ax4.loglog(freqs, imem_psd, color=cond_colors[cond_number], lw=0.5)
+            if numb == 0:
+                lines.append(l)
+                line_names.append(conductance_type)
+            
+        for ax in [ax1, ax3]:
+            ax.set_xticks(ax.get_xticks()[::2])
+            #ax.set_yticks(ax.get_yticks()[::2])
+        for ax in [ax1, ax2, ax3, ax4]:
+            ax.plot(ax.get_xticks()[0], ax.get_yticks()[-1], comp_markers[numb], color='k', clip_on=False)
+    fig.legend(lines, line_names, frameon=False, loc='upper left')
+
+    fig.savefig('compare_currents_%1.2f_%+d.png' %(syn_strength, shift), dpi=150)
+    plt.show()
+
+        
+
 def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simulation_params,
                             plot_compartments):
 
