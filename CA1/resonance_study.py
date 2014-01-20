@@ -33,11 +33,10 @@ else:
     neuron_model = join('..', 'neuron_models', model)
     cut_off = 2000
 
-
-timeres = 2**-5
-tstopms = 10
-ntsteps = round((tstopms - 0) / timeres)
-
+timeres_N = 2**-5
+timeres_p = 2**-5
+tstopms = 1000
+ntsteps = round((tstopms - 0) / timeres_N)
 
 n_elecs= 8
 elec_x = np.ones(n_elecs) * 50
@@ -57,29 +56,43 @@ cell_params = {
     'passive' : False,           # switch on passive mechs
     'nsegs_method' : 'lambda_f',# method for setting number of segments,
     'lambda_f' : 100,           # segments are isopotential at this frequency
-    'timeres_NEURON' : timeres,   # dt of LFP and NEURON simulation.
-    'timeres_python' : 1,
-    'tstartms' : -cut_off,          #start time, recorders start at t=0
-    'tstopms' : tstopms,
+    'timeres_NEURON' : timeres_N,   # dt of LFP and NEURON simulation.
+    'timeres_python' : timeres_p,
+    'tstartms' : 0,          #start time, recorders start at t=0
+    'tstopms' : tstopms + cut_off,
     'custom_code'  : [join(model_path, 'fig-3c_active.hoc')],
 }
 simulation_params = {'rec_imem': True,
                      'rec_vmem': True,
                      }
 
-def initialize():
-    aLFP.initialize_cell(cell_params, model, elec_x, elec_y, elec_z, ntsteps, folder, make_WN_input=True, testing=False)
 
+def static_test():
+    aLFP.find_static_Vm_distribution(cell_params, '.', 'active')
+
+
+def initialize():
+    aLFP.initialize_cell(cell_params, model, elec_x, elec_y, elec_z,
+                         ntsteps, folder, make_WN_input=True, testing=False)
+
+
+def WN_plot():
+    input_shifts = [-0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5]#[-0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5]
+    for input_shift in input_shifts:
+        print input_shift
+        aLFP.plot_WN_CA1(folder, elec_x, elec_y, elec_z, 0, input_shift)
+        #aLFP.plot_WN_CA1(folder, elec_x, elec_y, elec_z, 475, input_shift)
 
 
 def WN_sim():
-    conductance_list = ['active', 'passive', 'hd_and_km', 'only_km', 'only_hd']
+    conductance_list = ['active', 'passive', 'only_km']
     input_idxs = [0, 475]
     input_scalings = [0.1]
+    input_shifts = [-1, -0.75, 0.75, 1]#[-0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5]
     for conductance_type in conductance_list:
         cell_params['custom_code'] = [join(model_path, 'fig-3c_%s.hoc' % conductance_type)]
-        aLFP.run_all_WN_simulations(cell_params, folder, input_idxs, input_scalings, ntsteps,
-                                 simulation_params, conductance_type)
+        aLFP.run_all_CA1_WN_simulations(cell_params, folder, input_idxs, input_scalings, input_shifts, ntsteps,
+                                        simulation_params, conductance_type)
 
 
 if __name__ == '__main__':
