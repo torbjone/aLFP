@@ -52,7 +52,216 @@ def arrow_to_axis(pos, ax_origin, ax_target, clr, x_shift):
               color=clr, clip_on=False, alpha=1.)
     #ax_origin.plot(lower_line_x, lower_line_y, lw=1, 
     #          color=clr, clip_on=False, alpha=1.)
-    
+
+def plot_WN_cell_to_ax(ax, xstart, xmid, xend, zstart, zmid, zend, elec_x, elec_z,
+                    electrodes, input_idx, elec_clr, soma_idx, apical_idx, tuft_idx, basal_idx):
+
+    [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], color='grey') for idx in xrange(len(xstart))]
+    [ax.plot(elec_x[electrodes[idx]], elec_z[electrodes[idx]], 'o', color=elec_clr(idx)) for idx in xrange(len(electrodes))]
+    ax.plot(xmid[input_idx], zmid[input_idx], 'g*', ms=20)
+    ax.plot(xmid[soma_idx], zmid[soma_idx], 'ms')
+    ax.plot(xmid[apical_idx], zmid[apical_idx], 'bD')
+    ax.plot(xmid[basal_idx], zmid[basal_idx], 'r*', ms=10)
+    ax.plot(xmid[tuft_idx], zmid[tuft_idx], 'k^')
+
+def plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, input_shift):
+
+    conductance_list = ['only_hd', 'hd_and_km', 'passive', 'active']
+
+    #plot_idxs = np.array([0, 20, 282, 433, 452, 475])
+
+    tuft_idx = 452
+    apical_idx = 433
+    basal_idx = 20
+    soma_idx = 0
+
+    syn_strength = .1
+
+    xmid = np.load(join(folder, 'xmid.npy'))
+    ymid = np.load(join(folder, 'ymid.npy'))
+    zmid = np.load(join(folder, 'zmid.npy'))
+    xstart = np.load(join(folder, 'xstart.npy'))
+    ystart = np.load(join(folder, 'ystart.npy'))
+    zstart = np.load(join(folder, 'zstart.npy'))
+    xend = np.load(join(folder, 'xend.npy'))
+    yend = np.load(join(folder, 'yend.npy'))
+    zend = np.load(join(folder, 'zend.npy'))
+
+    ncols = 6
+    nrows = 3
+
+    electrodes = np.array([1, 3, 5])
+    elec_clr = lambda idx: plt.cm.rainbow(int(256. * idx/(len(electrodes) - 1.)))
+
+    clr = lambda idx: plt.cm.jet(int(256. * idx/(len(conductance_list ) - 1)))
+
+    v_min = -90
+    v_max = 0
+
+
+    plt.close('all')
+    fig = plt.figure(figsize=[12,8])
+    fig.suptitle('Synaptic input: %s, synaptic strength: %1.2f, input_shift: %1.2f'
+                 % (input_idx, syn_strength, input_shift))
+    fig.subplots_adjust(wspace=0.5, hspace=0.5)
+
+    ax_morph = fig.add_axes([0.02, 0.1, 0.15, 0.8], frameon=False, xticks=[], yticks=[])
+    plot_WN_cell_to_ax(ax_morph, xstart, xmid, xend, zstart, zmid, zend, elec_x,
+                    elec_z, electrodes, input_idx, elec_clr, soma_idx, apical_idx, tuft_idx, basal_idx)
+
+    # Somatic Vm
+    ax_s1 = fig.add_axes([0.5, 0.05, 0.09, 0.1], ylim=[v_min, v_max], xlabel='ms', ylabel='Somatic Vm [mV]')
+    ax_s2 = fig.add_axes([0.63, 0.05, 0.09, 0.1], xlabel='ms', ylabel='Shifted somatic Vm [mV]')
+    ax_s3 = fig.add_axes([0.76, 0.05, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylim=[1e-6, 1e0],
+                         ylabel='Somatic Vm PSD [$mV^2$]')
+    ax_s4 = fig.add_axes([0.9, 0.05, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylim=[1e-3, 1e-1],
+                         ylabel='Somatic imem PSD')
+    # Apic Vm
+    ax_a1 = fig.add_axes([0.5, 0.45, 0.09, 0.1], ncols, 10, ylim=[v_min, v_max],
+                         xlabel='ms', ylabel='Apical Vm [mV]')
+    ax_a2 = fig.add_axes([0.63, 0.45, 0.09, 0.1], 11, xlabel='ms', ylabel='Shifted apical Vm [mV]')
+    ax_a3 = fig.add_axes([0.76, 0.45, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylabel='Apical Vm PSD [$mV^2$]',
+                         ylim=[1e-6,1e0])
+    ax_a4 = fig.add_axes([0.9, 0.45, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylim=[1e-9,1e-3],
+                         ylabel='Apic imem PSD')
+    # Basal Vm
+    ax_b1 = fig.add_axes([0.5, 0.25, 0.09, 0.1], ncols, 10, ylim=[v_min, v_max],
+                         xlabel='ms', ylabel='Basal Vm [mV]')
+    ax_b2 = fig.add_axes([0.63, 0.25, 0.09, 0.1], 11, xlabel='ms', ylabel='Shifted basal Vm [mV]')
+    ax_b3 = fig.add_axes([0.76, 0.25, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylabel='Basal Vm PSD [$mV^2$]',
+                         ylim=[1e-6,1e0])
+    ax_b4 = fig.add_axes([0.9, 0.25, 0.09, 0.1], xlim=[1, 500], xlabel='Hz',
+                         ylim=[1e-9,1e-3], ylabel='Basal imem PSD')
+    # Tuft Vm
+    ax_t1 = fig.add_axes([0.5, 0.65, 0.09, 0.1], ncols, 10, ylim=[v_min, v_max],
+                         xlabel='ms', ylabel='Apical tuft Vm [mV]')
+    ax_t2 = fig.add_axes([0.63, 0.65, 0.09, 0.1], 11, xlabel='ms', ylabel='Shifted apical tuft Vm [mV]')
+    ax_t3 = fig.add_axes([0.76, 0.65, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylabel='Apical tuft Vm PSD [$mV^2$]',
+                         ylim=[1e-6,1e0])
+    ax_t4 = fig.add_axes([0.9, 0.65, 0.09, 0.1], xlim=[1, 500], xlabel='Hz',
+                         ylim=[1e-9,1e-3], ylabel='Apical tuft imem PSD')
+
+
+    # Electrodes
+    ax_e1 = fig.add_axes([0.2, 0.1, 0.1, 0.2], xlabel='ms', ylabel='$\mu V$')
+    ax_e2 = fig.add_axes([0.2, 0.4, 0.1, 0.2], xlabel='ms', ylabel='$\mu V$')
+    ax_e3 = fig.add_axes([0.2, 0.7, 0.1, 0.2], xlabel='ms', ylabel='$\mu V$', title='Extracellular')
+
+    ax_e1_psd = fig.add_axes([0.35, 0.1, 0.1, 0.2], xlim=[1, 500], xlabel='Hz', ylabel='$\mu V^2$', ylim=[1e-8,1e-3])
+    ax_e2_psd = fig.add_axes([0.35, 0.4, 0.1, 0.2], xlim=[1, 500], xlabel='Hz', ylabel='$\mu V^2$', ylim=[1e-8,1e-3])
+    ax_e3_psd = fig.add_axes([0.35, 0.7, 0.1, 0.2], xlim=[1, 500], xlabel='Hz', ylabel='$\mu V^2$', ylim=[1e-8,1e-3],
+                             title='Extracellular PSD')
+
+    e_ax = [ax_e1, ax_e2, ax_e3]
+    e_ax_psd = [ax_e1_psd, ax_e2_psd, ax_e3_psd]
+
+    axes = [ax_s1, ax_s2, ax_s3, ax_a1, ax_a2, ax_a3, ax_e1, ax_t1, ax_t2, ax_t3,ax_b1, ax_b2, ax_b3,
+            ax_e2, ax_e3, ax_e1_psd, ax_e2_psd, ax_e3_psd]
+    for ax in axes:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.get_xaxis().tick_bottom()
+        ax.get_yaxis().tick_left()
+
+    clr_ax = [ax_e1, ax_e2, ax_e3]
+    clr_ax_psd = [ax_e1_psd, ax_e2_psd, ax_e3_psd]
+    for axnumb in xrange(len(clr_ax)):
+        for spine in clr_ax[axnumb].spines.values():
+            spine.set_edgecolor(elec_clr(axnumb))
+        for spine in clr_ax_psd[axnumb].spines.values():
+            spine.set_edgecolor(elec_clr(axnumb))
+
+    ax_s3.grid(True)
+    ax_a3.grid(True)
+    ax_t3.grid(True)
+    ax_b3.grid(True)
+
+    ax_s4.grid(True)
+    ax_a4.grid(True)
+    ax_t4.grid(True)
+    ax_b4.grid(True)
+
+    ax_e1_psd.grid(True)
+    ax_e2_psd.grid(True)
+    ax_e3_psd.grid(True)
+
+    #ax_s4.grid(True)
+    lines = []
+    line_names = []
+    freqs = np.load(join(folder, 'freqs.npy'))
+    for idx, conductance_type in enumerate(conductance_list):
+
+        identifier = '%s_%1.3f_%+1.3f_%s.npy' %(input_idx, syn_strength, input_shift, conductance_type)
+        #somav = np.load(join(folder, 'somav_%s' %identifier))
+        vmem = np.load(join(folder, 'vmem_%s' %identifier))
+        vmem_psd = np.load(join(folder, 'vmem_psd_%s' %identifier))
+
+        #imem = np.load(join(folder, 'imem_%s' %identifier))
+        imem_psd = np.load(join(folder, 'imem_psd_%s' %identifier))
+
+        sig = np.load(join(folder, 'signal_%s' %(identifier)))[:,:]
+        sig_psd = np.load(join(folder, 'psd_%s' %(identifier)))[:,:]
+
+
+        for eidx, elec in enumerate(electrodes):
+            e_ax[eidx].plot(sig[eidx] - sig[eidx, 0], color=clr(idx))
+            e_ax_psd[eidx].loglog(freqs, sig_psd[eidx], color=clr(idx))
+
+        ax_s1.plot(vmem[soma_idx], color=clr(idx))
+        ax_s2.plot(vmem[soma_idx] - vmem[soma_idx, 0], color=clr(idx))
+        ax_s3.loglog(freqs, vmem_psd[soma_idx], color=clr(idx))
+        ax_s4.loglog(freqs, imem_psd[soma_idx], color=clr(idx))
+
+        ax_t1.plot(vmem[tuft_idx], color=clr(idx))
+        ax_t2.plot(vmem[tuft_idx] - vmem[tuft_idx, 0], color=clr(idx))
+        ax_t3.loglog(freqs, vmem_psd[tuft_idx], color=clr(idx))
+        ax_t4.loglog(freqs, imem_psd[tuft_idx], color=clr(idx))
+
+        ax_b1.plot(vmem[basal_idx], color=clr(idx))
+        ax_b2.plot(vmem[basal_idx] - vmem[basal_idx, 0], color=clr(idx))
+        ax_b3.loglog(freqs, vmem_psd[basal_idx], color=clr(idx))
+        ax_b4.loglog(freqs, imem_psd[basal_idx], color=clr(idx))
+
+        ax_a1.plot(vmem[apical_idx], color=clr(idx))
+        ax_a2.plot(vmem[apical_idx] - vmem[apical_idx, 0], color=clr(idx))
+        ax_a3.loglog(freqs, vmem_psd[apical_idx], color=clr(idx))
+        l, = ax_a4.loglog(freqs, imem_psd[apical_idx], color=clr(idx))
+
+        line_names.append(conductance_type)
+        lines.append(l)
+
+    ax_s1.plot(ax_s1.get_xlim()[0], ax_s1.get_ylim()[1], 'ms', clip_on=False)
+    ax_s2.plot(ax_s2.get_xlim()[0], ax_s2.get_ylim()[1], 'ms', clip_on=False)
+    ax_s3.plot(ax_s3.get_xlim()[0], ax_s3.get_ylim()[1], 'ms', clip_on=False)
+    ax_s4.plot(ax_s4.get_xlim()[0], ax_s4.get_ylim()[1], 'ms', clip_on=False)
+
+    ax_a1.plot(ax_a1.get_xlim()[0], ax_a1.get_ylim()[1], 'bD', clip_on=False)
+    ax_a2.plot(ax_a2.get_xlim()[0], ax_a2.get_ylim()[1], 'bD', clip_on=False)
+    ax_a3.plot(ax_a3.get_xlim()[0], ax_a3.get_ylim()[1], 'bD', clip_on=False)
+    ax_a4.plot(ax_a4.get_xlim()[0], ax_a4.get_ylim()[1], 'bD', clip_on=False)
+
+    ax_b1.plot(ax_b1.get_xlim()[0], ax_b1.get_ylim()[1], 'r*', clip_on=False, ms=10)
+    ax_b2.plot(ax_b2.get_xlim()[0], ax_b2.get_ylim()[1], 'r*', clip_on=False, ms=10)
+    ax_b3.plot(ax_b3.get_xlim()[0], ax_b3.get_ylim()[1], 'r*', clip_on=False, ms=10)
+    ax_b4.plot(ax_b4.get_xlim()[0], ax_b4.get_ylim()[1], 'r*', clip_on=False, ms=10)
+
+    ax_t1.plot(ax_t1.get_xlim()[0], ax_t1.get_ylim()[1], 'k^', clip_on=False)
+    ax_t2.plot(ax_t2.get_xlim()[0], ax_t2.get_ylim()[1], 'k^', clip_on=False)
+    ax_t3.plot(ax_t3.get_xlim()[0], ax_t3.get_ylim()[1], 'k^', clip_on=False)
+    ax_t4.plot(ax_t4.get_xlim()[0], ax_t4.get_ylim()[1], 'k^', clip_on=False)
+
+
+    ax_sparse = [ax_a1, ax_a2, ax_s1, ax_s2, ax_e1, ax_e2, ax_e3]
+    for ax in ax_sparse:
+        ax.set_xticks(ax.get_xticks()[::2])
+
+    fig.legend(lines, line_names, frameon=False)
+
+    fig.savefig(join('WN_figs', 'WN_%d_%1.2f_%+1.2f.png' %
+                (input_idx, syn_strength, input_shift)), dpi=150)
+
+
+
 def plot_active_currents(ifolder, input_scaling, input_idx, plot_params, simulation_params,
                          plot_compartments, conductance_type, epas=None):
 
