@@ -64,18 +64,15 @@ def plot_WN_cell_to_ax(ax, xstart, xmid, xend, zstart, zmid, zend, elec_x, elec_
     ax.plot(xmid[basal_idx], zmid[basal_idx], 'r*', ms=10)
     ax.plot(xmid[tuft_idx], zmid[tuft_idx], 'k^')
 
-def plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, input_shift):
+def plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, vrest, syn_strength):
 
-    conductance_list = ['only_hd', 'hd_and_km', 'passive', 'active']
-
-    #plot_idxs = np.array([0, 20, 282, 433, 452, 475])
+    conductance_list = ['passive_%d' % vrest, 'only_km_%d' % vrest,
+                        'only_hd_%d' % vrest, 'active_%d' % vrest]
 
     tuft_idx = 452
     apical_idx = 433
     basal_idx = 20
     soma_idx = 0
-
-    syn_strength = .1
 
     xmid = np.load(join(folder, 'xmid.npy'))
     ymid = np.load(join(folder, 'ymid.npy'))
@@ -101,8 +98,8 @@ def plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, input_shift):
 
     plt.close('all')
     fig = plt.figure(figsize=[12,8])
-    fig.suptitle('Synaptic input: %s, synaptic strength: %1.2f, input_shift: %1.2f'
-                 % (input_idx, syn_strength, input_shift))
+    fig.suptitle('Synaptic input: %s, synaptic strength: %1.2f, V_rest: %1.2f'
+                 % (input_idx, syn_strength, vrest))
     fig.subplots_adjust(wspace=0.5, hspace=0.5)
 
     ax_morph = fig.add_axes([0.02, 0.1, 0.15, 0.8], frameon=False, xticks=[], yticks=[])
@@ -114,7 +111,7 @@ def plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, input_shift):
     ax_s2 = fig.add_axes([0.63, 0.05, 0.09, 0.1], xlabel='ms', ylabel='Shifted somatic Vm [mV]')
     ax_s3 = fig.add_axes([0.76, 0.05, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylim=[1e-6, 1e0],
                          ylabel='Somatic Vm PSD [$mV^2$]')
-    ax_s4 = fig.add_axes([0.9, 0.05, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylim=[1e-3, 1e-1],
+    ax_s4 = fig.add_axes([0.9, 0.05, 0.09, 0.1], xlim=[1, 500], xlabel='Hz', ylim=[1e-9, 1e1],
                          ylabel='Somatic imem PSD')
     # Apic Vm
     ax_a1 = fig.add_axes([0.5, 0.45, 0.09, 0.1], ncols, 10, ylim=[v_min, v_max],
@@ -191,7 +188,7 @@ def plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, input_shift):
     freqs = np.load(join(folder, 'freqs.npy'))
     for idx, conductance_type in enumerate(conductance_list):
 
-        identifier = '%s_%1.3f_%+1.3f_%s.npy' %(input_idx, syn_strength, input_shift, conductance_type)
+        identifier = '%d_%1.3f_%+1.3f_%s.npy' %(input_idx, syn_strength, 0, conductance_type)
         #somav = np.load(join(folder, 'somav_%s' %identifier))
         vmem = np.load(join(folder, 'vmem_%s' %identifier))
         vmem_psd = np.load(join(folder, 'vmem_psd_%s' %identifier))
@@ -258,7 +255,7 @@ def plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, input_shift):
     fig.legend(lines, line_names, frameon=False)
 
     fig.savefig(join('WN_figs', 'WN_%d_%1.2f_%+1.2f.png' %
-                (input_idx, syn_strength, input_shift)), dpi=150)
+                (input_idx, syn_strength, vrest)), dpi=150)
 
 
 

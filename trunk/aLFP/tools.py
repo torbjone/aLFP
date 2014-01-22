@@ -20,23 +20,14 @@ def make_WN_input(cell_params):
     for freq in xrange(1,1001):
         I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
     I /= np.std(I)
-    
-    if 0:
-        pl.subplot(211)
-        pl.plot(tvec, I)
-        pl.subplot(212)
-        freqs, power = return_psd(I, neural_sim_dict)
-        pl.loglog(freqs, power)
-        pl.xlim(1,1000)
-        pl.show()
     return I
-
-def return_time_const(cell):
-    start_t_idx = np.argmin(np.abs(cell.tvec - input_delay))
-    v = cell.somav[:] - cell.somav[0]
-    idx = np.argmin(np.abs(v - 0.63*v[-1]))
-    print cell.tvec[idx] - cell.tvec[start_t_idx]
-    return cell.tvec[idx] - cell.tvec[start_t_idx]
+#
+# def return_time_const(cell):
+#     start_t_idx = np.argmin(np.abs(cell.tvec - input_delay))
+#     v = cell.somav[:] - cell.somav[0]
+#     idx = np.argmin(np.abs(v - 0.63*v[-1]))
+#     print cell.tvec[idx] - cell.tvec[start_t_idx]
+#     return cell.tvec[idx] - cell.tvec[start_t_idx]
 
 def norm_it(sig):
     return (sig - sig[0])

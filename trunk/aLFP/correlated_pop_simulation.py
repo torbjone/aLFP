@@ -52,7 +52,8 @@ def plot_cell_to_ax(ax, xstart, xmid, xend, ystart, ymid, yend, elec_x, elec_z, 
     [ax.plot(elec_x[electrodes[idx]], elec_z[electrodes[idx]], 'o', color=elec_clr(idx)) for idx in xrange(len(electrodes))]
     ax.plot(xmid[apic_idx], ymid[apic_idx], 'g*', ms=10)
     ax.plot(xmid[0], ymid[0], 'yD')
-        
+
+
 def plot_compare_single_input_state(folder, elec_x, elec_y, elec_z):
 
     divide_into_welch = 16
