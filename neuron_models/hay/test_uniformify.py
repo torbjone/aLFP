@@ -7,10 +7,11 @@ from os.path import join
 
 import LFPy
 import neuron
+import pylab as plt
 
 
 timeres = 2**-6
-cut_off = 200
+cut_off = 1000
 tstopms = 1000
 
 model_path = join('lfpy_version')
@@ -21,7 +22,7 @@ cell_params_n = {
     #'rm' : 30000,               # membrane resistance
     #'cm' : 1.0,                 # membrane capacitance
     #'Ra' : 100,                 # axial resistance
-    'v_init': -77,             # initial crossmembrane potential
+    'v_init': -60,             # initial crossmembrane potential
     'passive': False,           # switch on passive mechs
     'nsegs_method': 'lambda_f',  # method for setting number of segments,
     'lambda_f': 100,           # segments are isopotential at this frequency
@@ -39,7 +40,7 @@ cell_params_u = {
     #'rm' : 30000,               # membrane resistance
     #'cm' : 1.0,                 # membrane capacitance
     #'Ra' : 100,                 # axial resistance
-    'v_init': -77,             # initial crossmembrane potential
+    'v_init': -60,             # initial crossmembrane potential
     'passive': False,           # switch on passive mechs
     'nsegs_method': 'lambda_f',  # method for setting number of segments,
     'lambda_f': 100,           # segments are isopotential at this frequency
@@ -67,3 +68,8 @@ def uniform_cell():
 if __name__ == '__main__':
     #cell_n = normal_cell()
     cell_u = uniform_cell()
+    plt.scatter(cell_u.xmid, cell_u.zmid, c=cell_u.vmem[:, -1])
+    plt.colorbar()
+    plt.figure()
+    plt.plot(cell_u.tvec, cell_u.vmem[0, :])
+    plt.show()
