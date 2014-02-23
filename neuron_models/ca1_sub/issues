@@ -1,0 +1,8 @@
+
+- Do we aim to exactly reproduce Hu 2009, or just make an equivalent model?
+- Change diameters according to Hu?
+- Implement Ih Borg-Graham style?
+
+I suggest:
+ - Use Ih from Maggie with distance dependence as from Hu
+   - But with both distal and proximal versions?
