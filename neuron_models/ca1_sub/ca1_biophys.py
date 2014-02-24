@@ -62,6 +62,7 @@ def init(Vrest):
                 seg.e_pas += seg.ica/seg.g_pas
 
 
+
 def biophys_active(**kwargs):
 
     Vrest = -70 if not 'hold_potential' in kwargs else kwargs['hold_potential']
@@ -69,6 +70,22 @@ def biophys_active(**kwargs):
     Rm = 30000.
     Cm = 1.5
     Ra = 100.
+
+    apic_trunk = neuron.h.SectionList()
+    basal = neuron.h.SectionList()
+    apic_tuft = neuron.h.SectionList()
+    #oblique_dendrites = neuron.h.SectionList()
+
+    for sec in neuron.h.allsec():
+        sec_type = sec.name()[:4]
+        sec_idx = int(sec.name()[5:-1])
+        if sec_type == 'dend':
+            basal.append(sec)
+        elif sec_type == 'apic' and sec_idx > 0:
+            apic_tuft.append(sec)
+        elif sec_type == 'apic' and sec_idx == 0:
+            apic_trunk.append(sec)
+
 
     # for sec in neuron.h.axon:
     #     sec.insert('pas')
@@ -91,7 +108,7 @@ def biophys_active(**kwargs):
         sec.Ra = Ra
         sec.cm = Cm
 
-    for sec in neuron.h.apic:
+    for sec in apic_trunk:
         sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./Rm
@@ -102,13 +119,86 @@ def biophys_active(**kwargs):
     insert_Ih_prox()
     #init(Vrest)
 
+# def rename_morphology():
+#     """ Go through n120 cell and name sections according to Hu 2009
+#     """
+#     clrs = {'soma': 'r',
+#             'dend': 'g',
+#             'apic': 'b'}
+#
+#     apic_trunk = neuron.h.SectionList()
+#     basal = neuron.h.SectionList()
+#     apic_tuft = neuron.h.SectionList()
+#     oblique_dendrites = neuron.h.SectionList()
+#
+#     #ax2 = plt.subplot(122, aspect='equal')
+#
+#     for sec in neuron.h.allsec():
+#         #n3d = int(neuron.h.n3d())
+#         numsegs = sec.nseg
+#         sec_type = sec.name()[:4]
+#         sec_idx = int(sec.name()[5:-1])
+#
+#         if sec_type == 'dend':
+#             basal.append(sec)
+#         elif sec_type == 'apic' and sec_idx > 0:
+#             apic_tuft.append(sec)
+#         elif sec_type == 'apic' and sec_idx == 0:
+#             apic_trunk.append(sec)
+#
+#         #plt.text(neuron.h.x3d(n3d/2),
+#         #         neuron.h.y3d(n3d/2), sec.name())
+#
+#         #plt.plot([neuron.h.x3d(0), neuron.h.x3d(n3d - 1)],
+#         #         [neuron.h.y3d(0), neuron.h.y3d(n3d - 1)], '-o', color=clrs[sec.name()[:4]])
+#         #print sec.name()
+#     print neuron.h.apic_trunk
+
+
+def create_axon():
+    neuron.h('''
+        create axon_hillock[4], axon_IS[1], myelinated_axon[1]
+        connect axon_hillock[0](0), soma(0.5)
+        connect axon_hillock[1](0), axon_hillock[0](1)
+        connect axon_hillock[2](0), axon_hillock[1](1)
+        connect axon_hillock[3](0), axon_hillock[2](1)
+        connect axon_IS[0](0), axon_hillock[3](1)
+        connect myelinated_axon[0](0), axon_IS[0](1)
+    ''')
+
+    for idx, sec in enumerate(neuron.h.axon_hillock):
+        #print sec.name()
+        sec.L = 2.5
+        sec.diam = 4 - idx
+
+    for idx, sec in enumerate(neuron.h.axon_IS):
+        #print sec.name()
+        sec.L = 20.
+        sec.diam = 1.
+
+    for idx, sec in enumerate(neuron.h.myelinated_axon):
+        #print sec.name()
+        sec.L = 100.
+        sec.diam = 1.
+
+
+#
+#   nSecAxonal = 2
+#   connect axon(0), soma(0.5)
+#   connect axon[1](0), axon[0](1)
+#   access soma
+# }
+# """)
+
 
 def active_declarations(**kwargs):
     ''' Set active conductances for modified CA1 cell'''
 
     #neuron.h.geom_nseg()
     #neuron.h.define_shape()
-    exec('biophys_%s(**kwargs)' % kwargs['conductance_type'])
+    create_axon()
+    #neuron.h.define_shape()
+    #exec('biophys_%s(**kwargs)' % kwargs['conductance_type'])
 
 
 if __name__ == '__main__':
@@ -137,6 +227,21 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
+    cell._collect_geometry()
+
+    ax1 = plt.subplot(221, aspect='equal')
+    ax2 = plt.subplot(223, aspect='equal')
+    ax3 = plt.subplot(133, aspect='equal')
+
+    [ax1.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]],
+              'k', lw=cell.diam[i]**0.5) for i in xrange(len(cell.xmid))]
+    [ax3.plot([cell.zstart[i], cell.zend[i]], [-cell.xstart[i], -cell.xend[i]], 'k')
+            for i in xrange(len(cell.xmid))]
+    [ax2.plot([cell.xstart[i], cell.xend[i]], [-cell.ystart[i], -cell.yend[i]], 'k')
+            for i in xrange(len(cell.xmid))]
+
+    plt.show()
+    sys.exit()
     neuron.h.celsius = 33
     cell.simulate(rec_vmem=True, rec_imem=True)
 
