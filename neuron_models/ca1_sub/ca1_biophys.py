@@ -62,14 +62,18 @@ def init(Vrest):
                 seg.e_pas += seg.ica/seg.g_pas
 
 
+def biophys_passive(**kwargs):
+    Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
 
-def biophys_active(**kwargs):
+    rm = 90000.
+    rm_apic_tuft = 20000.
+    rm_myel_ax = 1e9
 
-    Vrest = -70 if not 'hold_potential' in kwargs else kwargs['hold_potential']
+    cm = 1.5
+    cm_myel_ax = 0.04
 
-    Rm = 30000.
-    Cm = 1.5
-    Ra = 100.
+    ra = 100.
+
 
     apic_trunk = neuron.h.SectionList()
     basal = neuron.h.SectionList()
@@ -77,8 +81,8 @@ def biophys_active(**kwargs):
     #oblique_dendrites = neuron.h.SectionList()
 
     for sec in neuron.h.allsec():
-        sec_type = sec.name()[:4]
-        sec_idx = int(sec.name()[5:-1])
+        sec_type = sec.name().split('[')[0]
+        sec_idx = int(sec.name().split('[')[1][:-1])
         if sec_type == 'dend':
             basal.append(sec)
         elif sec_type == 'apic' and sec_idx > 0:
@@ -86,73 +90,55 @@ def biophys_active(**kwargs):
         elif sec_type == 'apic' and sec_idx == 0:
             apic_trunk.append(sec)
 
+    for sec in neuron.h.axon_hillock:
+         sec.insert('pas')
+         sec.e_pas = Vrest
+         sec.g_pas = 1./rm
+         sec.Ra = ra
+         sec.cm = cm
 
-    # for sec in neuron.h.axon:
-    #     sec.insert('pas')
-    #     sec.e_pas = Vrest
-    #     sec.g_pas = 1/Rm
-    #     sec.Ra = Ra
-    #     sec.cm = Cm
+    for sec in neuron.h.axon_IS:
+         sec.insert('pas')
+         sec.e_pas = Vrest
+         sec.g_pas = 1./rm
+         sec.Ra = ra
+         sec.cm = cm
+
+    for sec in neuron.h.myelinated_axon:
+         sec.insert('pas')
+         sec.e_pas = Vrest
+         sec.g_pas = 1./rm_myel_ax
+         sec.Ra = ra
+         sec.cm = cm_myel_ax
 
     for sec in neuron.h.soma:
         sec.insert("pas")
         sec.e_pas = Vrest
-        sec.g_pas = 1./Rm
-        sec.Ra = Ra
-        sec.cm = Cm
+        sec.g_pas = 1./rm_apic_tuft
+        sec.Ra = ra
+        sec.cm = cm
 
-    for sec in neuron.h.dend:
+    for sec in apic_tuft:
         sec.insert("pas")
         sec.e_pas = Vrest
-        sec.g_pas = 1./Rm
-        sec.Ra = Ra
-        sec.cm = Cm
+        sec.g_pas = 1./rm_apic_tuft
+        sec.Ra = ra
+        sec.cm = cm
+
+    for sec in basal:
+        sec.insert("pas")
+        sec.e_pas = Vrest
+        sec.g_pas = 1./rm
+        sec.Ra = ra
+        sec.cm = cm
+        sec.diam = 0.76
 
     for sec in apic_trunk:
         sec.insert("pas")
         sec.e_pas = Vrest
-        sec.g_pas = 1./Rm
-        sec.Ra = Ra
-        sec.cm = Cm
-
-    neuron.h.distance()
-    insert_Ih_prox()
-    #init(Vrest)
-
-# def rename_morphology():
-#     """ Go through n120 cell and name sections according to Hu 2009
-#     """
-#     clrs = {'soma': 'r',
-#             'dend': 'g',
-#             'apic': 'b'}
-#
-#     apic_trunk = neuron.h.SectionList()
-#     basal = neuron.h.SectionList()
-#     apic_tuft = neuron.h.SectionList()
-#     oblique_dendrites = neuron.h.SectionList()
-#
-#     #ax2 = plt.subplot(122, aspect='equal')
-#
-#     for sec in neuron.h.allsec():
-#         #n3d = int(neuron.h.n3d())
-#         numsegs = sec.nseg
-#         sec_type = sec.name()[:4]
-#         sec_idx = int(sec.name()[5:-1])
-#
-#         if sec_type == 'dend':
-#             basal.append(sec)
-#         elif sec_type == 'apic' and sec_idx > 0:
-#             apic_tuft.append(sec)
-#         elif sec_type == 'apic' and sec_idx == 0:
-#             apic_trunk.append(sec)
-#
-#         #plt.text(neuron.h.x3d(n3d/2),
-#         #         neuron.h.y3d(n3d/2), sec.name())
-#
-#         #plt.plot([neuron.h.x3d(0), neuron.h.x3d(n3d - 1)],
-#         #         [neuron.h.y3d(0), neuron.h.y3d(n3d - 1)], '-o', color=clrs[sec.name()[:4]])
-#         #print sec.name()
-#     print neuron.h.apic_trunk
+        sec.g_pas = 1./rm
+        sec.Ra = ra
+        sec.cm = cm
 
 
 def create_axon():
@@ -178,27 +164,25 @@ def create_axon():
 
     for idx, sec in enumerate(neuron.h.myelinated_axon):
         #print sec.name()
-        sec.L = 100.
+        sec.L = 1000.
         sec.diam = 1.
 
 
-#
-#   nSecAxonal = 2
-#   connect axon(0), soma(0.5)
-#   connect axon[1](0), axon[0](1)
-#   access soma
-# }
-# """)
-
-
 def active_declarations(**kwargs):
-    ''' Set active conductances for modified CA1 cell'''
+    ''' Set active conductances for modified CA1 cell
 
-    #neuron.h.geom_nseg()
-    #neuron.h.define_shape()
+    '''
+
+    # TODO: Test if Ih_prox makes sensible results
+    # TODO: Add more channels
+
+    #neuron.h.geom_nse# g()
+
     create_axon()
-    #neuron.h.define_shape()
-    #exec('biophys_%s(**kwargs)' % kwargs['conductance_type'])
+
+    biophys_passive(**kwargs)
+    insert_Ih_prox()
+
 
 
 if __name__ == '__main__':
@@ -227,7 +211,6 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
-    cell._collect_geometry()
 
     ax1 = plt.subplot(221, aspect='equal')
     ax2 = plt.subplot(223, aspect='equal')
@@ -240,6 +223,7 @@ if __name__ == '__main__':
     [ax2.plot([cell.xstart[i], cell.xend[i]], [-cell.ystart[i], -cell.yend[i]], 'k')
             for i in xrange(len(cell.xmid))]
 
+    print cell.xmid.shape
     plt.show()
     sys.exit()
     neuron.h.celsius = 33
