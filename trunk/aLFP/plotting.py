@@ -492,7 +492,7 @@ def plot_cell_probe(folder, simulation_params, syn_strength, shift):
         plt.savefig(join('comps', '%04d_%1.2f_%d.png' % (comp, syn_strength, shift)))
 
 
-def compare_cell_currents(folder, syn_strength, shift, conductance_list):
+def compare_cell_currents(folder, syn_strength, shift, conductance_list, input_pos):
 
     # Loading all needed data
     xmid = np.load(join(folder, 'xmid.npy' ))
@@ -513,13 +513,13 @@ def compare_cell_currents(folder, syn_strength, shift, conductance_list):
     vmem_dict = {}
 
     for conductance_type in conductance_list:
-        stem = 'probe_%1.2f_%d_%s.npy' %(syn_strength, shift, conductance_type)
+        stem = '%s_%s_1.00_%1.3f_%d_sim_0.npy' %(conductance_type, input_pos, syn_strength, shift)
         imem_dict[conductance_type] = np.load(join(folder, 'imem_%s' % stem))
         vmem_dict[conductance_type] = np.load(join(folder, 'vmem_%s' % stem))
 
-    divide_into_welch = 8.
+    divide_into_welch = 4.
     comp_list = np.array([0, 20, 282, 433, 452, 475])
-    argsort = np.argsort(-zmid[comp_list])
+    argsort = np.argsort(-ymid[comp_list])
     nrows = len(comp_list)
 
     plt.close('all')
@@ -527,18 +527,18 @@ def compare_cell_currents(folder, syn_strength, shift, conductance_list):
     fig.subplots_adjust(hspace=0.5, wspace=0.6, bottom=0.05, top=0.90, right=0.98)
     
     ax0 = fig.add_axes([0, 0, 0.25, 0.9], frameon=False, xticks=[], yticks=[], aspect='equal')
-    [ax0.plot([xstart[i], xend[i]], [zstart[i], zend[i]], 'grey') for i in xrange(len(diam))]
+    [ax0.plot([xstart[i], xend[i]], [ystart[i], yend[i]], 'grey') for i in xrange(len(diam))]
 
     fig.suptitle('Synaptic strength: %1.2f\nPassive reversal potential shift: %+d' %(syn_strength, shift))
     
     lines = []
     line_names = []
     for numb, comp in enumerate(comp_list[argsort]):
-        ax0.plot(xmid[comp], zmid[comp], comp_markers[numb], color='k')
-        ax1 = fig.add_subplot(nrows, 5, 5 * numb + 2, ylim=[-2, 2])
+        ax0.plot(xmid[comp], ymid[comp], comp_markers[numb], color='k')
+        ax1 = fig.add_subplot(nrows, 5, 5 * numb + 2)
         ax2 = fig.add_subplot(nrows, 5, 5 * numb + 3)
         ax3 = fig.add_subplot(nrows, 5, 5 * numb + 4)
-        ax4 = fig.add_subplot(nrows, 5, 5 * numb + 5)
+        ax4 = fig.add_subplot(nrows, 5, 5 * numb + 5, ylim=[1e-16, 1e-8])
 
         ax2.grid(True)
         ax4.grid(True)
@@ -556,7 +556,7 @@ def compare_cell_currents(folder, syn_strength, shift, conductance_list):
             ax4.set_xlabel('Hz')
             ax4.set_ylabel('mV$^2$/Hz')
         for cond_number, conductance_type in enumerate(conductance_list):
-            vmem = vmem_dict[conductance_type][comp, :] - vmem_dict[conductance_type][comp, 0]
+            vmem = vmem_dict[conductance_type][comp, :]
             imem = imem_dict[conductance_type][comp, :]
             
             vmem_psd, freqs = mlab.psd(vmem, Fs=1000., NFFT=int(len(vmem)/divide_into_welch),
@@ -581,10 +581,8 @@ def compare_cell_currents(folder, syn_strength, shift, conductance_list):
             ax.plot(ax.get_xticks()[0], ax.get_yticks()[-1], comp_markers[numb], color='k', clip_on=False)
     fig.legend(lines, line_names, frameon=False, loc='upper left')
 
-    fig.savefig('compare_currents_%1.2f_%+d.png' %(syn_strength, shift), dpi=150)
-    plt.show()
+    fig.savefig('vmem_imem_%1.2f_%+d_-65.png' %(syn_strength, shift), dpi=150)
 
-        
 
 def plot_transfer_functions(ifolder, input_scaling, input_idx, plot_params, simulation_params,
                             plot_compartments):

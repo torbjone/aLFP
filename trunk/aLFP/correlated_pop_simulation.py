@@ -895,7 +895,7 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
    # Excitatory synapse parameters:
     synapse_params = {
         'e' : 0,   
-        'syntype' : 'ExpSynI',      #conductance based exponential synapse
+        'syntype' : 'ExpSyn',      #conductance based exponential synapse
         'tau' : .1,                #Time constant, rise           #Time constant, decay
         'weight' : syn_strength,           #Synaptic weight
         'color' : 'r',              #for pl.plot
@@ -974,6 +974,7 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
         stem = '%s_%s_%1.2f_%1.3f%s' %(conductance_type, input_name,
                                        correlation, syn_strength, add_to_name)
         sim_name = '%s_sim_%d' % (stem, simulation_idx)
+        print sim_name
         for sec in cell.allseclist:
             for seg in sec:
                 seg.pas.e += resting_pot_shift
@@ -985,7 +986,7 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
         #plt.axis('equal')
         #plt.show()
         cell.simulate(rec_imem=True, rec_vmem=True)
-        cell.tvec = np.arange(10001)    
+        cell.tvec = np.arange(cell.imem.shape[1])
         ## if np.max(cell.somav) > -40:
         ##     is_spiking = True
         ##     plt.close('all')
@@ -996,9 +997,8 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
 
         ## if conductance_type == 'active':
         ##     print '%s is spiking: %s' %(sim_name, is_spiking)
-        cell.imem = np.load(join(ofolder, 'imem_%s.npy' %sim_name))
         electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
-
+        electrode.calc_lfp()
         ## np.save(join(ofolder, 'xstart.npy' ), cell.xstart)
         ## np.save(join(ofolder, 'ystart.npy' ), cell.ystart)
         ## np.save(join(ofolder, 'zstart.npy' ), cell.zstart)
@@ -1010,58 +1010,36 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
         ## np.save(join(ofolder, 'zmid.npy' ), cell.zmid)
         ## np.save(join(ofolder, 'diam.npy' ), cell.diam)
         
-        electrode.calc_lfp()
-        ## if not at_stallo:
-        ##     np.save(join(ofolder, 'imem_%s.npy' %sim_name), cell.imem)
-        ##     np.save(join(ofolder, 'somav_%s.npy' %sim_name), cell.somav)
-        ##     np.save(join(ofolder, 'vmem_%s.npy' %sim_name), cell.vmem)
-        ##     if conductance_type == 'active':
-        ##         plt.close('all')
-        ##         plt.subplot(121, aspect='equal', xlim=[-1000, 1000], ylim=[-1000, 1000])
-        ##         plt.scatter(cell.xmid, cell.ymid, edgecolor='none', s=2, c='r')
-        ##         plt.scatter(elec_x, elec_y, s=4, c='b')
+
+        if not at_stallo:
+            np.save(join(ofolder, 'imem_%s.npy' %sim_name), cell.imem)
+            #np.save(join(ofolder, 'somav_%s.npy' %sim_name), cell.somav)
+            np.save(join(ofolder, 'vmem_%s.npy' %sim_name), cell.vmem)
+            if conductance_type == 'active':
+                plt.close('all')
+                plt.subplot(121, aspect='equal', xlim=[-1000, 1000], ylim=[-1000, 1000])
+                plt.scatter(cell.xmid, cell.ymid, edgecolor='none', s=2, c='r')
+                plt.scatter(elec_x, elec_y, s=4, c='b')
             
-        ##         plt.subplot(122, aspect='equal', xlim=[-1000, 1000], ylim=[-400, 1400])
-        ##         plt.scatter(cell.xmid, cell.zmid, edgecolor='none', s=2, c='r')
-        ##         plt.scatter(elec_x, elec_z, s=4, c='b')
-        ##         plt.savefig('cell_%05d.png' %simulation_idx)
+                plt.subplot(122, aspect='equal', xlim=[-1000, 1000], ylim=[-400, 1400])
+                plt.scatter(cell.xmid, cell.zmid, edgecolor='none', s=2, c='r')
+                plt.scatter(elec_x, elec_z, s=4, c='b')
+                plt.savefig('cell_%05d.png' %simulation_idx)
 
-        ## elif simulation_idx % 500 == 0:
-        ##     np.save(join(ofolder, 'imem_%s.npy' %sim_name), cell.imem)
-        ##     np.save(join(ofolder, 'somav_%s.npy' %sim_name), cell.somav)
-        ##     np.save(join(ofolder, 'vmem_%s.npy' %sim_name), cell.vmem)
-        ##     if conductance_type == 'active':
-        ##         plt.close('all')
-        ##         plt.subplot(121, aspect='equal', xlim=[-1000, 1000], ylim=[-1000, 1000])
-        ##         plt.scatter(cell.xmid, cell.ymid, edgecolor='none', s=2, c='r')
-        ##         plt.scatter(elec_x, elec_y, s=4, c='b')
-        ##         plt.subplot(122, aspect='equal', xlim=[-1000, 1000], ylim=[-400, 1400])
-        ##         plt.scatter(cell.xmid, cell.zmid, edgecolor='none', s=2, c='r')
-        ##         plt.scatter(elec_x, elec_z, s=4, c='b')
-        ##         plt.savefig('cell_%05d.png' %simulation_idx)
-        #set_trace()
+        elif simulation_idx % 500 == 0:
+            np.save(join(ofolder, 'imem_%s.npy' %sim_name), cell.imem)
+            np.save(join(ofolder, 'somav_%s.npy' %sim_name), cell.somav)
+            np.save(join(ofolder, 'vmem_%s.npy' %sim_name), cell.vmem)
+            if conductance_type == 'active':
+                plt.close('all')
+                plt.subplot(121, aspect='equal', xlim=[-1000, 1000], ylim=[-1000, 1000])
+                plt.scatter(cell.xmid, cell.ymid, edgecolor='none', s=2, c='r')
+                plt.scatter(elec_x, elec_y, s=4, c='b')
+                plt.subplot(122, aspect='equal', xlim=[-1000, 1000], ylim=[-400, 1400])
+                plt.scatter(cell.xmid, cell.zmid, edgecolor='none', s=2, c='r')
+                plt.scatter(elec_x, elec_z, s=4, c='b')
+                plt.savefig('cell_%05d.png' %simulation_idx)
         np.save(join(ofolder, 'signal_%s.npy' %sim_name), 1000*electrode.LFP)
-        #set_trace()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
