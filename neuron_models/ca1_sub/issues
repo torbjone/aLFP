@@ -3,6 +3,10 @@
 - Change diameters according to Hu?
 - Implement Ih Borg-Graham style?
 
-I suggest:
- - Use Ih from Maggie with distance dependence as from Hu
-   - But with both distal and proximal versions?
+If we can implement one channel Borg-Graham style, all should work (except NaP which has typo?)
+
+
+If we use normal dynamics it's not immediately clear how to make our model equal to theirs.
+Ih from Magee 1998, but Im and INaP are not that simple.
+
+I

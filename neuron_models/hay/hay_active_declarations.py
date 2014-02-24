@@ -181,7 +181,6 @@ def active_declarations(**kwargs):
     exec('biophys_%s(**kwargs)' % kwargs['conductance_type'])
 
 
-
 if __name__ == '__main__':
 
     timeres = 2**-4
@@ -190,6 +189,7 @@ if __name__ == '__main__':
     tstartms = -cut_off
     model_path = join('lfpy_version')
     neuron.load_mechanisms(join('mod'))
+
 
     cell_params_pythonized_mod = {
         'morphology': join(model_path, 'morphologies', 'cell1.hoc'),

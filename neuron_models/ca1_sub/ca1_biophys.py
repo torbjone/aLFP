@@ -3,13 +3,14 @@ __author__ = 'torbjone'
 from os.path import join
 import neuron
 import LFPy
-
+import numpy as np
+import pylab as plt
 
 def insert_Ih_prox():
 
     for sec in neuron.h.apic:
         sec.insert("Ih_BK")
-        sec.ghbar_Ih_BK = 1.
+        sec.ghbar_Ih_BK = 2.
 
         #for seg in sec:
         #    xdist = neuron.h.distance(seg.x)
@@ -63,9 +64,9 @@ def init(Vrest):
 
 def biophys_active(**kwargs):
 
-    Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
+    Vrest = -70 if not 'hold_potential' in kwargs else kwargs['hold_potential']
 
-    Rm = 90000.
+    Rm = 30000.
     Cm = 1.5
     Ra = 100.
 
@@ -97,7 +98,7 @@ def biophys_active(**kwargs):
         sec.Ra = Ra
         sec.cm = Cm
 
-    #neuron.h.distance()
+    neuron.h.distance()
     insert_Ih_prox()
     #init(Vrest)
 
@@ -112,10 +113,9 @@ def active_declarations(**kwargs):
 
 if __name__ == '__main__':
 
-    import pylab as plt
     timeres = 2**-4
     cut_off = 0
-    tstopms = 1000
+    tstopms = 200
     tstartms = -cut_off
     model_path = '.'
 
@@ -137,11 +137,30 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
+    neuron.h.celsius = 33
     cell.simulate(rec_vmem=True, rec_imem=True)
-    plt.subplot(121)
-    plt.scatter(cell.xmid, cell.ymid, c=cell.vmem[:, -1])
+
+    #clr = lambda idx: plt.cm.jet(int(256. * idx/(len(conductance_list ) - 1)))
+
+    plt.figure(figsize=[10,5])
+    plt.subplot(121, aspect='equal')
+    #[plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], color='gray')
+    #          for idx in xrange(cell.totnsegs)]
+    plt.scatter(cell.xmid, cell.zmid, c=cell.vmem[:, -1], vmin=np.min(cell.vmem), vmax=np.max(cell.vmem))
     print cell.vmem
+    #
+    # K = 0.006
+    # R = 8.315
+    # F = 96.48
+    # vhalfn = -82.
+    # z = -3.
+    # gamma = 0.5
+    # betn = K * np.exp(-z * (1 - gamma) * (cell.vmem-vhalfn) * F / (R * (273.16+neuron.h.celsius)))
+    # alpn = K * np.exp(z * gamma * (cell.vmem-vhalfn) * F / (R * (273.16+neuron.h.celsius)))
+    # print betn
+    # print alpn
     plt.colorbar()
     plt.subplot(122)
     plt.plot(cell.tvec, cell.somav)
-    plt.show()
+
+    plt.savefig('test.png')

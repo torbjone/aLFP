@@ -13,8 +13,8 @@ PARAMETER {
     z = -3.    (1)
     gamma = 0.5   (1)
     tau0 = 4 (ms)
-    K = 0.006 (1/ms)
-    R = 8.315
+    K = 0.0 (1/ms)
+    R = 8315
     F = 9.648e4
 }
 
@@ -66,7 +66,7 @@ PROCEDURE rates(v (mV)) { :callable from hoc
     LOCAL a, q10, b
     :q10=3^((celsius-30)/10)
     a = alpn(v)
-    b = 0.1 :betn(v)
+    b = betn(v)
     ninf = a /(a + b)
     taun = 1 / (a + b) + tau0
 }

@@ -87,8 +87,8 @@ cell_params_hoc = {
     'timeres_python': 1,
     'tstartms': tstartms,          # start time, recorders start at t=0
     'tstopms': tstopms,
-    'custom_code': [join(model_path, 'custom_codes.hoc'),
-                    join(model_path, 'biophys3_active.hoc')],
+    #'custom_code': [join(model_path, 'custom_codes.hoc'),
+    #                join(model_path, 'biophys3_active.hoc')],
 }
 
 cell_params_py = {
@@ -106,7 +106,7 @@ cell_params_py = {
     'tstopms': tstopms,
     'custom_code': [join(model_path, 'custom_codes.hoc')],
     'custom_fun': [active_declarations],  # will execute this function
-    'custom_fun_args': [{'conductance_type': 'active'}],
+    #'custom_fun_args': [{'conductance_type': 'active'}],
 }
 
 
@@ -139,14 +139,14 @@ def plot_cell(cell, name):
 
 def test_active_mod():
 
-    cell_params_hoc_ = cell_params_hoc.copy()
-    cell_params_hoc_['custom_code'][1] = join(model_path, 'biophys3_active_mod.hoc')
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                      join(model_path, 'biophys3_active_mod.hoc')]
 
-    cell_params_py_ = cell_params_py.copy()
-    cell_params_py_['custom_fun_args'][0] = {'conductance_type': 'active',
-                                             'hold_potential': -70}
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'active',
+                                          'hold_potential': -70}]
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_py_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_py)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
     insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
@@ -154,7 +154,8 @@ def test_active_mod():
     plot_cell(cell, '2_active_mod_py')
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_hoc_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_hoc)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
     insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
@@ -164,6 +165,12 @@ def test_active_mod():
 
 def test_active_orig():
     plt.seed(0)
+
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                      join(model_path, 'biophys3_active.hoc')]
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'active'}]
+
+    neuron.h('forall delete_section()')
     cell = LFPy.Cell(**cell_params_hoc)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
@@ -172,6 +179,8 @@ def test_active_orig():
     plot_cell(cell, '1_active_hoc')
 
     plt.seed(0)
+    neuron.h('forall delete_section()')
+
     cell = LFPy.Cell(**cell_params_py)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
@@ -182,31 +191,37 @@ def test_active_orig():
 
 def test_active_mod_no_input():
 
-    cell_params_hoc_ = cell_params_hoc.copy()
-    cell_params_hoc_['custom_code'][1] = join(model_path, 'biophys3_active_mod.hoc')
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                       join(model_path, 'biophys3_active_mod.hoc')]
 
-    cell_params_py_ = cell_params_py.copy()
-    cell_params_py_['custom_fun_args'][0] = {'conductance_type': 'active',
-                                             'hold_potential': -70}
-
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'active',
+                                           'hold_potential': -70}]
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_py_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_py)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '4_active_mod_no_input_py')
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_hoc_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_hoc)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '4_active_mod_no_input_hoc')
 
 
 def test_active_no_input():
     plt.seed(0)
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                      join(model_path, 'biophys3_active.hoc')]
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'active'}]
+
+    neuron.h('forall delete_section()')
     cell = LFPy.Cell(**cell_params_hoc)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '3_active_no_input_hoc')
 
     plt.seed(0)
+    neuron.h('forall delete_section()')
     cell = LFPy.Cell(**cell_params_py)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '3_active_no_input_py')
@@ -214,33 +229,34 @@ def test_active_no_input():
 
 def test_passive_no_input():
 
-    cell_params_hoc_ = cell_params_hoc.copy()
-    cell_params_hoc_['custom_code'][1] = join(model_path, 'biophys3_passive.hoc')
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                       join(model_path, 'biophys3_passive.hoc')]
 
-    cell_params_py_ = cell_params_py.copy()
-    cell_params_py_['custom_fun_args'][0] = {'conductance_type': 'passive',
-                                             'hold_potential': -70}
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'passive',
+                                           'hold_potential': -70}]
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_hoc_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_hoc)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '8_passive_no_input_hoc')
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_py_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_py)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '8_passive_no_input_py')
 
 
 def test_passive():
 
-    cell_params_hoc_ = cell_params_hoc.copy()
-    cell_params_hoc_['custom_code'][1] = join(model_path, 'biophys3_passive.hoc')
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                      join(model_path, 'biophys3_passive.hoc')]
 
-    cell_params_py_ = cell_params_py.copy()
-    cell_params_py_['custom_fun_args'][0] = {'conductance_type': 'passive',
-                                             'hold_potential': -70}
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'passive',
+                                          'hold_potential': -70}]
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_hoc_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_hoc)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
     insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
@@ -248,7 +264,8 @@ def test_passive():
     plot_cell(cell, '7_passive_hoc')
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_py_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_py)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
     insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
@@ -258,35 +275,36 @@ def test_passive():
 
 def test_linearized_no_input():
 
-    cell_params_hoc_ = cell_params_hoc.copy()
-    cell_params_hoc_['custom_code'][1] = join(model_path, 'biophys3_Ih_linearized_mod.hoc')
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                       join(model_path, 'biophys3_Ih_linearized_mod.hoc')]
 
-    cell_params_py_ = cell_params_py.copy()
-    cell_params_py_['custom_fun_args'][0] = {'conductance_type': 'Ih_linearized',
-                                             'hold_potential': -70}
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'Ih_linearized',
+                                           'hold_potential': -70}]
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_hoc_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_hoc)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '6_linearized_no_input_hoc')
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_py_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_py)
     cell.simulate(rec_vmem=True, rec_imem=True)
     plot_cell(cell, '6_linearized_no_input_py')
 
 
 def test_linearized():
 
-    cell_params_hoc_ = cell_params_hoc.copy()
-    cell_params_hoc_['custom_code'][1] = join(model_path, 'biophys3_Ih_linearized_mod.hoc')
+    cell_params_hoc['custom_code'] = [join(model_path, 'custom_codes.hoc'),
+                                       join(model_path, 'biophys3_Ih_linearized_mod.hoc')]
 
-    cell_params_py_ = cell_params_py.copy()
-    cell_params_py_['custom_fun_args'][0] = {'conductance_type': 'Ih_linearized',
-                                             'hold_potential': -70}
+    cell_params_py['custom_fun_args'] = [{'conductance_type': 'Ih_linearized',
+                                          'hold_potential': -70}]
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_hoc_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_hoc)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
     insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
@@ -294,7 +312,8 @@ def test_linearized():
     plot_cell(cell, '5_linearized_hoc')
 
     plt.seed(0)
-    cell = LFPy.Cell(**cell_params_py_)
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params_py)
     insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
     insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
@@ -302,13 +321,12 @@ def test_linearized():
     plot_cell(cell, '5_linearized_py')
 
 
-
 if __name__ == '__main__':
 
     test_active_mod()
     test_active_orig()
-    test_active_no_input()
     test_active_mod_no_input()
+    test_active_no_input()
     test_passive_no_input()
     test_passive()
     test_linearized_no_input()
