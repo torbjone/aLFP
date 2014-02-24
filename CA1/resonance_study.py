@@ -44,8 +44,8 @@ elec_y = np.zeros(n_elecs)
 elec_z = np.linspace(-200, 800, n_elecs)
 
 model_path = join(neuron_model)
-LFPy.cell.neuron.load_mechanisms(join(neuron_model))
-LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))
+neuron.load_mechanisms(join(neuron_model))
+neuron.load_mechanisms(join(neuron_model, '..'))
 
 cell_params = {
     'morphology' : join(model_path, 'geo9068802.hoc'),
