@@ -293,7 +293,7 @@ if __name__ == '__main__':
     # ax1 = plt.subplot(221, aspect='equal')
     # ax2 = plt.subplot(223, aspect='equal')
     # ax3 = plt.subplot(133, aspect='equal')
-    # 
+    #
     # [ax1.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]],
     #           'k', lw=cell.diam[i]**0.5) for i in xrange(len(cell.xmid))]
     # [ax3.plot([cell.zstart[i], cell.zend[i]], [-cell.xstart[i], -cell.xend[i]], 'k', lw=cell.diam[i]**0.5)
@@ -303,7 +303,7 @@ if __name__ == '__main__':
     #
     # print cell.xmid.shape
     # plt.show()
-    sys.exit()
+    #sys.exit()
     neuron.h.celsius = 33
     cell.simulate(rec_vmem=True, rec_imem=True)
 
