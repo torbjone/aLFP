@@ -8,11 +8,22 @@ import numpy as np
 import pylab as plt
 
 
-def insert_Ih_prox(apic_trunk, basal, apic_tuft):
+def insert_Ih(apic_trunk, basal, apic_tuft):
 
-    for sec in neuron.h.apic:
-        sec.insert("Ih_BK")
-        sec.ghbar_Ih_BK = 2.
+    for sec in basal:
+        sec.insert("Ih_BK_prox")
+        sec.ghbar_Ih_BK_prox = 0.2
+
+    neuron.h.distance()
+    for sec in apic_trunk:
+        sec.insert("Ih_BK_prox")
+        for seg in sec:
+            dist = neuron.h.distance(seg.x)
+            seg.ghbar_Ih_BK_prox = 0.2 + (2.0 - 0.2)/(1 + np.exp((250. - dist)/30))
+
+    for sec in apic_tuft:
+        sec.insert("Ih_BK_dist")
+        sec.ghbar_Ih_BK_dist = 20.
 
         #for seg in sec:
         #    xdist = neuron.h.distance(seg.x)
@@ -32,7 +43,7 @@ def insert_km(apic_trunk, basal, apic_tuft):
         sec.insert("km")
         sec.gbar_km = gkm
 
-    for sec in neuron.h.soma:
+    for sec in neuron.h.somatic:
             sec.insert("km")
             sec.gbar_km = gkm
 
@@ -89,16 +100,32 @@ def modify_morphology(apic_trunk, basal, apic_tuft):
         sec.diam = 0.76
 
     neuron.h.distance()
+    apic_tuft_root_diam = None
+    apic_tuft_root_dist = None
     for sec in apic_trunk:
-        for i in xrange(int(neuron.h.n3d())):
-            import ipdb; ipdb.set_trace()
-            sec_x =  neuron.h.arc3d(1) / neuron.h.L
-            dist_to_soma = neuron.h.distance(sec_x)
-            # TODO: Test this!
-            print sec_x, dist_to_soma, neuron.h.x3d(i), neuron.h.y3d(i), neuron.h.z3d(i)
-            diam = 3.5 - 4.7e-3 * dist_to_soma
+        npts = int(neuron.h.n3d())
+        for i in xrange(npts):
+            dist_calc = np.sqrt(neuron.h.x3d(i)**2 + neuron.h.y3d(i)**2 + neuron.h.z3d(i)**2)
+            diam = 3.5 - 4.7e-3 * dist_calc
             neuron.h.pt3dchange(i, neuron.h.x3d(i), neuron.h.y3d(i), neuron.h.z3d(i), diam)
+        apic_tuft_root_diam = neuron.h.diam3d(npts - 1)
+        apic_tuft_root_dist = np.sqrt(neuron.h.x3d(i)**2 + neuron.h.y3d(i)**2 + neuron.h.z3d(i)**2)
 
+    if apic_tuft_root_diam == None:
+        raise RuntimeError, "Found no apic_tuft_root_diam"
+    neuron.h.distance()
+
+    # TODO: THE FOLLOWING MAKES NO SENSE AT THE MOMENT
+    for sec in apic_tuft:
+        npts = int(neuron.h.n3d())
+        print sec.name(), npts
+        for i in xrange(npts):
+            dist_calc = np.sqrt(neuron.h.x3d(i)**2 + neuron.h.y3d(i)**2 + neuron.h.z3d(i)**2)
+            dist_from_root = np.abs(dist_calc - apic_tuft_root_dist)
+            #print dist_from_root, dist_calc
+            diam = apic_tuft_root_diam - 18e-3 * (dist_from_root)
+            # neuron.h.pt3dchange(i, neuron.h.x3d(i), neuron.h.y3d(i), neuron.h.z3d(i), diam)
+    return apic_tuft_root_diam
 
 def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
     Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
@@ -133,7 +160,7 @@ def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
          sec.Ra = ra
          sec.cm = cm_myel_ax
 
-    for sec in neuron.h.soma:
+    for sec in neuron.h.somatic:
         sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./rm
@@ -155,15 +182,12 @@ def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
         sec.Ra = ra
         sec.cm = cm
 
-
     for sec in apic_trunk:
         sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./rm
         sec.Ra = ra
         sec.cm = cm
-
-
 
 def create_axon():
     neuron.h('''
@@ -205,7 +229,7 @@ def active_declarations(**kwargs):
     apic_trunk, basal, apic_tuft = make_section_lists()
     modify_morphology(apic_trunk, basal, apic_tuft)
     biophys_passive(apic_trunk, basal, apic_tuft, **kwargs)
-    insert_Ih_prox(apic_trunk, basal, apic_tuft)
+    insert_Ih(apic_trunk, basal, apic_tuft)
 
 
 

@@ -1,4 +1,4 @@
-TITLE Borg-Graham type Ih channel
+TITLE Borg-Graham type IM channel
 UNITS {
 	(mA) = (milliamp)
 	(mV) = (millivolt)
@@ -6,23 +6,23 @@ UNITS {
 
 PARAMETER {
 	v (mV)
-    eh = -40 (mV)
+    ek (mV)
 	celsius (degC)
-	ghbar = .01 (mho/cm2)
-    vhalfn = -82.   (mV)
-    z = -3.    (1)
+	gkbar = .01 (mho/cm2)
+    vhalfn = -43.   (mV)
+    z = 3.5    (1)
     gamma = 0.5   (1)
-    tau0 = 4 (ms)
-    K = 0.006 (1/ms)
+    tau0 = 1. (ms)
+    K = 0.004 (1/ms)
     R = 8315
     F = 9.648e4
 }
 
 
 NEURON {
-	SUFFIX Ih_BK_prox
-    NONSPECIFIC_CURRENT ih
-    RANGE ghbar
+	SUFFIX Im_BK
+    USEION k READ ek WRITE ik
+    RANGE gkbar
     GLOBAL ninf, taun
 }
 
@@ -36,16 +36,16 @@ INITIAL {
 }
 
 ASSIGNED {
-	ih (mA/cm2)
-    gh
+	ik (mA/cm2)
+    gk
     ninf
     taun
 }
 
 BREAKPOINT {
 	SOLVE states METHOD cnexp
-	gh = ghbar*n
-	ih = gh * (v - eh)
+	gk = gkbar*n
+	ik = gk * (v - ek)
 }
 
 

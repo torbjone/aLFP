@@ -103,7 +103,7 @@ proc topol() { local i
   basic_shape()
 }
 proc shape3d_1() {
-  soma {pt3dclear()
+  soma[0] {pt3dclear()
 	pt3dadd(-11.509, 0.181, 4.96, 16.238)
 	pt3dadd(-3.39, 0.181, 4.96, 16.238)
 	pt3dadd(4.729, 0.181, 4.96, 16.238)

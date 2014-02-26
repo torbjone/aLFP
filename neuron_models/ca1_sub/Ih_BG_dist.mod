@@ -9,8 +9,8 @@ PARAMETER {
     eh = -40 (mV)
 	celsius (degC)
 	ghbar = .01 (mho/cm2)
-    vhalfn = -82.   (mV)
-    z = -3.    (1)
+    vhalfn = -90.   (mV)
+    z = -3.1    (1)
     gamma = 0.5   (1)
     tau0 = 4 (ms)
     K = 0.006 (1/ms)
@@ -20,7 +20,7 @@ PARAMETER {
 
 
 NEURON {
-	SUFFIX Ih_BK_prox
+	SUFFIX Ih_BK_dist
     NONSPECIFIC_CURRENT ih
     RANGE ghbar
     GLOBAL ninf, taun
