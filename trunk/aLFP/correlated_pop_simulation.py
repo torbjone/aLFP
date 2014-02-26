@@ -895,7 +895,7 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
    # Excitatory synapse parameters:
     synapse_params = {
         'e' : 0,   
-        'syntype' : 'ExpSynI',      #conductance based exponential synapse
+        'syntype' : 'ExpSyn',      #conductance based exponential synapse
         'tau' : .1,                #Time constant, rise           #Time constant, decay
         'weight' : syn_strength,           #Synaptic weight
         'color' : 'r',              #for pl.plot
@@ -1043,6 +1043,29 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
         np.save(join(ofolder, 'signal_%s.npy' %sim_name), 1000*electrode.LFP)
         #set_trace()
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 def run_correlated_population_simulation(cell_params, conductance_list, ofolder, model_path, 
                                          elec_x, elec_y, elec_z, ntsteps, spiketrain_params, 
                                          correlation, num_cells, population_radius,
@@ -1050,7 +1073,7 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
    # Excitatory synapse parameters:
     synapse_params = {
         'e' : 0,   
-        'syntype' : 'ExpSyn',      #conductance based exponential synapse
+        'syntype' : 'ExpSynI',      #conductance based exponential synapse
         'tau' : .1,                #Time constant, rise           #Time constant, decay
         'weight' : syn_strength,           #Synaptic weight
         'color' : 'r',              #for pl.plot
@@ -1111,24 +1134,24 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
                 1, 5, cell_params['tstartms'], cell_params['tstopms'])[0]
         spike_train_idxs = np.arange(spiketrain_params['n'])
 
-    #active_vm_average = None
-    #average_active_as_vss = True
+    active_vm_average = None
+    average_active_as_vss = True
     
     for conductance_type in conductance_list:
         neuron.h('forall delete_section()')
         neuron.h('secondorder=2')
         del cell
         
-        # if average_active_as_vss and (active_vm_average != None):
-        #     print "Using average active membrane voltage as resting for passive or linearized: %1.2f"\
-        #        % active_vm_average
-        #     vss = active_vm_average
-        # else:
-        #     vss = -70 + resting_pot_shift
-        #
+        if average_active_as_vss and (active_vm_average != None):
+            print "Using average active membrane voltage as resting for passive or linearized: %1.2f"\
+               % active_vm_average
+            vss = active_vm_average
+        else:
+            vss = -70 + resting_pot_shift
+        
         cell_params['custom_code'] = [join(model_path, 'custom_codes.hoc'),
                                       join(model_path, 'biophys3_%s.hoc' % conductance_type)]
-        # cell_params['v_init'] = vss
+        cell_params['v_init'] = vss
         cell = LFPy.Cell(**cell_params)
 
         cell.set_rotation(**rot_params)
@@ -1146,20 +1169,20 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
                                        correlation, syn_strength, add_to_name)
         sim_name = '%s_sim_%d' % (stem, simulation_idx)
 
-        # if conductance_type in ['passive_vss', 'Ih_linearized', 'Ih_linearized_gradient']:
-        #     for sec in cell.allseclist:
-        #         for seg in sec:
-        #             exec('seg.vss_%s = %g'% (conductance_type, vss))
-        #
-        # if conductance_type in ['active','Ih_linearized_gradient']:
-        #     for sec in cell.allseclist:
-        #         for seg in sec:
-        #             if conductance_type == 'active':
-        #                 seg.pas.e = -90 + resting_pot_shift
-        #             if conductance_type == 'Ih_linearized_gradient':
-        #                 seg.el_Ih_linearized_gradient = -90 + resting_pot_shift
-        #
-        #if 'Ih_linearized' in conductance_type:
+        if conductance_type in ['passive_vss', 'Ih_linearized', 'Ih_linearized_gradient']:
+            for sec in cell.allseclist:
+                for seg in sec:
+                    exec('seg.vss_%s = %g'% (conductance_type, vss))
+                    
+        if conductance_type in ['active','Ih_linearized_gradient']:
+            for sec in cell.allseclist:
+                for seg in sec:
+                    if conductance_type == 'active':
+                        seg.pas.e = -90 + resting_pot_shift
+                    if conductance_type == 'Ih_linearized_gradient':
+                        seg.el_Ih_linearized_gradient = -90 + resting_pot_shift
+
+        #if 'Ih_linearized' in conductance_type:            
         #    plot_Ih_el_gradient(cell, -70 + resting_pot_shift, conductance_type)
 
         #if os.path.isfile(join(ofolder, 'signal_%s.npy' %sim_name)):
@@ -1170,10 +1193,10 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
         set_input_spiketrain(cell, all_spike_trains, cell_input_idxs, spike_train_idxs, synapse_params)
         cell.simulate(rec_imem=True, rec_vmem=True)
 
-        # if conductance_type == 'active' and average_active_as_vss:
-        #     active_vm_average = np.average(cell.vmem)
-        #     print active_vm_average
-        #
+        if conductance_type == 'active' and average_active_as_vss:
+            active_vm_average = np.average(cell.vmem)
+            print active_vm_average
+            
         if np.max(cell.somav) > -40:
             is_spiking = True
             plt.close('all')
@@ -1217,6 +1240,8 @@ def run_correlated_population_simulation(cell_params, conductance_list, ofolder,
                 plt.savefig('cell_%05d.png' %simulation_idx)
         np.save(join(ofolder, 'signal_%s.npy' %sim_name), 1000*electrode.LFP)
         #set_trace()
+
+    
 
 ## def run_correlated_population_simulation_debug(cell_params, conductance_list, ofolder, model_path, 
 ##                                          elec_x, elec_y, elec_z, ntsteps, spiketrain_params, 

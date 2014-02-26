@@ -14,6 +14,8 @@ try:
 except:
     pass
 from os.path import join
+
+import neuron
 import aLFP
 
 model = 'shah'
@@ -28,13 +30,13 @@ if at_stallo:
     timeres = 2**-6
 else:
     neuron_model = join('..', 'neuron_models', model)
-    cut_off = 5
+    cut_off = 500
     timeres = 2**-6
 
 num_cells = 1
 population_radius = 0
 
-tstopms = 1
+tstopms = 1000
 ntsteps = round((tstopms - 0) / timeres)
 
 n_elecs_center = 8
@@ -60,8 +62,9 @@ n_elecs = len(elec_x)
 #np.save(join(folder, 'elec_z.npy'), elec_z)
 
 model_path = join(neuron_model)
-LFPy.cell.neuron.load_mechanisms(join(neuron_model))      
-LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
+
+neuron.load_mechanisms(join(neuron_model))
+neuron.load_mechanisms(join(neuron_model, '..'))
 
 cell_params = {
     'morphology' : join(model_path, 'geo9068802.hoc'),
@@ -94,6 +97,7 @@ spiketrain_params = {'section': ['tuft'],
                      'args' : [1, 5, cell_params['tstartms'], cell_params['tstopms']]
                     }
 
+
 def make_all_input_trains():
     """ Makes all the input spike trains. Totally 1000 / 0.01, since that is the
     maximum number of needed ones"""
@@ -116,7 +120,9 @@ def simulate_single_cell():
     """ One long cell simulation will be used to draw short 
     random sequences of membrane currents to build LFP 
     """  
+
     conductance_list = ['active', 'passive', 'hd_and_km', 'only_km', 'only_hd']
+
 
     if sys.argv[3] == 'homogeneous':
         spiketrain_params = {'section': ['apic', 'dend'],
@@ -141,16 +147,41 @@ def simulate_single_cell():
                                               syn_strength, resting_pot_shift)
 
 
-
-
-
 def compare_currents():
+    conductance_list = ['passive_-65', 'only_hd_-65', 'only_km_-65', 'hd_and_km_-65', 'active_-65']
+    aLFP.compare_cell_currents('shah', 0.001, 0, conductance_list, 'homogeneous')
+    #aLFP.compare_cell_currents('probe_shah', 0.1, 0, conductance_list)
+    #aLFP.compare_cell_currents('probe_shah', 0.1, 16, conductance_list)
+    #aLFP.compare_cell_currents('probe_shah', 0.1, 17, conductance_list)
 
-    conductance_list = ['passive', 'hd_and_km', 'only_km', 'only_hd', 'active']    
-    aLFP.compare_cell_currents('probe_shah', 0.1, -30, conductance_list)
-    aLFP.compare_cell_currents('probe_shah', 0.1, 0, conductance_list)
-    aLFP.compare_cell_currents('probe_shah', 0.1, 16, conductance_list)
-    aLFP.compare_cell_currents('probe_shah', 0.1, 17, conductance_list)
+
+def is_imem_less_affected_then_vmem():
+    """ One long cell simulation will be used to draw short
+    random sequences of membrane currents to build LFP
+    """
+    conductance_list = ['hd_and_km_-80', 'hd_and_km_-65']
+
+    if sys.argv[2] == 'homogeneous':
+        spiketrain_params = {'section': ['apic', 'dend'],
+                             'n' : 1000,
+                             'spTimesFun' : LFPy.inputgenerators.stationary_poisson,
+                             'args' : [1, 5, cell_params['tstartms'], cell_params['tstopms']]
+                             }
+    else:
+        spiketrain_params = {'section': [sys.argv[2]],
+                             'n' : 1000,
+                             'spTimesFun' : LFPy.inputgenerators.stationary_poisson,
+                             'args' : [1, 5, cell_params['tstartms'], cell_params['tstopms']]
+                             }
+
+    correlation = 1.0
+    syn_strength = 0.001
+    simulation_idx = 0
+    resting_pot_shift = 0
+    aLFP.run_CA1_correlated_population_simulation(cell_params, conductance_list, folder, model_path,
+                                              elec_x, elec_y, elec_z, ntsteps, spiketrain_params,
+                                              correlation, num_cells, population_radius, simulation_idx,
+                                              syn_strength, resting_pot_shift)
 
 
 
@@ -178,19 +209,6 @@ def probe_cell():
     aLFP.probe_active_currents(cell_params, folder, simulation_params, shift, .1, spiketrain_params,
                                    conductance_type)
 
-def make_population():
-    aLFP.distribute_cells(num_cells, population_radius)
-
-def make_all_input_trains():
-    """ Makes all the input spike trains. Totally 1000 / 0.01, since that is the
-    maximum number of needed ones"""
-    num_trains = int(1000/0.01)
-    all_spiketimes = {}
-    for idx in xrange(num_trains):
-        all_spiketimes[idx] = LFPy.inputgenerators.stationary_poisson(
-            1, 5, cell_params['tstartms'], cell_params['tstopms'])[0]
-    np.save(join(folder, 'all_spike_trains.npy'), all_spiketimes)
-    
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         sys.stderr.write("Usage: python %s <function-name> <additional arguments>\n" % sys.argv[0])
