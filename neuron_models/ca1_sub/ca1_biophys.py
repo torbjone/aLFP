@@ -1,12 +1,14 @@
 __author__ = 'torbjone'
 
 from os.path import join
+import sys
 import neuron
 import LFPy
 import numpy as np
 import pylab as plt
 
-def insert_Ih_prox():
+
+def insert_Ih_prox(apic_trunk, basal, apic_tuft):
 
     for sec in neuron.h.apic:
         sec.insert("Ih_BK")
@@ -21,7 +23,7 @@ def insert_Ih_prox():
         #        seg.gkabar_kap = ka * (1+xdist/100)
 
 
-def insert_km():
+def insert_km(apic_trunk, basal, apic_tuft):
 
     ka = 1
     gkm = 1
@@ -62,18 +64,7 @@ def init(Vrest):
                 seg.e_pas += seg.ica/seg.g_pas
 
 
-def biophys_passive(**kwargs):
-    Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
-
-    rm = 90000.
-    rm_apic_tuft = 20000.
-    rm_myel_ax = 1e9
-
-    cm = 1.5
-    cm_myel_ax = 0.04
-
-    ra = 100.
-
+def make_section_lists():
 
     apic_trunk = neuron.h.SectionList()
     basal = neuron.h.SectionList()
@@ -89,6 +80,37 @@ def biophys_passive(**kwargs):
             apic_tuft.append(sec)
         elif sec_type == 'apic' and sec_idx == 0:
             apic_trunk.append(sec)
+    return apic_trunk, basal, apic_tuft
+
+
+def modify_morphology(apic_trunk, basal, apic_tuft):
+
+    for sec in basal:
+        sec.diam = 0.76
+
+    neuron.h.distance()
+    for sec in apic_trunk:
+        for i in xrange(int(neuron.h.n3d())):
+            import ipdb; ipdb.set_trace()
+            sec_x =  neuron.h.arc3d(1) / neuron.h.L
+            dist_to_soma = neuron.h.distance(sec_x)
+            # TODO: Test this!
+            print sec_x, dist_to_soma, neuron.h.x3d(i), neuron.h.y3d(i), neuron.h.z3d(i)
+            diam = 3.5 - 4.7e-3 * dist_to_soma
+            neuron.h.pt3dchange(i, neuron.h.x3d(i), neuron.h.y3d(i), neuron.h.z3d(i), diam)
+
+
+def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
+    Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
+
+    rm = 90000.
+    rm_apic_tuft = 20000.
+    rm_myel_ax = 1e9
+
+    cm = 1.5
+    cm_myel_ax = 0.04
+
+    ra = 100.
 
     for sec in neuron.h.axon_hillock:
          sec.insert('pas')
@@ -114,11 +136,12 @@ def biophys_passive(**kwargs):
     for sec in neuron.h.soma:
         sec.insert("pas")
         sec.e_pas = Vrest
-        sec.g_pas = 1./rm_apic_tuft
+        sec.g_pas = 1./rm
         sec.Ra = ra
         sec.cm = cm
 
     for sec in apic_tuft:
+
         sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./rm_apic_tuft
@@ -131,7 +154,7 @@ def biophys_passive(**kwargs):
         sec.g_pas = 1./rm
         sec.Ra = ra
         sec.cm = cm
-        sec.diam = 0.76
+
 
     for sec in apic_trunk:
         sec.insert("pas")
@@ -139,6 +162,7 @@ def biophys_passive(**kwargs):
         sec.g_pas = 1./rm
         sec.Ra = ra
         sec.cm = cm
+
 
 
 def create_axon():
@@ -177,11 +201,11 @@ def active_declarations(**kwargs):
     # TODO: Add more channels
 
     #neuron.h.geom_nse# g()
-
     create_axon()
-
-    biophys_passive(**kwargs)
-    insert_Ih_prox()
+    apic_trunk, basal, apic_tuft = make_section_lists()
+    modify_morphology(apic_trunk, basal, apic_tuft)
+    biophys_passive(apic_trunk, basal, apic_tuft, **kwargs)
+    insert_Ih_prox(apic_trunk, basal, apic_tuft)
 
 
 
@@ -212,19 +236,19 @@ if __name__ == '__main__':
 
     cell = LFPy.Cell(**cell_params)
 
-    ax1 = plt.subplot(221, aspect='equal')
-    ax2 = plt.subplot(223, aspect='equal')
-    ax3 = plt.subplot(133, aspect='equal')
+    # ax1 = plt.subplot(221, aspect='equal')
+    # ax2 = plt.subplot(223, aspect='equal')
+    # ax3 = plt.subplot(133, aspect='equal')
+    #
+    # [ax1.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]],
+    #           'k', lw=cell.diam[i]**0.5) for i in xrange(len(cell.xmid))]
+    # [ax3.plot([cell.zstart[i], cell.zend[i]], [-cell.xstart[i], -cell.xend[i]], 'k')
+    #         for i in xrange(len(cell.xmid))]
+    # [ax2.plot([cell.xstart[i], cell.xend[i]], [-cell.ystart[i], -cell.yend[i]], 'k')
+    #         for i in xrange(len(cell.xmid))]
 
-    [ax1.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]],
-              'k', lw=cell.diam[i]**0.5) for i in xrange(len(cell.xmid))]
-    [ax3.plot([cell.zstart[i], cell.zend[i]], [-cell.xstart[i], -cell.xend[i]], 'k')
-            for i in xrange(len(cell.xmid))]
-    [ax2.plot([cell.xstart[i], cell.xend[i]], [-cell.ystart[i], -cell.yend[i]], 'k')
-            for i in xrange(len(cell.xmid))]
-
-    print cell.xmid.shape
-    plt.show()
+    #print cell.xmid.shape
+    #plt.show()
     sys.exit()
     neuron.h.celsius = 33
     cell.simulate(rec_vmem=True, rec_imem=True)
