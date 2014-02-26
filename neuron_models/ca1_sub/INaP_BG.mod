@@ -68,6 +68,6 @@ PROCEDURE rates(v (mV)) { :callable from hoc
     a = alpn(v)
     b = betn(v)
     ninf = a /(a + b)
-    taun = 1 / (a + b) + tau0
+    taun = tau0
 }
 
