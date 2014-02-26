@@ -6,9 +6,17 @@ proc celldef() {
   geom_nseg()
 }
 
-create soma[3], dend[101], apic[52]
+create soma[3], dend[101], apic[52], axon_hillock[4], axon_IS[1], myelinated_axon[1]
 
 proc topol() { local i
+
+  connect axon_hillock[0](0), soma[1](1)
+  connect axon_hillock[1](0), axon_hillock[0](1)
+  connect axon_hillock[2](0), axon_hillock[1](1)
+  connect axon_hillock[3](0), axon_hillock[2](1)
+  connect axon_IS[0](0), axon_hillock[3](1)
+  connect myelinated_axon[0](0), axon_IS[0](1)
+
   for i = 1, 2 connect soma[i](0), soma(0.5)
   connect dend(0), soma[1](1)
   for i = 1, 2 connect dend[i](0), dend[i-1](1)
@@ -3314,6 +3322,33 @@ proc shape3d_15() {
 	pt3dadd(-80.377, 30.408, 28.08, 0.8)
   }
 }
+
+proc shape3d_16() {
+  axon_hillock[0] {pt3dclear()
+    pt3dadd(4.729, 0.181, 4.960, 4)
+    pt3dadd(7.229, 0.181, 4.960, 4)
+  }
+  axon_hillock[1] {pt3dclear()
+    pt3dadd(7.229, 0.181, 4.960, 4)
+    pt3dadd(9.729, 0.181, 4.960, 3)
+  }
+  axon_hillock[2] {pt3dclear()
+    pt3dadd(9.729, 0.181, 4.960, 3)
+    pt3dadd(12.229, 0.181, 4.960, 2)
+  }
+  axon_hillock[3] {pt3dclear()
+    pt3dadd(12.229, 0.181, 4.960, 2)
+    pt3dadd(14.729, 0.181, 4.960, 1)
+  }
+  axon_IS[0] {pt3dclear()
+    pt3dadd(14.729, 0.181, 4.960, 1)
+    pt3dadd(34.729, 0.181, 4.960, 1)
+  }
+  myelinated_axon[0] {pt3dclear()
+    pt3dadd(34.729, 0.181, 4.960, 1)
+    pt3dadd(134.729, 0.181, 4.960, 1)
+  }
+}
 proc basic_shape() {
   shape3d_1()
   shape3d_2()
@@ -3330,6 +3365,7 @@ proc basic_shape() {
   shape3d_13()
   shape3d_14()
   shape3d_15()
+  shape3d_16()
 }
 
 objref all, somatic, basal, apical

@@ -25,36 +25,45 @@ def insert_Ih(apic_trunk, basal, apic_tuft):
         sec.insert("Ih_BK_dist")
         sec.ghbar_Ih_BK_dist = 20.
 
-        #for seg in sec:
-        #    xdist = neuron.h.distance(seg.x)
-        #    seg.ghdbar_hd = ghd * (1+3.*xdist/100)
-        #    if xdist > 100:
-        #        seg.gkabar_kad = ka * (1+xdist/100)
-        #    else:
-        #        seg.gkabar_kap = ka * (1+xdist/100)
 
+def insert_Im():
 
-def insert_km(apic_trunk, basal, apic_tuft):
-
-    ka = 1
-    gkm = 1
-
-    for sec in neuron.h.axon:
-        sec.insert("km")
-        sec.gbar_km = gkm
-
-    for sec in neuron.h.somatic:
-            sec.insert("km")
-            sec.gbar_km = gkm
-
-    for sec in neuron.h.apical_dendrite:
+    gkm = 12
+    max_dist = 40
+    neuron.h.distance()
+    # neuron.h.diam_changed()
+    for sec in neuron.h.axon_hillock:
+        print sec.name()
         for seg in sec:
-            xdist = neuron.h.distance(seg.x)
-            if xdist > 100:
-                seg.gkabar_kad = ka * (1+xdist/100)
-            else:
-                seg.gkabar_kap = ka * (1+xdist/100)
+            pass
+            # pass
+            # print sec.diam
+            # print neuron.h.diam3d(1)
+            # print #neuron.h.distance(seg.x)
 
+
+    # sec_lists = [neuron.h.axon_hillock, neuron.h.axon_IS, neuron.h.myelinated_axon, neuron.h.somatic]
+    # neuron.h.distance()
+    # for sec_list in sec_lists:
+        #neuron.h.distance()
+        #
+        # for sec in sec_list:
+        #     print sec.name()
+        #     print neuron.h.x3d(0), neuron.h.y3d(0), neuron.h.z3d(0), neuron.h.diam3d(0)
+
+    # for sec_list in sec_lists:
+    #     neuron.h.distance()
+    #     for sec in sec_list:
+    #         sec.L
+    #         sec.insert("Im_BK")
+    #         for seg in sec:
+    #             print neuron.h.distance(seg.x)
+    #             if neuron.h.distance(seg.x) < max_dist:
+    #                 seg.gkbar_Im_BK = gkm
+    #                 print sec.name(), "Gets"
+    #             else:
+    #                 print sec.name(), "Gets no"
+    #                 seg.gkbar_Im_BK = 0
 
 def init(Vrest):
     neuron.h.t = 0
@@ -97,7 +106,9 @@ def make_section_lists():
 def modify_morphology(apic_trunk, basal, apic_tuft):
 
     for sec in basal:
-        sec.diam = 0.76
+        npts = int(neuron.h.n3d())
+        for i in xrange(npts):
+            neuron.h.pt3dchange(i, 0.76)
 
     neuron.h.distance()
     apic_tuft_root_diam = None
@@ -118,13 +129,14 @@ def modify_morphology(apic_trunk, basal, apic_tuft):
     # TODO: THE FOLLOWING MAKES NO SENSE AT THE MOMENT
     for sec in apic_tuft:
         npts = int(neuron.h.n3d())
-        print sec.name(), npts
+        #print sec.name(), npts
         for i in xrange(npts):
             dist_calc = np.sqrt(neuron.h.x3d(i)**2 + neuron.h.y3d(i)**2 + neuron.h.z3d(i)**2)
             dist_from_root = np.abs(dist_calc - apic_tuft_root_dist)
             #print dist_from_root, dist_calc
             diam = apic_tuft_root_diam - 18e-3 * (dist_from_root)
             # neuron.h.pt3dchange(i, neuron.h.x3d(i), neuron.h.y3d(i), neuron.h.z3d(i), diam)
+    neuron.h.define_shape()
     return apic_tuft_root_diam
 
 def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
@@ -189,32 +201,49 @@ def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
         sec.Ra = ra
         sec.cm = cm
 
-def create_axon():
-    neuron.h('''
-        create axon_hillock[4], axon_IS[1], myelinated_axon[1]
-        connect axon_hillock[0](0), soma(0.5)
-        connect axon_hillock[1](0), axon_hillock[0](1)
-        connect axon_hillock[2](0), axon_hillock[1](1)
-        connect axon_hillock[3](0), axon_hillock[2](1)
-        connect axon_IS[0](0), axon_hillock[3](1)
-        connect myelinated_axon[0](0), axon_IS[0](1)
-    ''')
-
-    for idx, sec in enumerate(neuron.h.axon_hillock):
-        #print sec.name()
-        sec.L = 2.5
-        sec.diam = 4 - idx
-
-    for idx, sec in enumerate(neuron.h.axon_IS):
-        #print sec.name()
-        sec.L = 20.
-        sec.diam = 1.
-
-    for idx, sec in enumerate(neuron.h.myelinated_axon):
-        #print sec.name()
-        sec.L = 1000.
-        sec.diam = 1.
-
+# def create_axon():
+#
+#     neuron.h('''
+#         create axon_hillock[4], axon_IS[1], myelinated_axon[1]
+#         connect axon_hillock[0](0), soma[1](1)
+#         connect axon_hillock[1](0), axon_hillock[0](1)
+#         connect axon_hillock[2](0), axon_hillock[1](1)
+#         connect axon_hillock[3](0), axon_hillock[2](1)
+#         connect axon_IS[0](0), axon_hillock[3](1)
+#         connect myelinated_axon[0](0), axon_IS[0](1)
+#     ''')
+#
+#     #neuron.h('access soma[1]')
+#     npts = int(neuron.h.n3d())
+#     soma_end_point = neuron.h.x3d(npts - 1), neuron.h.y3d(npts - 1), neuron.h.z3d(npts - 1)
+#     print soma_end_point
+#
+#     #neuron.h('access axon_hillock')
+#     # Make axon in positive x-direction
+#     for idx, sec in enumerate(neuron.h.axon_hillock):
+#         L = 2.5
+#         diam = 4. - idx
+#         print soma_end_point[0] + (idx + 1)*L/2
+#         neuron.h.pt3dchange(idx, soma_end_point[0] + (idx + 1)*L/2.,
+#                                 soma_end_point[1], soma_end_point[2], diam)
+#
+#
+#     #neuron.h.pt3dstyle(1)
+#     for idx, sec in enumerate(neuron.h.axon_hillock):
+#         npts = int(neuron.h.n3d())
+#         for i in xrange(npts):
+#             print neuron.h.x3d(i), neuron.h.y3d(i), neuron.h.z3d(i), neuron.h.diam3d(i)
+#     #
+#     #
+#     # for idx, sec in enumerate(neuron.h.axon_IS):
+#     #     #print sec.name()
+#     #     sec.L = 200.
+#     #     sec.diam = 1.
+#     #
+#     # for idx, sec in enumerate(neuron.h.myelinated_axon):
+#     #     #print sec.name()
+#     #     sec.L = 1000.
+#     #     sec.diam = 1.
 
 def active_declarations(**kwargs):
     ''' Set active conductances for modified CA1 cell
@@ -225,11 +254,12 @@ def active_declarations(**kwargs):
     # TODO: Add more channels
 
     #neuron.h.geom_nse# g()
-    create_axon()
+    #create_axon()
     apic_trunk, basal, apic_tuft = make_section_lists()
     modify_morphology(apic_trunk, basal, apic_tuft)
     biophys_passive(apic_trunk, basal, apic_tuft, **kwargs)
     insert_Ih(apic_trunk, basal, apic_tuft)
+    insert_Im()
 
 
 
@@ -259,20 +289,20 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
-
+    #
     # ax1 = plt.subplot(221, aspect='equal')
     # ax2 = plt.subplot(223, aspect='equal')
     # ax3 = plt.subplot(133, aspect='equal')
-    #
+    # 
     # [ax1.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]],
     #           'k', lw=cell.diam[i]**0.5) for i in xrange(len(cell.xmid))]
-    # [ax3.plot([cell.zstart[i], cell.zend[i]], [-cell.xstart[i], -cell.xend[i]], 'k')
+    # [ax3.plot([cell.zstart[i], cell.zend[i]], [-cell.xstart[i], -cell.xend[i]], 'k', lw=cell.diam[i]**0.5)
     #         for i in xrange(len(cell.xmid))]
-    # [ax2.plot([cell.xstart[i], cell.xend[i]], [-cell.ystart[i], -cell.yend[i]], 'k')
+    # [ax2.plot([cell.xstart[i], cell.xend[i]], [-cell.ystart[i], -cell.yend[i]], 'k', lw=cell.diam[i]**0.5)
     #         for i in xrange(len(cell.xmid))]
-
-    #print cell.xmid.shape
-    #plt.show()
+    #
+    # print cell.xmid.shape
+    # plt.show()
     sys.exit()
     neuron.h.celsius = 33
     cell.simulate(rec_vmem=True, rec_imem=True)
