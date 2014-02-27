@@ -7,7 +7,51 @@ from neuron import h as nrn
 import LFPy
 import numpy as np
 import pylab as plt
+import scipy.fftpack as ff
 
+
+def find_LFP_power(sig, timestep):
+    """ Returns the power and freqency of the input signal"""
+    sample_freq = ff.fftfreq(sig.shape[1], d=timestep)
+    pidxs = np.where(sample_freq >= 0)
+    freqs = sample_freq[pidxs]
+    Y = ff.fft(sig, axis=1)[:,pidxs[0]]
+    power = np.abs(Y)/Y.shape[1]
+    return freqs, power
+
+
+def make_WN_input(cell_params):
+    """ White Noise input ala Linden 2010 is made """
+    tot_ntsteps = round((cell_params['tstopms'])/\
+                  cell_params['timeres_NEURON'] + 1)
+    I = np.zeros(tot_ntsteps)
+    tvec = np.arange(tot_ntsteps) * cell_params['timeres_NEURON']
+    #I = np.random.random(tot_ntsteps) - 0.5
+    for freq in xrange(1,1001):
+        I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
+    I /= np.std(I)
+    return I
+
+
+def make_WN_stimuli(cell, input_idx, input_scaling):
+
+    input_array = input_scaling * make_WN_input(cell_params)
+
+    noiseVec = neuron.h.Vector(input_array)
+    i = 0
+    syn = None
+    for sec in cell.allseclist:
+        for seg in sec:
+            if i == input_idx:
+                print "Inserted in ", sec.name()
+                syn = neuron.h.ISyn(seg.x, sec=sec)
+            i += 1
+    if type(syn) == type(None):
+        raise RuntimeError("Wrong stimuli index")
+    syn.dur = 1E9
+    syn.delay = 0
+    noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
+    return cell, noiseVec, syn
 
 # def insert_debug():
 #
@@ -75,7 +119,10 @@ def insert_INaP():
                     seg.gnabar_INaP_BK = 0
 
 
-def init(Vrest):
+def make_uniform(Vrest):
+    """ Makes the cell uniform. Doesn't really work for INaP yet,
+    since it is way to strong it seems
+    """
     nrn.t = 0
 
     nrn.finitialize(Vrest)
@@ -85,7 +132,7 @@ def init(Vrest):
         for seg in sec:
             seg.e_pas = seg.v
             if nrn.ismembrane("na_ion"):
-                print sec.name(), seg.e_pas, seg.ina, seg.g_pas, seg.ina/seg.g_pas
+                # print sec.name(), seg.e_pas, seg.ina, seg.g_pas, seg.ina/seg.g_pas
                 seg.e_pas += seg.ina/seg.g_pas
             if nrn.ismembrane("k_ion"):
                 seg.e_pas += seg.ik/seg.g_pas
@@ -225,68 +272,24 @@ def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
         sec.Ra = ra
         sec.cm = cm
 
-# def create_axon():
-#
-#     neuron.h('''
-#         create axon_hillock[4], axon_IS[1], myelinated_axon[1]
-#         connect axon_hillock[0](0), soma[1](1)
-#         connect axon_hillock[1](0), axon_hillock[0](1)
-#         connect axon_hillock[2](0), axon_hillock[1](1)
-#         connect axon_hillock[3](0), axon_hillock[2](1)
-#         connect axon_IS[0](0), axon_hillock[3](1)
-#         connect myelinated_axon[0](0), axon_IS[0](1)
-#     ''')
-#
-#     #neuron.h('access soma[1]')
-#     npts = int(nrn.n3d())
-#     soma_end_point = nrn.x3d(npts - 1), nrn.y3d(npts - 1), nrn.z3d(npts - 1)
-#     print soma_end_point
-#
-#     #neuron.h('access axon_hillock')
-#     # Make axon in positive x-direction
-#     for idx, sec in enumerate(nrn.axon_hillock):
-#         L = 2.5
-#         diam = 4. - idx
-#         print soma_end_point[0] + (idx + 1)*L/2
-#         nrn.pt3dchange(idx, soma_end_point[0] + (idx + 1)*L/2.,
-#                                 soma_end_point[1], soma_end_point[2], diam)
-#
-#
-#     #nrn.pt3dstyle(1)
-#     for idx, sec in enumerate(nrn.axon_hillock):
-#         npts = int(nrn.n3d())
-#         for i in xrange(npts):
-#             print nrn.x3d(i), nrn.y3d(i), nrn.z3d(i), nrn.diam3d(i)
-#     #
-#     #
-#     # for idx, sec in enumerate(nrn.axon_IS):
-#     #     #print sec.name()
-#     #     sec.L = 200.
-#     #     sec.diam = 1.
-#     #
-#     # for idx, sec in enumerate(nrn.myelinated_axon):
-#     #     #print sec.name()
-#     #     sec.L = 1000.
-#     #     sec.diam = 1.
-
 
 def active_declarations(**kwargs):
     ''' Set active conductances for modified CA1 cell
 
     '''
 
-    # TODO: Test channels give reasonable results
     # TODO: Documents methods and code better.
     # TODO: Diameter modifications give negative diameters?
+    # TODO: Do we see the resonance properties we expect?
 
-    # create_axon()
+    Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
     apic_trunk, basal, apic_tuft = make_section_lists()
     modify_morphology(apic_trunk, basal, apic_tuft)
     biophys_passive(apic_trunk, basal, apic_tuft, **kwargs)
     insert_Ih(apic_trunk, basal, apic_tuft)
     insert_Im()
     insert_INaP()
-    init(-80)
+    make_uniform(Vrest)
 
 
 def plot_cell(cell):
@@ -313,6 +316,7 @@ def insert_synapses(synparams, cell, section, n, spTimesFun, args):
 
 
 def plot_dynamics():
+
     e_rev = 30
     vhalfn = -47.
     z = 6.5
@@ -359,18 +363,30 @@ def plot_cell_steady_state(cell):
     plt.axis('equal')
 
     plt.subplot(122)
-    plt.plot(cell.tvec, cell.somav)
+    [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
 
     plt.show()
 
 
-if __name__ == '__main__':
+def plot_resonances(cell):
+    plt.subplot(131)
+    plt.scatter(cell.zmid, -cell.xmid, c=cell.vmem[:,-1], edgecolor='none')
+    plt.colorbar()
+    plt.axis('equal')
 
-    timeres = 2**-5
-    cut_off = 0
-    tstopms = 200
-    tstartms = -cut_off
-    model_path = '.'
+    plt.subplot(232)
+    [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
+
+    plt.subplot(233, yscale='log', xlim=[0,1000])
+
+    freqs, psd_sig = find_LFP_power(cell.vmem, cell.timeres_NEURON/1000.)
+    [plt.plot(freqs, psd_sig[idx]) for idx in xrange(len(cell.xmid))]
+
+
+
+    plt.show()
+
+def insert_bunch_of_synapses(cell):
 
     synapseParameters_AMPA = {
         'e': 0,                    #reversal potential
@@ -410,20 +426,31 @@ if __name__ == '__main__':
         'section': 'apic',
         'n': 100,
         'spTimesFun': LFPy.inputgenerators.stationary_gamma,
-        'args': [tstartms, tstopms, 0.5, 80, tstartms]
+        'args': [cell.tstartms, cell.tstopms, 0.5, 80, cell.tstartms]
     }
     insert_synapses_NMDA_args = {
         'section': ['dend', 'apic'],
         'n': 15,
         'spTimesFun': LFPy.inputgenerators.stationary_gamma,
-        'args': [tstartms, tstopms, 2, 100, tstartms]
+        'args': [cell.tstartms, cell.tstopms, 2, 100, cell.tstartms]
     }
     insert_synapses_GABA_A_args = {
         'section': 'dend',
         'n': 100,
         'spTimesFun': LFPy.inputgenerators.stationary_gamma,
-        'args': [tstartms, tstopms, 0.5, 80, tstartms]
+        'args': [cell.tstartms, cell.tstopms, 0.5, 80, cell.tstartms]
     }
+    insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
+    insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
+    insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
+
+if __name__ == '__main__':
+
+    timeres = 2**-4
+    cut_off = 0
+    tstopms = 200
+    tstartms = -cut_off
+    model_path = '.'
 
     cell_params = {
         'morphology': join(model_path, 'n120.hoc'),
@@ -443,18 +470,20 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
+    input_idx = 0
+    input_scaling = 10.
+    cell, vec, syn = make_WN_stimuli(cell, input_idx, input_scaling)
+    freqs, psd_sig = find_LFP_power(np.array([vec]), cell.timeres_NEURON/1000.)
+    plt.semilogy(freqs, psd_sig[0,:])
+    plt.show()
     # plot_dynamics()
-
-    insert_synapses(synapseParameters_AMPA, cell, **insert_synapses_AMPA_args)
-    insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
-    insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
+    # insert_bunch_of_synapses(cell)
 
     sim_params = {'rec_vmem': True,
                   'rec_imem': True,
                   'rec_variables': []}
     cell.simulate(**sim_params)
-    plot_cell_steady_state(cell)
-
-
-    # [plt.plot(cell.tvec, cell.imem[idx, :]) for idx in xrange(len(cell.xmid))]
+    # plt.plot(cell.tvec, vec)
     # plt.show()
+    # plot_cell_steady_state(cell)
+    plot_resonances(cell)

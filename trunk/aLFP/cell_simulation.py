@@ -314,10 +314,6 @@ def quickprobe_cell(cell_params, folder):
     plt.xlim(-5, cell.tvec[-1] + 5)
     plt.savefig(join(folder, 'static_Vm_distribution.png'))
     np.save(join(folder, 'static_Vm_distribution.npy'), cell.vmem[:,-1])
-
-
-
-    
     
 def find_static_Vm_distribution(cell_params, ofolder, conductance_type):
 
