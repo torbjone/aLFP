@@ -6,24 +6,23 @@ UNITS {
 
 PARAMETER {
 	v (mV)
-    ena (mV)
+    e_rev = 30 (mV)
 	celsius (degC)
 	gnabar = .01 (mho/cm2)
     vhalfn = -47.   (mV)
     z = 6.5    (1)
     gamma = 0.5   (1)
     tau0 = 1. (ms)
-    K = 1.0 (1/ms)
-    R = 8315
+    K = 0.0 (1/ms)
+    R = 8315.
     F = 9.648e4
 }
 
 
 NEURON {
 	SUFFIX INaP_BK
-    USEION na READ ena WRITE ina
+    USEION na WRITE ina
     RANGE gnabar
-    GLOBAL ninf, taun
 }
 
 STATE {
@@ -45,16 +44,16 @@ ASSIGNED {
 BREAKPOINT {
 	SOLVE states METHOD cnexp
 	gna = gnabar*n
-	ina = gna * (v - ena)
+	ina = gna * (v - e_rev)
 }
 
 
 FUNCTION alpn(v(mV)) {
-  alpn = K * exp(z * gamma * (v-vhalfn) * F / (R * (273.16+celsius)))
+  alpn = exp(z * gamma * (v-vhalfn) * F / (R * (273.16+celsius)))
 }
 
 FUNCTION betn(v(mV)) {
-  betn = K * exp(-z * (1 - gamma) * (v-vhalfn) * F / (R * (273.16+celsius)))
+  betn = exp(-z * (1 - gamma) * (v-vhalfn) * F / (R * (273.16+celsius)))
 }
 
 DERIVATIVE states {
@@ -65,6 +64,9 @@ DERIVATIVE states {
 PROCEDURE rates(v (mV)) { :callable from hoc
     LOCAL a, q10, b
     :q10=3^((celsius-30)/10)
+    if(v == vhalfn){
+            v = v + 0.0001
+    }
     a = alpn(v)
     b = betn(v)
     ninf = a /(a + b)

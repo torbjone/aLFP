@@ -6,7 +6,7 @@ UNITS {
 
 PARAMETER {
 	v (mV)
-    eh = -40 (mV)
+    e_rev = -40 (mV)
 	celsius (degC)
 	ghbar = .01 (mho/cm2)
     vhalfn = -82.   (mV)
@@ -23,7 +23,6 @@ NEURON {
 	SUFFIX Ih_BK_prox
     NONSPECIFIC_CURRENT ih
     RANGE ghbar
-    GLOBAL ninf, taun
 }
 
 STATE {
@@ -45,7 +44,7 @@ ASSIGNED {
 BREAKPOINT {
 	SOLVE states METHOD cnexp
 	gh = ghbar*n
-	ih = gh * (v - eh)
+	ih = gh * (v - e_rev)
 }
 
 
@@ -65,6 +64,9 @@ DERIVATIVE states {
 PROCEDURE rates(v (mV)) { :callable from hoc
     LOCAL a, q10, b
     :q10=3^((celsius-30)/10)
+    if(v == vhalfn){
+        v = v + 0.0001
+    }
     a = alpn(v)
     b = betn(v)
     ninf = a /(a + b)

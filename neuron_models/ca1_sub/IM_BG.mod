@@ -6,7 +6,7 @@ UNITS {
 
 PARAMETER {
 	v (mV)
-    ek (mV)
+    e_rev = -80 (mV)
 	celsius (degC)
 	gkbar = .01 (mho/cm2)
     vhalfn = -43.   (mV)
@@ -21,9 +21,8 @@ PARAMETER {
 
 NEURON {
 	SUFFIX Im_BK
-    USEION k READ ek WRITE ik
+    USEION k WRITE ik
     RANGE gkbar
-    GLOBAL ninf, taun
 }
 
 STATE {
@@ -32,20 +31,20 @@ STATE {
 
 INITIAL {
         rates(v)
-        n=ninf
+        n=ninf_Im
 }
 
 ASSIGNED {
 	ik (mA/cm2)
     gk
-    ninf
-    taun
+    ninf_Im
+    taun_Im
 }
 
 BREAKPOINT {
 	SOLVE states METHOD cnexp
 	gk = gkbar*n
-	ik = gk * (v - ek)
+	ik = gk * (v - e_rev)
 }
 
 
@@ -59,15 +58,19 @@ FUNCTION betn(v(mV)) {
 
 DERIVATIVE states {
     rates(v)
-    n' = (n - ninf)/taun
+    n' = (n - ninf_Im)/taun_Im
 }
 
 PROCEDURE rates(v (mV)) { :callable from hoc
     LOCAL a, q10, b
     :q10=3^((celsius-30)/10)
+    if(v == vhalfn){
+            v = v + 0.0001
+    }
+
     a = alpn(v)
     b = betn(v)
-    ninf = a /(a + b)
-    taun = 1 / (a + b) + tau0
+    ninf_Im = a /(a + b)
+    taun_Im = 1 / (a + b) + tau0
 }
 
