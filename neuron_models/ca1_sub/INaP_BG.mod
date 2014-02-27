@@ -10,7 +10,7 @@ PARAMETER {
 	celsius (degC)
 	gnabar = .01 (mho/cm2)
     vhalfn = -47.   (mV)
-    z = 6.5    (1)
+    zeta = 6.5    (1)
     gamma = 0.5   (1)
     tau0 = 1. (ms)
     K = 0.0 (1/ms)
@@ -49,16 +49,16 @@ BREAKPOINT {
 
 
 FUNCTION alpn(v(mV)) {
-  alpn = exp(z * gamma * (v-vhalfn) * F / (R * (273.16+celsius)))
+  alpn = exp(zeta * gamma * (v-vhalfn) * F / (R * (273.16+celsius)))
 }
 
 FUNCTION betn(v(mV)) {
-  betn = exp(-z * (1 - gamma) * (v-vhalfn) * F / (R * (273.16+celsius)))
+  betn = exp(-zeta * (1 - gamma) * (v-vhalfn) * F / (R * (273.16+celsius)))
 }
 
 DERIVATIVE states {
     rates(v)
-    n' = (n - ninf)/taun
+    n' = (ninf - n)/taun
 }
 
 PROCEDURE rates(v (mV)) { :callable from hoc

@@ -31,14 +31,14 @@ STATE {
 
 INITIAL {
         rates(v)
-        n=ninf_Im
+        n=ninf
 }
 
 ASSIGNED {
 	ik (mA/cm2)
     gk
-    ninf_Im
-    taun_Im
+    ninf
+    taun
 }
 
 BREAKPOINT {
@@ -58,7 +58,7 @@ FUNCTION betn(v(mV)) {
 
 DERIVATIVE states {
     rates(v)
-    n' = (n - ninf_Im)/taun_Im
+    n' = (ninf - n)/taun
 }
 
 PROCEDURE rates(v (mV)) { :callable from hoc
@@ -70,7 +70,7 @@ PROCEDURE rates(v (mV)) { :callable from hoc
 
     a = alpn(v)
     b = betn(v)
-    ninf_Im = a /(a + b)
-    taun_Im = 1 / (a + b) + tau0
+    ninf = a /(a + b)
+    taun = 1 / (a + b) + tau0
 }
 
