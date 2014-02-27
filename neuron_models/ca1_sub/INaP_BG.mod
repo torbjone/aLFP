@@ -62,11 +62,7 @@ DERIVATIVE states {
 }
 
 PROCEDURE rates(v (mV)) { :callable from hoc
-    LOCAL a, q10, b
-    :q10=3^((celsius-30)/10)
-    if(v == vhalfn){
-            v = v + 0.0001
-    }
+    LOCAL a, b
     a = alpn(v)
     b = betn(v)
     ninf = a /(a + b)

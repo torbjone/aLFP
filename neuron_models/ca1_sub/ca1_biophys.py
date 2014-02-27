@@ -9,16 +9,16 @@ import numpy as np
 import pylab as plt
 
 
-def insert_debug():
-
-    for sec in nrn.allsec():
-        sec.insert('pas')
-        sec.e_pas = -80
-        sec.g_pas = 1./30000
-        sec.Ra = 150
-        sec.cm = 1
-        sec.insert("debug_BG")
-        sec.gbar_debug_BG = 1.0
+# def insert_debug():
+#
+#     for sec in nrn.allsec():
+#         sec.insert('pas')
+#         sec.e_pas = -80
+#         sec.g_pas = 1./30000
+#         sec.Ra = 150
+#         sec.cm = 1
+#         sec.insert("debug_BG")
+#         sec.gbar_debug_BG = 1.0
 
 
 def insert_Ih(apic_trunk, basal, apic_tuft):
@@ -52,7 +52,7 @@ def insert_Im():
             sec.insert("Im_BK")
             for seg in sec:
                 if nrn.distance(seg.x) < max_dist:
-                    print sec.name(), "gets IM"
+                    #print sec.name(), "gets IM"
                     seg.gkbar_Im_BK = gkm
                 else:
                     seg.gkbar_Im_BK = 0
@@ -60,7 +60,7 @@ def insert_Im():
 
 def insert_INaP():
 
-    gna = 40.
+    gna = 50.
     max_dist = 40  # Changed because distance to soma is much less than distance to soma center.
     nrn.distance(0, 1)
     sec_lists = [nrn.axonal_hillock, nrn.axonal_IS, nrn.myelinated_axonal]
@@ -69,7 +69,7 @@ def insert_INaP():
             sec.insert("INaP_BK")
             for seg in sec:
                 if nrn.distance(seg.x) < max_dist:
-                    print sec.name(), "gets INaP"
+                    #print sec.name(), "gets INaP"
                     seg.gnabar_INaP_BK = gna
                 else:
                     seg.gnabar_INaP_BK = 0
@@ -85,6 +85,7 @@ def init(Vrest):
         for seg in sec:
             seg.e_pas = seg.v
             if nrn.ismembrane("na_ion"):
+                print sec.name(), seg.e_pas, seg.ina, seg.g_pas, seg.ina/seg.g_pas
                 seg.e_pas += seg.ina/seg.g_pas
             if nrn.ismembrane("k_ion"):
                 seg.e_pas += seg.ik/seg.g_pas
@@ -283,10 +284,9 @@ def active_declarations(**kwargs):
     modify_morphology(apic_trunk, basal, apic_tuft)
     biophys_passive(apic_trunk, basal, apic_tuft, **kwargs)
     insert_Ih(apic_trunk, basal, apic_tuft)
-    # insert_debug()
     insert_Im()
     insert_INaP()
-    #init(-60)
+    init(-80)
 
 
 def plot_cell(cell):
@@ -313,8 +313,6 @@ def insert_synapses(synparams, cell, section, n, spTimesFun, args):
 
 
 def plot_dynamics():
-
-
     e_rev = 30
     vhalfn = -47.
     z = 6.5
@@ -336,6 +334,7 @@ def plot_dynamics():
     plt.plot(v, alpn)
     plt.plot(v, betn)
     plt.show()
+
 
 def plot_cell_dynamics_state(cell):
     plt.subplot(221, title='n')
@@ -365,12 +364,9 @@ def plot_cell_steady_state(cell):
     plt.show()
 
 
-
-
-
 if __name__ == '__main__':
 
-    timeres = 2**-4
+    timeres = 2**-5
     cut_off = 0
     tstopms = 200
     tstartms = -cut_off
