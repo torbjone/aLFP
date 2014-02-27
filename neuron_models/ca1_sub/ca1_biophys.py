@@ -161,51 +161,51 @@ def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
 
     ra = 100.
 
-    for sec in nrn.axon_hillock:
-         sec.insert('pas')
+    for sec in nrn.allsec():
+        sec.insert('pas')
+        sec.e_pas = Vrest
+        sec.g_pas = 1./rm
+        sec.Ra = ra
+        sec.cm = cm
+
+
+    for sec in nrn.axonal_hillock:
          sec.e_pas = Vrest
          sec.g_pas = 1./rm
          sec.Ra = ra
          sec.cm = cm
 
-    for sec in nrn.axon_IS:
-         sec.insert('pas')
+    for sec in nrn.axonal_IS:
          sec.e_pas = Vrest
          sec.g_pas = 1./rm
          sec.Ra = ra
          sec.cm = cm
 
-    for sec in nrn.myelinated_axon:
-         sec.insert('pas')
+    for sec in nrn.myelinated_axonal:
          sec.e_pas = Vrest
          sec.g_pas = 1./rm_myel_ax
          sec.Ra = ra
          sec.cm = cm_myel_ax
 
     for sec in nrn.somatic:
-        sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./rm
         sec.Ra = ra
         sec.cm = cm
 
     for sec in apic_tuft:
-
-        sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./rm_apic_tuft
         sec.Ra = ra
         sec.cm = cm
 
     for sec in basal:
-        sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./rm
         sec.Ra = ra
         sec.cm = cm
 
     for sec in apic_trunk:
-        sec.insert("pas")
         sec.e_pas = Vrest
         sec.g_pas = 1./rm
         sec.Ra = ra
@@ -274,6 +274,43 @@ def active_declarations(**kwargs):
     insert_INaP()
 
 
+def plot_cell(cell):
+
+    for t in xrange(200, 300):
+        plt.close('all')
+        plt.subplot(111, aspect='equal')
+
+        plt.scatter(cell.ymid, -cell.xmid, c=cell.vmem[:, t], vmin=-100, vmax=20,
+                    edgecolor='none')
+
+        plt.colorbar()
+        plt.savefig('test_%04d.png' % t)
+
+
+def plot_dynamics():
+
+
+    e_rev = 30
+    vhalfn = -47.
+    z = 6.5
+    gamma = 0.5
+    tau0 = 1.
+    K = 0.0
+    R = 8315.
+    F = 9.648e4
+    celsius = 33
+    v = np.linspace(-100, 0, 1000)
+
+    alpn = np.exp(z * gamma * (v-vhalfn) * F / (R * (273.16+celsius)))
+    betn = np.exp(-z * (1 - gamma) * (v-vhalfn) * F / (R * (273.16+celsius)))
+
+    ninf = alpn / (alpn + betn)
+
+    plt.plot(v, ninf)
+
+    plt.plot(v, alpn)
+    plt.plot(v, betn)
+    plt.show()
 
 if __name__ == '__main__':
 
@@ -301,43 +338,23 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
+    plot_dynamics()
 
-    for sec in cell.allseclist:
-        print sec.name()
 
-    # neuron.h.define_shape()
-    #
-    # ax1 = plt.subplot(221, aspect='equal')
-    # ax2 = plt.subplot(223, aspect='equal')
-    # ax3 = plt.subplot(133, aspect='equal')
-    #
-    # [ax1.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]],
-    #           'k', lw=cell.diam[i]**0.5) for i in xrange(len(cell.xmid))]
-    # [ax3.plot([cell.zstart[i], cell.zend[i]], [-cell.xstart[i], -cell.xend[i]], 'k', lw=cell.diam[i]**0.5)
-    #         for i in xrange(len(cell.xmid))]
-    # [ax2.plot([cell.xstart[i], cell.xend[i]], [-cell.ystart[i], -cell.yend[i]], 'k', lw=cell.diam[i]**0.5)
-    #         for i in xrange(len(cell.xmid))]
-    #
-    # print cell.xmid.shape
-    # plt.show()
+    #cell.simulate(rec_vmem=True, rec_imem=True)
 
-    # nrn.celsius = 33
-    cell.simulate(rec_vmem=True, rec_imem=True)
 
-    plt.figure(figsize=[10, 5])
-    plt.subplot(121, aspect='equal')
-    #[plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], color='gray')
-    #          for idx in xrange(cell.totnsegs)]
-    plt.scatter(cell.ymid, -cell.xmid, c=cell.vmem[:, -1], vmin=np.min(cell.vmem), vmax=np.max(cell.vmem),
-                edgecolor='none')
-    # print cell.vmem
-    #
-    K = 0.00
-    R = 8315.
-    F = 9.648e4
-    vhalfn = -47.
-    z = 6.5
-    gamma = 0.5
+    [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
+    plt.ylim(-100, 100)
+    plt.show()
+    #plot_cell(cell)
+
+    # K = 0.00
+    # R = 8315.
+    # F = 9.648e4
+    # vhalfn = -47.
+    # z = 6.5
+    # gamma = 0.5
 
     # print -z * (1 - gamma) * (np.linspace(-100, 20)-vhalfn) * F / (R * (273.16+nrn.celsius))
 
@@ -345,8 +362,3 @@ if __name__ == '__main__':
     # alpn = np.exp(z * gamma * (cell.vmem-vhalfn) * F / (R * (273.16+nrn.celsius)))
     #print betn
     #print alpn
-    plt.colorbar()
-    plt.subplot(122)
-    plt.plot(cell.tvec, cell.somav)
-
-    plt.savefig('test.png')
