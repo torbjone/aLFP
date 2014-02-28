@@ -282,14 +282,29 @@ def active_declarations(**kwargs):
     # TODO: Diameter modifications give negative diameters?
     # TODO: Do we see the resonance properties we expect?
 
-    Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
+
     apic_trunk, basal, apic_tuft = make_section_lists()
-    # modify_morphology(apic_trunk, basal, apic_tuft)
+    modify_morphology(apic_trunk, basal, apic_tuft)
     biophys_passive(apic_trunk, basal, apic_tuft, **kwargs)
-    insert_Ih(apic_trunk, basal, apic_tuft)
-    # insert_Im()
-    # insert_INaP()
-    make_uniform(Vrest)
+    added_channels = 0
+    if 'use_channels' in kwargs:
+        if 'Ih' in kwargs['use_channels']:
+            print "Inserting Ih"
+            insert_Ih(apic_trunk, basal, apic_tuft)
+            added_channels += 1
+        if 'Im' in kwargs['use_channels']:
+            print "Inserting Im"
+            insert_Im()
+            added_channels += 1
+        if 'INaP' in kwargs['use_channels']:
+            print "Inserting INaP"
+            insert_INaP()
+            added_channels += 1
+        if not added_channels == len(kwargs['use_channels']):
+            raise RuntimeError("The right number of channels was not inserted!")
+
+    if 'hold_potential' in kwargs:
+        make_uniform(kwargs['hold_potential'])
 
 
 def plot_cell(cell):
@@ -358,7 +373,8 @@ def plot_cell_dynamics_state(cell):
 
 def plot_cell_steady_state(cell):
     plt.subplot(121)
-    plt.scatter(cell.zmid, -cell.xmid, c=cell.vmem[:,-1], edgecolor='none')
+    plt.scatter(cell.ymid, -cell.xmid, c=cell.vmem[:,-1], edgecolor='none',
+                vmax=(np.max(cell.vmem[:,-1]) + 1), vmin=(np.min(cell.vmem[:,-1]) - 1))
     plt.colorbar()
     plt.axis('equal')
 
@@ -368,7 +384,7 @@ def plot_cell_steady_state(cell):
     plt.show()
 
 
-def plot_resonances(cell, input_idx, input_scaling, idx_list):
+def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
 
     plt.figure(figsize=[12, 8])
     clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
@@ -406,7 +422,16 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list):
     plt.axis([lims[0], lims[1], upper_lim/1e7, upper_lim])
 
     plt.grid()
-    plt.savefig('resonance_%s_%1.3f_Ih.png' %(input_idx, input_scaling), dpi=150)
+
+    fig_name = 'resonance_%d_%1.3f' % (input_idx, input_scaling)
+    if 'use_channels' in cell_params['custom_fun_args'][0]:
+        for ion in cell_params['custom_fun_args'][0]['use_channels']:
+            fig_name += '_%s' %ion
+
+    if 'hold_potential' in cell_params['custom_fun_args'][0]:
+        fig_name += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
+    print "Saving ", fig_name
+    plt.savefig('%s.png' % fig_name, dpi=150)
 
 
 def insert_bunch_of_synapses(cell):
@@ -469,18 +494,18 @@ def insert_bunch_of_synapses(cell):
 
 if __name__ == '__main__':
 
-    timeres = 2**-4
-    cut_off = 500
+    timeres = 2**-5
+    cut_off = 0
     tstopms = 1000
     tstartms = -cut_off
     model_path = '.'
-    plt.seed(1234)
+
     cell_params = {
         'morphology': join(model_path, 'n120.hoc'),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
-        'v_init': -80,             # initial crossmembrane potential
+        'v_init': -80.,             # initial crossmembrane potential
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
         'lambda_f': 100,           # segments are isopotential at this frequency
@@ -489,28 +514,36 @@ if __name__ == '__main__':
         'tstartms': tstartms,          # start time, recorders start at t=0
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{}],
+        'custom_fun_args': [{'use_channels': ['Im', 'INaP'],
+                             'hold_potential': int(sys.argv[2])}],
     }
 
     cell = LFPy.Cell(**cell_params)
 
+    input_idx = int(sys.argv[1])#np.random.randint(0, np.max(cell.totnsegs))
+    plt.seed(1234)
+    apic_tuft_idx = cell.get_closest_idx(-400, 0, -50)
+    trunk_idx = cell.get_closest_idx(-100, 0, 0)
+    axon_idx = cell.get_idx('axon_IS')[0]
+    basal_idx = cell.get_closest_idx(100, 100, 0)
+    soma_idx = 0
 
-    apic_idx = cell.get_closest_idx(-400, 0, -50)
-    input_idx = apic_idx
-    idx_list = np.array([0, apic_idx -1, apic_idx, apic_idx + 1, apic_idx - 20, cell.get_closest_idx(-100, 0, 0)])
+    print input_idx, int(sys.argv[2])
+    idx_list = np.array([input_idx, input_idx + 1, input_idx - 1, apic_tuft_idx,
+                         trunk_idx, axon_idx, basal_idx, soma_idx])
     input_scaling = .01
+
     cell, vec, syn = make_WN_stimuli(cell, input_idx, input_scaling)
     # freqs, psd_sig = find_LFP_power(np.array([vec]), cell.timeres_NEURON/1000.)
     # plt.semilogy(freqs, psd_sig[0,:])
     # plt.show()
     # plot_dynamics()
     # insert_bunch_of_synapses(cell)
-
     sim_params = {'rec_vmem': True,
                   'rec_imem': True,
                   'rec_variables': []}
     cell.simulate(**sim_params)
     # plt.plot(cell.tvec, vec)
     # plt.show()
-    # plot_cell_steady_state(cell)
-    plot_resonances(cell, input_idx, input_scaling, idx_list)
+    #plot_cell_steady_state(cell)
+    plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params)

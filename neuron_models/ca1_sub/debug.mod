@@ -14,7 +14,6 @@ PARAMETER {
     gamma = 0.5   (1)
     tau0 = 4. (ms)
     K = 0.006 (1/ms)
-
     R = 8315
     F = 9.648e4
 }
