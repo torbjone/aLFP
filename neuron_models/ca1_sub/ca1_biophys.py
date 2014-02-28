@@ -22,7 +22,7 @@ def find_LFP_power(sig, timestep):
 
 def make_WN_input(cell_params):
     """ White Noise input ala Linden 2010 is made """
-    tot_ntsteps = round((cell_params['tstopms'])/\
+    tot_ntsteps = round((cell_params['tstopms'] - cell_params['tstartms'])/\
                   cell_params['timeres_NEURON'] + 1)
     I = np.zeros(tot_ntsteps)
     tvec = np.arange(tot_ntsteps) * cell_params['timeres_NEURON']
@@ -69,23 +69,23 @@ def insert_Ih(apic_trunk, basal, apic_tuft):
 
     for sec in basal:
         sec.insert("Ih_BK_prox")
-        sec.ghbar_Ih_BK_prox = 0.2
+        sec.ghbar_Ih_BK_prox = 1e-4 * 0.2
 
     nrn.distance(0, 1)
     for sec in apic_trunk:
         sec.insert("Ih_BK_prox")
         for seg in sec:
             dist = nrn.distance(seg.x)
-            seg.ghbar_Ih_BK_prox = + (2.0 - 0.2)/(1 + np.exp((250. - dist)/30))
+            seg.ghbar_Ih_BK_prox = 1e-4*(0.2 + (2.0 - 0.2)/(1 + np.exp((250. - dist)/30)))
 
     for sec in apic_tuft:
         sec.insert("Ih_BK_dist")
-        sec.ghbar_Ih_BK_dist = 20.
+        sec.ghbar_Ih_BK_dist = 1e-4 * 20.
 
 
 def insert_Im():
 
-    gkm = 12.
+    gkm = 1e-4 * 12.
     max_dist = 40.  # Changed because distance to soma is much less than distance to soma center.
 
     # Specify the origin close to the start of the axon
@@ -104,7 +104,7 @@ def insert_Im():
 
 def insert_INaP():
 
-    gna = 50.
+    gna = 1e-4 * 50.
     max_dist = 40  # Changed because distance to soma is much less than distance to soma center.
     nrn.distance(0, 1)
     sec_lists = [nrn.axonal_hillock, nrn.axonal_IS, nrn.myelinated_axonal]
@@ -216,7 +216,7 @@ def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
 
     rm = 90000.
     rm_apic_tuft = 20000.
-    rm_myel_ax = 1e9
+    rm_myel_ax = 1.e9
 
     cm = 1.5
     cm_myel_ax = 0.04
@@ -231,22 +231,22 @@ def biophys_passive(apic_trunk, basal, apic_tuft, **kwargs):
         sec.cm = cm
 
     for sec in nrn.axonal_hillock:
-         sec.e_pas = Vrest
-         sec.g_pas = 1./rm
-         sec.Ra = ra
-         sec.cm = cm
+        sec.e_pas = Vrest
+        sec.g_pas = 1./rm
+        sec.Ra = ra
+        sec.cm = cm
 
     for sec in nrn.axonal_IS:
-         sec.e_pas = Vrest
-         sec.g_pas = 1./rm
-         sec.Ra = ra
-         sec.cm = cm
+        sec.e_pas = Vrest
+        sec.g_pas = 1./rm
+        sec.Ra = ra
+        sec.cm = cm
 
     for sec in nrn.myelinated_axonal:
-         sec.e_pas = Vrest
-         sec.g_pas = 1./rm_myel_ax
-         sec.Ra = ra
-         sec.cm = cm_myel_ax
+        sec.e_pas = Vrest
+        sec.g_pas = 1./rm_myel_ax
+        sec.Ra = ra
+        sec.cm = cm_myel_ax
 
     for sec in nrn.somatic:
         sec.e_pas = Vrest
@@ -284,11 +284,11 @@ def active_declarations(**kwargs):
 
     Vrest = -80 if not 'hold_potential' in kwargs else kwargs['hold_potential']
     apic_trunk, basal, apic_tuft = make_section_lists()
-    modify_morphology(apic_trunk, basal, apic_tuft)
+    # modify_morphology(apic_trunk, basal, apic_tuft)
     biophys_passive(apic_trunk, basal, apic_tuft, **kwargs)
     insert_Ih(apic_trunk, basal, apic_tuft)
-    insert_Im()
-    insert_INaP()
+    # insert_Im()
+    # insert_INaP()
     make_uniform(Vrest)
 
 
@@ -368,23 +368,46 @@ def plot_cell_steady_state(cell):
     plt.show()
 
 
-def plot_resonances(cell):
-    plt.subplot(131)
-    plt.scatter(cell.zmid, -cell.xmid, c=cell.vmem[:,-1], edgecolor='none')
-    plt.colorbar()
+def plot_resonances(cell, input_idx, input_scaling, idx_list):
+
+    plt.figure(figsize=[12, 8])
+    clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
+
+    vmem = cell.vmem[idx_list, :]
+    imem = cell.imem[idx_list, :]
+
+    plt.subplot(131, title='Star marks white noise input')
+    plt.scatter(cell.ymid, -cell.xmid, c='grey', edgecolor='none')
+    [plt.plot(cell.ymid[idx], -cell.xmid[idx], 'D', color=clr(numb)) for numb, idx in enumerate(idx_list)]
+    plt.plot(cell.ymid[input_idx], -cell.xmid[input_idx], '*', color='y', ms=15)
     plt.axis('equal')
 
-    plt.subplot(232)
-    [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
+    plt.subplot(232, title='Vmem')
+    [plt.plot(cell.tvec, vmem[numb, :], color=clr(numb)) for numb, idx in enumerate(idx_list)]
 
-    plt.subplot(233, yscale='log', xlim=[0,1000])
+    plt.subplot(235, title='Imem')
+    [plt.plot(cell.tvec, imem[numb, :], color=clr(numb)) for numb, idx in enumerate(idx_list)]
 
-    freqs, psd_sig = find_LFP_power(cell.vmem, cell.timeres_NEURON/1000.)
-    [plt.plot(freqs, psd_sig[idx]) for idx in xrange(len(cell.xmid))]
+    plt.subplot(233, xlim=[1e0, 1e3], title='Vmem PSD')
+    plt.grid()
+    freqs, vmem_psd = find_LFP_power(vmem, cell.timeres_python/1000.)
+    [plt.loglog(freqs, vmem_psd[numb], color=clr(numb)) for numb, idx in enumerate(idx_list)]
 
+    upper_lim = 10**(int(np.ceil(np.log10(np.max(vmem_psd[:, 1:])))))
+    lims = plt.axis()
+    plt.axis([lims[0], lims[1], upper_lim/1e7, upper_lim])
+    print freqs
 
+    plt.subplot(236, xlim=[1e0, 1e3], title='Imem PSD')
+    freqs, imem_psd = find_LFP_power(imem, cell.timeres_python/1000.)
+    [plt.loglog(freqs, imem_psd[numb], color=clr(numb)) for numb, idx in enumerate(idx_list)]
+    upper_lim = 10**(int(np.ceil(np.log10(np.max(imem_psd[:, 1:])))))
+    lims = plt.axis()
+    plt.axis([lims[0], lims[1], upper_lim/1e7, upper_lim])
 
-    plt.show()
+    plt.grid()
+    plt.savefig('resonance_%s_%1.3f_Ih.png' %(input_idx, input_scaling), dpi=150)
+
 
 def insert_bunch_of_synapses(cell):
 
@@ -447,17 +470,17 @@ def insert_bunch_of_synapses(cell):
 if __name__ == '__main__':
 
     timeres = 2**-4
-    cut_off = 0
-    tstopms = 200
+    cut_off = 500
+    tstopms = 1000
     tstartms = -cut_off
     model_path = '.'
-
+    plt.seed(1234)
     cell_params = {
         'morphology': join(model_path, 'n120.hoc'),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
-        'v_init': -70,             # initial crossmembrane potential
+        'v_init': -80,             # initial crossmembrane potential
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
         'lambda_f': 100,           # segments are isopotential at this frequency
@@ -470,12 +493,16 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
-    input_idx = 0
-    input_scaling = 10.
+
+
+    apic_idx = cell.get_closest_idx(-400, 0, -50)
+    input_idx = apic_idx
+    idx_list = np.array([0, apic_idx -1, apic_idx, apic_idx + 1, apic_idx - 20, cell.get_closest_idx(-100, 0, 0)])
+    input_scaling = .01
     cell, vec, syn = make_WN_stimuli(cell, input_idx, input_scaling)
-    freqs, psd_sig = find_LFP_power(np.array([vec]), cell.timeres_NEURON/1000.)
-    plt.semilogy(freqs, psd_sig[0,:])
-    plt.show()
+    # freqs, psd_sig = find_LFP_power(np.array([vec]), cell.timeres_NEURON/1000.)
+    # plt.semilogy(freqs, psd_sig[0,:])
+    # plt.show()
     # plot_dynamics()
     # insert_bunch_of_synapses(cell)
 
@@ -486,4 +513,4 @@ if __name__ == '__main__':
     # plt.plot(cell.tvec, vec)
     # plt.show()
     # plot_cell_steady_state(cell)
-    plot_resonances(cell)
+    plot_resonances(cell, input_idx, input_scaling, idx_list)
