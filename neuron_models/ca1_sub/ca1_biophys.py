@@ -43,7 +43,8 @@ def make_WN_stimuli(cell, input_idx, input_scaling):
     for sec in cell.allseclist:
         for seg in sec:
             if i == input_idx:
-                print "Inserted in ", sec.name()
+                print "Input i" \
+                      "nserted in ", sec.name()
                 syn = neuron.h.ISyn(seg.x, sec=sec)
             i += 1
     if type(syn) == type(None):
@@ -412,6 +413,7 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
     upper_lim = 10**(int(np.ceil(np.log10(np.max(vmem_psd[:, 1:])))))
     lims = plt.axis()
     plt.axis([lims[0], lims[1], upper_lim/1e7, upper_lim])
+    # plt.axis([lims[0], lims[1], 1e-3, 1e-1])
     print freqs
 
     plt.subplot(236, xlim=[1e0, 1e3], title='Imem PSD')
@@ -419,20 +421,24 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
     [plt.loglog(freqs, imem_psd[numb], color=clr(numb)) for numb, idx in enumerate(idx_list)]
     upper_lim = 10**(int(np.ceil(np.log10(np.max(imem_psd[:, 1:])))))
     lims = plt.axis()
+    # plt.axis([lims[0], lims[1], 1e-7, 1e-3])
     plt.axis([lims[0], lims[1], upper_lim/1e7, upper_lim])
 
     plt.grid()
 
     fig_name = 'resonance_%d_%1.3f' % (input_idx, input_scaling)
-    if 'use_channels' in cell_params['custom_fun_args'][0]:
+    if 'use_channels' in cell_params['custom_fun_args'][0] and \
+                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
         for ion in cell_params['custom_fun_args'][0]['use_channels']:
-            fig_name += '_%s' %ion
+            fig_name += '_%s' % ion
+    else:
+        fig_name += '_passive'
 
     if 'hold_potential' in cell_params['custom_fun_args'][0]:
         fig_name += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
     print "Saving ", fig_name
     plt.savefig('%s.png' % fig_name, dpi=150)
-
+    #plt.show()
 
 def insert_bunch_of_synapses(cell):
 
@@ -505,7 +511,7 @@ if __name__ == '__main__':
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
-        'v_init': -80.,             # initial crossmembrane potential
+        'v_init': int(sys.argv[2]),             # initial crossmembrane potential
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
         'lambda_f': 100,           # segments are isopotential at this frequency
@@ -514,7 +520,7 @@ if __name__ == '__main__':
         'tstartms': tstartms,          # start time, recorders start at t=0
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{'use_channels': ['Im', 'INaP'],
+        'custom_fun_args': [{'use_channels': ['Ih', 'Im', 'INaP'],
                              'hold_potential': int(sys.argv[2])}],
     }
 
@@ -527,6 +533,7 @@ if __name__ == '__main__':
     axon_idx = cell.get_idx('axon_IS')[0]
     basal_idx = cell.get_closest_idx(100, 100, 0)
     soma_idx = 0
+
 
     print input_idx, int(sys.argv[2])
     idx_list = np.array([input_idx, input_idx + 1, input_idx - 1, apic_tuft_idx,
