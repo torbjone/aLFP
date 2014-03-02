@@ -416,7 +416,7 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfo
     lims = plt.axis()
     plt.axis([lims[0], lims[1], upper_lim/1e7, upper_lim])
     # plt.axis([lims[0], lims[1], 1e-3, 1e-1])
-    print freqs
+    # print freqs
 
     plt.subplot(236, xlim=[1e0, 1e3], title='Imem PSD')
     freqs, imem_psd = find_LFP_power(imem, cell.timeres_python/1000.)
@@ -445,70 +445,75 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfo
 
 def plot_resonance_to_ax(ax, input_idx, hold_potential, simfolder):
 
+    control_clr = 'r'
+    reduced_clr = 'b'
+
     control_name = '%d_Ih_Im_INaP_%+d' %(input_idx, hold_potential)
-
     freqs = np.load(join(simfolder, '%s_freqs.npy' % control_name))
-    vmem_control = np.load(join(simfolder, '%s_vmem.npy' % control_name))
-    imem_control = np.load(join(simfolder, '%s_imem.npy' % control_name))
+
+    # vmem_control = np.load(join(simfolder, '%s_vmem.npy' % control_name))
+    # imem_control = np.load(join(simfolder, '%s_imem.npy' % control_name))
     vmem_psd_control = np.load(join(simfolder, '%s_vmem_psd.npy' % control_name))
-    imem_psd_control = np.load(join(simfolder, '%s_imem_psd.npy' % control_name))
+    # imem_psd_control = np.load(join(simfolder, '%s_imem_psd.npy' % control_name))
 
-    reduced_name = '%d_Ih_Im_INaP_%+d' %(input_idx, hold_potential)
+    if hold_potential == -80:
+        reduced_name = '%d_Im_INaP_%+d' % (input_idx, hold_potential)
+        reduced_label = 'No Ih'
+    elif hold_potential == -60:
+        reduced_name = '%d_Ih_INaP_%+d' % (input_idx, hold_potential)
+        reduced_label = 'No Im'
+    else:
+        raise RuntimeError, "Not recognized holding potential"
     vmem_reduced = np.load(join(simfolder, '%s_vmem.npy' % reduced_name))
-    imem_reduced = np.load(join(simfolder, '%s_imem.npy' % reduced_name))
+    # imem_reduced = np.load(join(simfolder, '%s_imem.npy' % reduced_name))
     vmem_psd_reduced = np.load(join(simfolder, '%s_vmem_psd.npy' % reduced_name))
-    imem_psd_reduced = np.load(join(simfolder, '%s_imem_psd.npy' % reduced_name))
+    # imem_psd_reduced = np.load(join(simfolder, '%s_imem_psd.npy' % reduced_name))
 
-    ax.plot(freqs[1:16], vmem_psd_control[1:16], color=control_clr)
-    ax.plot(freqs[1:16], vmem_psd_reduced[1:16], color=reduced_clr)
+    lc, = ax.plot(freqs[1:16], vmem_psd_control[1:16], color=control_clr)
+    lr, = ax.plot(freqs[1:16], vmem_psd_reduced[1:16], color=reduced_clr)
 
+    lines = [lc, lr]
+    line_names = ['Control', reduced_label]
+    ax.legend(lines, line_names, frameon=False)
 
-def plot_morph_to_ax(ax, apic_idx, soma_idx):
+def plot_morph_to_ax(ax, apic_idx, soma_idx, simfolder):
     xstart = np.load(join(simfolder, 'xstart.npy'))
     ystart = np.load(join(simfolder, 'ystart.npy'))
-    zstart = np.load(join(simfolder, 'zstart.npy'))
     xend = np.load(join(simfolder, 'xend.npy'))
     yend = np.load(join(simfolder, 'yend.npy'))
-    zend = np.load(join(simfolder, 'zend.npy'))
     xmid = np.load(join(simfolder, 'xmid.npy'))
     ymid = np.load(join(simfolder, 'ymid.npy'))
-    zmid = np.load(join(simfolder, 'zmid.npy'))
 
     [ax.plot([ystart[idx], yend[idx]], [-xstart[idx], -xend[idx]], color='gray')
                 for idx in xrange(len(xend))]
-    ax.plot(ymid[soma_idx], -xmid[soma_idx], 'D', color='r', ms=15)
+    ax.plot(ymid[soma_idx], -xmid[soma_idx], 'D', color='r', ms=10)
     ax.plot(ymid[apic_idx], -xmid[apic_idx], '*', color='y', ms=15)
     ax.axis('equal')
 
 
 def recreate_Hu_figs(simfolder, figfolder):
 
-    control_clr = 'g'
-    reduced_clr = 'b'
-    plt.figure(figsize=[12, 8])
+    fig = plt.figure(figsize=[12, 8])
     # clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
 
     apic_idx = 460
     soma_idx = 0
 
     hyp_potential = -80
-    dep_potential = -80
+    dep_potential = -60
 
     morph_ax = fig.add_subplot(131, title='Star marks white noise input')
-    apic_dep_ax = fig.add_subplot(232, xlim=[0, 16], title='Apic input -60 mV')
-    soma_dep_ax = fig.add_subplot(233, xlim=[0, 16], title='Soma input -60 mV')
-    apic_hyp_ax = fig.add_subplot(235, xlim=[0, 16], title='Apic input -80 mV')
-    soma_hyp_ax = fig.add_subplot(236, xlim=[0, 16], title='Soma input -80 mV')
+    soma_hyp_ax = fig.add_subplot(232, ylim=[0, 1], xlim=[0, 16], title='Soma input -80 mV')
+    apic_hyp_ax = fig.add_subplot(233, ylim=[0, 1], xlim=[0, 16], title='Apic input -80 mV')
+    soma_dep_ax = fig.add_subplot(235, ylim=[0, 1], xlim=[0, 16], title='Soma input -60 mV')
+    apic_dep_ax = fig.add_subplot(236, ylim=[0, 1], xlim=[0, 16], title='Apic input -60 mV')
 
-    plot_morph_to_ax(morph_ax, apic_idx, soma_idx)
+    plot_morph_to_ax(morph_ax, apic_idx, soma_idx, simfolder)
 
     plot_resonance_to_ax(apic_dep_ax, apic_idx, dep_potential, simfolder)
     plot_resonance_to_ax(soma_dep_ax, soma_idx, dep_potential, simfolder)
     plot_resonance_to_ax(apic_hyp_ax, apic_idx, hyp_potential, simfolder)
     plot_resonance_to_ax(soma_hyp_ax, soma_idx, hyp_potential, simfolder)
-
-    for ax in [apic_dep_ax, soma_dep_ax, apic_hyp_ax, soma_hyp_ax]:
-        ax.grid(True)
 
     plt.savefig(join(figfolder, 'Hu_fig_4.png'), dpi=150)
 
@@ -601,7 +606,8 @@ def savedata(cell, simname, input_idx):
 
 def run_single_test(cell_params, input_array, input_idx, hold_potential, use_channels):
 
-    cell_params.update({'custom_fun': [active_declarations],  # will execute this function
+    cell_params.update({'v_init': hold_potential,
+                        'custom_fun': [active_declarations],  # will execute this function
                         'custom_fun_args': [{'use_channels': use_channels,
                                              'hold_potential': hold_potential}]
                         })
@@ -646,7 +652,7 @@ def run_single_test(cell_params, input_array, input_idx, hold_potential, use_cha
 
     savedata(cell, simname, input_idx)
     # recreate_Hu_figs(cell, input_idx, idx_list, cell_params, figfolder)
-
+    plot_resonances(cell, input_idx, 0.01, [0, 460, 565, 451, 728, 303], cell_params, figfolder)
     del cell
     del noiseVec
     del syn
@@ -769,9 +775,9 @@ def simple_test():
     # plt.plot(cell.tvec, vec)
     # plt.show()
     #plot_cell_steady_state(cell)
-    recreate_Hu_figs(cell, input_idx, input_scaling, idx_list, cell_params, figfolder)
+
 
 
 if __name__ == '__main__':
+    run_all_sims()
     recreate_Hu_figs('simresults', '')
-    # run_all_sims()
