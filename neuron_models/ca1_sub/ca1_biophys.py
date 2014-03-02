@@ -1,5 +1,6 @@
 __author__ = 'torbjone'
 
+import os
 from os.path import join
 import sys
 import neuron
@@ -385,7 +386,7 @@ def plot_cell_steady_state(cell):
     plt.show()
 
 
-def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
+def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfolder):
 
     plt.figure(figsize=[12, 8])
     clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
@@ -437,7 +438,7 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
     if 'hold_potential' in cell_params['custom_fun_args'][0]:
         fig_name += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
     print "Saving ", fig_name
-    plt.savefig('%s.png' % fig_name, dpi=150)
+    plt.savefig(join(figfolder, '%s.png' % fig_name), dpi=150)
     #plt.show()
 
 def insert_bunch_of_synapses(cell):
@@ -526,6 +527,9 @@ if __name__ == '__main__':
 
     cell = LFPy.Cell(**cell_params)
 
+    figfolder = 'verifications'
+    if not os.path.isdir(figfolder): os.mkdir(figfolder)
+
     input_idx = int(sys.argv[1])#np.random.randint(0, np.max(cell.totnsegs))
     plt.seed(1234)
     apic_tuft_idx = cell.get_closest_idx(-400, 0, -50)
@@ -553,4 +557,4 @@ if __name__ == '__main__':
     # plt.plot(cell.tvec, vec)
     # plt.show()
     #plot_cell_steady_state(cell)
-    plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params)
+    plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfolder)
