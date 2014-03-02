@@ -320,6 +320,7 @@ def plot_cell(cell):
         plt.colorbar()
         plt.savefig('test_%04d.png' % t)
 
+
 def insert_synapses(synparams, cell, section, n, spTimesFun, args):
     ''' find n compartments to insert synapses onto '''
     idx = cell.get_rand_idx_area_norm(section=section, nidx=n)
@@ -476,6 +477,7 @@ def plot_resonance_to_ax(ax, input_idx, hold_potential, simfolder):
     line_names = ['Control', reduced_label]
     ax.legend(lines, line_names, frameon=False)
 
+
 def plot_morph_to_ax(ax, apic_idx, soma_idx, simfolder):
     xstart = np.load(join(simfolder, 'xstart.npy'))
     ystart = np.load(join(simfolder, 'ystart.npy'))
@@ -580,14 +582,14 @@ def insert_bunch_of_synapses(cell):
 def savedata(cell, simname, input_idx):
 
     print "Saving ", simname
-    freqs, imem_psd = find_LFP_power(np.array([cell.imem[input_idx]]), cell.timeres_python/1000.)
+    # freqs, imem_psd = find_LFP_power(np.array([cell.imem[input_idx]]), cell.timeres_python/1000.)
     freqs, vmem_psd = find_LFP_power(np.array([cell.vmem[input_idx]]), cell.timeres_python/1000.)
 
-    np.save('%s_imem_psd.npy' % simname, imem_psd[0])
+    #np.save('%s_imem_psd.npy' % simname, imem_psd[0])
     np.save('%s_vmem_psd.npy' % simname, vmem_psd[0])
-    np.save('%s_imem.npy' % simname, cell.imem[input_idx])
-    np.save('%s_vmem.npy' % simname, cell.vmem[input_idx])
-    np.save('%s_tvec.npy' % simname, cell.tvec)
+    #np.save('%s_imem.npy' % simname, cell.imem[input_idx])
+    #np.save('%s_vmem.npy' % simname, cell.vmem[input_idx])
+    #np.save('%s_tvec.npy' % simname, cell.tvec)
     np.save('%s_freqs.npy' % simname, freqs)
 
     folder = os.path.dirname(simname)
@@ -604,7 +606,7 @@ def savedata(cell, simname, input_idx):
         np.save(join(folder, 'diam.npy'), cell.diam)
 
 
-def run_single_test(cell_params, input_array, input_idx, hold_potential, use_channels):
+def run_single_test(cell_params, input_array, input_idx, hold_potential, use_channels, sim_idx):
 
     cell_params.update({'v_init': hold_potential,
                         'custom_fun': [active_declarations],  # will execute this function
@@ -649,7 +651,7 @@ def run_single_test(cell_params, input_array, input_idx, hold_potential, use_cha
         for ion in use_channels:
             simname += '_%s' % ion
     simname += '_%+d' % hold_potential
-
+    simname += '_sim_%d' % sim_idx
     savedata(cell, simname, input_idx)
     # recreate_Hu_figs(cell, input_idx, idx_list, cell_params, figfolder)
     plot_resonances(cell, input_idx, 0.01, [0, 460, 565, 451, 728, 303], cell_params, figfolder)
@@ -660,7 +662,7 @@ def run_single_test(cell_params, input_array, input_idx, hold_potential, use_cha
 
 def run_all_sims():
 
-    timeres = 2**-4
+    timeres = 2**-5
     cut_off = 0
     tstopms = 1000
     tstartms = -cut_off
@@ -668,7 +670,6 @@ def run_all_sims():
     # input_idxs = [0, 460, 565, 451, 728, 303]
 
     max_freq = 15
-    plt.seed(1234)
 
     soma_idx = 0
     apic_idx = 460
@@ -684,19 +685,20 @@ def run_all_sims():
         'tstopms': tstopms,
     }
 
-    input_array = input_scaling * make_WN_input(cell_params, max_freq)
+    for sim_idx in xrange(10):
+        input_array = input_scaling * make_WN_input(cell_params, max_freq)
 
-    run_single_test(cell_params, input_array, soma_idx, -80, ['Ih', 'Im', 'INaP'])
-    run_single_test(cell_params, input_array, soma_idx, -80, ['Im', 'INaP'])
+        run_single_test(cell_params, input_array, soma_idx, -80, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, soma_idx, -80, ['Im', 'INaP'], sim_idx)
 
-    run_single_test(cell_params, input_array, apic_idx, -80, ['Ih', 'Im', 'INaP'])
-    run_single_test(cell_params, input_array, apic_idx, -80, ['Im', 'INaP'])
+        run_single_test(cell_params, input_array, apic_idx, -80, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, apic_idx, -80, ['Im', 'INaP'], sim_idx)
 
-    run_single_test(cell_params, input_array, soma_idx, -60, ['Ih', 'Im', 'INaP'])
-    run_single_test(cell_params, input_array, soma_idx, -60, ['Ih', 'INaP'])
+        run_single_test(cell_params, input_array, soma_idx, -60, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, soma_idx, -60, ['Ih', 'INaP'], sim_idx)
 
-    run_single_test(cell_params, input_array, apic_idx, -60, ['Ih', 'Im', 'INaP'])
-    run_single_test(cell_params, input_array, apic_idx, -60, ['Ih', 'INaP'])
+        run_single_test(cell_params, input_array, apic_idx, -60, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, apic_idx, -60, ['Ih', 'INaP'], sim_idx)
 
 
 def simple_test():
