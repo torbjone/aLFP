@@ -1,5 +1,6 @@
 __author__ = 'torbjone'
 
+import os
 from os.path import join
 import sys
 import neuron
@@ -20,22 +21,23 @@ def find_LFP_power(sig, timestep):
     return freqs, power
 
 
-def make_WN_input(cell_params):
+def make_WN_input(cell_params, max_freq):
     """ White Noise input ala Linden 2010 is made """
     tot_ntsteps = round((cell_params['tstopms'] - cell_params['tstartms'])/\
                   cell_params['timeres_NEURON'] + 1)
     I = np.zeros(tot_ntsteps)
     tvec = np.arange(tot_ntsteps) * cell_params['timeres_NEURON']
     #I = np.random.random(tot_ntsteps) - 0.5
-    for freq in xrange(1,1001):
+    for freq in xrange(1, max_freq + 1):
         I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
     I /= np.std(I)
     return I
 
 
-def make_WN_stimuli(cell, input_idx, input_scaling):
 
-    input_array = input_scaling * make_WN_input(cell_params)
+def make_WN_stimuli(cell, input_idx, input_scaling, max_freq=1000):
+
+    input_array = input_scaling * make_WN_input(cell_params, max_freq)
 
     noiseVec = neuron.h.Vector(input_array)
     i = 0
@@ -318,6 +320,7 @@ def plot_cell(cell):
         plt.colorbar()
         plt.savefig('test_%04d.png' % t)
 
+
 def insert_synapses(synparams, cell, section, n, spTimesFun, args):
     ''' find n compartments to insert synapses onto '''
     idx = cell.get_rand_idx_area_norm(section=section, nidx=n)
@@ -385,7 +388,7 @@ def plot_cell_steady_state(cell):
     plt.show()
 
 
-def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
+def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfolder):
 
     plt.figure(figsize=[12, 8])
     clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
@@ -414,7 +417,7 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
     lims = plt.axis()
     plt.axis([lims[0], lims[1], upper_lim/1e7, upper_lim])
     # plt.axis([lims[0], lims[1], 1e-3, 1e-1])
-    print freqs
+    # print freqs
 
     plt.subplot(236, xlim=[1e0, 1e3], title='Imem PSD')
     freqs, imem_psd = find_LFP_power(imem, cell.timeres_python/1000.)
@@ -437,8 +440,85 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params):
     if 'hold_potential' in cell_params['custom_fun_args'][0]:
         fig_name += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
     print "Saving ", fig_name
-    plt.savefig('%s.png' % fig_name, dpi=150)
+    plt.savefig(join(figfolder, '%s.png' % fig_name), dpi=150)
     #plt.show()
+
+
+def plot_resonance_to_ax(ax, input_idx, hold_potential, simfolder):
+
+    control_clr = 'r'
+    reduced_clr = 'b'
+
+    control_name = '%d_Ih_Im_INaP_%+d' %(input_idx, hold_potential)
+    freqs = np.load(join(simfolder, '%s_freqs.npy' % control_name))
+
+    # vmem_control = np.load(join(simfolder, '%s_vmem.npy' % control_name))
+    # imem_control = np.load(join(simfolder, '%s_imem.npy' % control_name))
+    vmem_psd_control = np.load(join(simfolder, '%s_vmem_psd.npy' % control_name))
+    # imem_psd_control = np.load(join(simfolder, '%s_imem_psd.npy' % control_name))
+
+    if hold_potential == -80:
+        reduced_name = '%d_Im_INaP_%+d' % (input_idx, hold_potential)
+        reduced_label = 'No Ih'
+    elif hold_potential == -60:
+        reduced_name = '%d_Ih_INaP_%+d' % (input_idx, hold_potential)
+        reduced_label = 'No Im'
+    else:
+        raise RuntimeError, "Not recognized holding potential"
+    vmem_reduced = np.load(join(simfolder, '%s_vmem.npy' % reduced_name))
+    # imem_reduced = np.load(join(simfolder, '%s_imem.npy' % reduced_name))
+    vmem_psd_reduced = np.load(join(simfolder, '%s_vmem_psd.npy' % reduced_name))
+    # imem_psd_reduced = np.load(join(simfolder, '%s_imem_psd.npy' % reduced_name))
+
+    lc, = ax.plot(freqs[1:16], vmem_psd_control[1:16], color=control_clr)
+    lr, = ax.plot(freqs[1:16], vmem_psd_reduced[1:16], color=reduced_clr)
+
+    lines = [lc, lr]
+    line_names = ['Control', reduced_label]
+    ax.legend(lines, line_names, frameon=False)
+
+
+def plot_morph_to_ax(ax, apic_idx, soma_idx, simfolder):
+    xstart = np.load(join(simfolder, 'xstart.npy'))
+    ystart = np.load(join(simfolder, 'ystart.npy'))
+    xend = np.load(join(simfolder, 'xend.npy'))
+    yend = np.load(join(simfolder, 'yend.npy'))
+    xmid = np.load(join(simfolder, 'xmid.npy'))
+    ymid = np.load(join(simfolder, 'ymid.npy'))
+
+    [ax.plot([ystart[idx], yend[idx]], [-xstart[idx], -xend[idx]], color='gray')
+                for idx in xrange(len(xend))]
+    ax.plot(ymid[soma_idx], -xmid[soma_idx], 'D', color='r', ms=10)
+    ax.plot(ymid[apic_idx], -xmid[apic_idx], '*', color='y', ms=15)
+    ax.axis('equal')
+
+
+def recreate_Hu_figs(simfolder, figfolder):
+
+    fig = plt.figure(figsize=[12, 8])
+    # clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
+
+    apic_idx = 460
+    soma_idx = 0
+
+    hyp_potential = -80
+    dep_potential = -60
+
+    morph_ax = fig.add_subplot(131, title='Star marks white noise input')
+    soma_hyp_ax = fig.add_subplot(232, ylim=[0, 1], xlim=[0, 16], title='Soma input -80 mV')
+    apic_hyp_ax = fig.add_subplot(233, ylim=[0, 1], xlim=[0, 16], title='Apic input -80 mV')
+    soma_dep_ax = fig.add_subplot(235, ylim=[0, 1], xlim=[0, 16], title='Soma input -60 mV')
+    apic_dep_ax = fig.add_subplot(236, ylim=[0, 1], xlim=[0, 16], title='Apic input -60 mV')
+
+    plot_morph_to_ax(morph_ax, apic_idx, soma_idx, simfolder)
+
+    plot_resonance_to_ax(apic_dep_ax, apic_idx, dep_potential, simfolder)
+    plot_resonance_to_ax(soma_dep_ax, soma_idx, dep_potential, simfolder)
+    plot_resonance_to_ax(apic_hyp_ax, apic_idx, hyp_potential, simfolder)
+    plot_resonance_to_ax(soma_hyp_ax, soma_idx, hyp_potential, simfolder)
+
+    plt.savefig(join(figfolder, 'Hu_fig_4.png'), dpi=150)
+
 
 def insert_bunch_of_synapses(cell):
 
@@ -498,9 +578,132 @@ def insert_bunch_of_synapses(cell):
     insert_synapses(synapseParameters_NMDA, cell, **insert_synapses_NMDA_args)
     insert_synapses(synapseParameters_GABA_A, cell, **insert_synapses_GABA_A_args)
 
-if __name__ == '__main__':
+
+def savedata(cell, simname, input_idx):
+
+    print "Saving ", simname
+    # freqs, imem_psd = find_LFP_power(np.array([cell.imem[input_idx]]), cell.timeres_python/1000.)
+    freqs, vmem_psd = find_LFP_power(np.array([cell.vmem[input_idx]]), cell.timeres_python/1000.)
+
+    #np.save('%s_imem_psd.npy' % simname, imem_psd[0])
+    np.save('%s_vmem_psd.npy' % simname, vmem_psd[0])
+    #np.save('%s_imem.npy' % simname, cell.imem[input_idx])
+    #np.save('%s_vmem.npy' % simname, cell.vmem[input_idx])
+    #np.save('%s_tvec.npy' % simname, cell.tvec)
+    np.save('%s_freqs.npy' % simname, freqs)
+
+    folder = os.path.dirname(simname)
+    if not os.path.isfile(join(folder, 'xmid.npy')):
+        np.save(join(folder, 'xmid.npy'), cell.xmid)
+        np.save(join(folder, 'ymid.npy'), cell.ymid)
+        np.save(join(folder, 'zmid.npy'), cell.zmid)
+        np.save(join(folder, 'xend.npy'), cell.xend)
+        np.save(join(folder, 'yend.npy'), cell.yend)
+        np.save(join(folder, 'zend.npy'), cell.zend)
+        np.save(join(folder, 'xstart.npy'), cell.xstart)
+        np.save(join(folder, 'ystart.npy'), cell.ystart)
+        np.save(join(folder, 'zstart.npy'), cell.zstart)
+        np.save(join(folder, 'diam.npy'), cell.diam)
+
+
+def run_single_test(cell_params, input_array, input_idx, hold_potential, use_channels, sim_idx):
+
+    cell_params.update({'v_init': hold_potential,
+                        'custom_fun': [active_declarations],  # will execute this function
+                        'custom_fun_args': [{'use_channels': use_channels,
+                                             'hold_potential': hold_potential}]
+                        })
+
+    neuron.h('forall delete_section()')
+
+    cell = LFPy.Cell(**cell_params)
+    noiseVec = neuron.h.Vector(input_array)
+    i = 0
+    syn = None
+    for sec in cell.allseclist:
+        for seg in sec:
+            if i == input_idx:
+                print "Input i" \
+                      "nserted in ", sec.name()
+                syn = neuron.h.ISyn(seg.x, sec=sec)
+            i += 1
+    if type(syn) == type(None):
+        raise RuntimeError("Wrong stimuli index")
+    syn.dur = 1E9
+    syn.delay = 0
+    noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
+
+    figfolder = 'verifications'
+    if not os.path.isdir(figfolder): os.mkdir(figfolder)
+
+    sim_params = {'rec_vmem': True,
+                  'rec_imem': True,
+                  'rec_variables': []}
+    cell.simulate(**sim_params)
+
+    simfolder = 'simresults'
+    if not os.path.isdir(simfolder): os.mkdir(simfolder)
+    simname = join(simfolder, '%d' % input_idx)
+
+    if len(use_channels) == 0:
+        simname += '_passive'
+    else:
+        for ion in use_channels:
+            simname += '_%s' % ion
+    simname += '_%+d' % hold_potential
+    simname += '_sim_%d' % sim_idx
+    savedata(cell, simname, input_idx)
+    # recreate_Hu_figs(cell, input_idx, idx_list, cell_params, figfolder)
+    plot_resonances(cell, input_idx, 0.01, [0, 460, 565, 451, 728, 303], cell_params, figfolder)
+    del cell
+    del noiseVec
+    del syn
+
+
+def run_all_sims():
 
     timeres = 2**-5
+    cut_off = 0
+    tstopms = 1000
+    tstartms = -cut_off
+    input_scaling = 0.01
+    # input_idxs = [0, 460, 565, 451, 728, 303]
+
+    max_freq = 15
+
+    soma_idx = 0
+    apic_idx = 460
+
+    cell_params = {
+        'morphology': join('n120.hoc'),
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': timeres,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+    }
+
+    for sim_idx in xrange(10):
+        input_array = input_scaling * make_WN_input(cell_params, max_freq)
+
+        run_single_test(cell_params, input_array, soma_idx, -80, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, soma_idx, -80, ['Im', 'INaP'], sim_idx)
+
+        run_single_test(cell_params, input_array, apic_idx, -80, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, apic_idx, -80, ['Im', 'INaP'], sim_idx)
+
+        run_single_test(cell_params, input_array, soma_idx, -60, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, soma_idx, -60, ['Ih', 'INaP'], sim_idx)
+
+        run_single_test(cell_params, input_array, apic_idx, -60, ['Ih', 'Im', 'INaP'], sim_idx)
+        run_single_test(cell_params, input_array, apic_idx, -60, ['Ih', 'INaP'], sim_idx)
+
+
+def simple_test():
+
+    timeres = 2**-4
     cut_off = 0
     tstopms = 1000
     tstartms = -cut_off
@@ -525,6 +728,10 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
+    apic_stim_idx = cell.get_idx('apic[5]')[1]
+
+    figfolder = 'verifications'
+    if not os.path.isdir(figfolder): os.mkdir(figfolder)
 
     input_idx = int(sys.argv[1])#np.random.randint(0, np.max(cell.totnsegs))
     plt.seed(1234)
@@ -534,13 +741,14 @@ if __name__ == '__main__':
     basal_idx = cell.get_closest_idx(100, 100, 0)
     soma_idx = 0
 
-
     print input_idx, int(sys.argv[2])
-    idx_list = np.array([input_idx, input_idx + 1, input_idx - 1, apic_tuft_idx,
-                         trunk_idx, axon_idx, basal_idx, soma_idx])
+    idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
+                         trunk_idx, axon_idx, basal_idx])
+
+    print idx_list
     input_scaling = .01
 
-    cell, vec, syn = make_WN_stimuli(cell, input_idx, input_scaling)
+    cell, vec, syn = make_WN_stimuli(cell, input_idx, input_scaling, max_freq=15)
     # freqs, psd_sig = find_LFP_power(np.array([vec]), cell.timeres_NEURON/1000.)
     # plt.semilogy(freqs, psd_sig[0,:])
     # plt.show()
@@ -550,7 +758,28 @@ if __name__ == '__main__':
                   'rec_imem': True,
                   'rec_variables': []}
     cell.simulate(**sim_params)
+
+    simfolder = 'simresults'
+    if not os.path.isdir(simfolder): os.mkdir(simfolder)
+    simname = join(simfolder, '%d_%1.3f' % (input_idx, input_scaling))
+    if 'use_channels' in cell_params['custom_fun_args'][0] and \
+                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
+        for ion in cell_params['custom_fun_args'][0]['use_channels']:
+            simname += '_%s' % ion
+    else:
+        simname += '_passive'
+
+    if 'hold_potential' in cell_params['custom_fun_args'][0]:
+        simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
+
+    savedata(cell, simname)
+
     # plt.plot(cell.tvec, vec)
     # plt.show()
     #plot_cell_steady_state(cell)
-    plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params)
+
+
+
+if __name__ == '__main__':
+    run_all_sims()
+    recreate_Hu_figs('simresults', '')

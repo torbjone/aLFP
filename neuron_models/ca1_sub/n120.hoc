@@ -1,3 +1,6 @@
+// Modified with axon by Torbjorn Ness according to Hu et al. 2009
+
+
 proc celldef() {
   topol()
   subsets()
