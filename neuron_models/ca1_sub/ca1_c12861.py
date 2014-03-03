@@ -35,7 +35,7 @@ def make_WN_input(cell_params, max_freq):
 
 
 
-def make_WN_stimuli(cell, input_idx, input_scaling, max_freq=1000):
+def make_WN_stimuli(cell, cell_params, input_idx, input_scaling, max_freq=1000):
 
     input_array = input_scaling * make_WN_input(cell_params, max_freq)
 
@@ -448,15 +448,10 @@ def plot_resonance_to_ax(ax, input_idx, hold_potential, simfolder):
 
     control_clr = 'r'
     reduced_clr = 'b'
+    numsims = 9
 
     control_name = '%d_Ih_Im_INaP_%+d' %(input_idx, hold_potential)
-    freqs = np.load(join(simfolder, '%s_freqs.npy' % control_name))
-
-    # vmem_control = np.load(join(simfolder, '%s_vmem.npy' % control_name))
-    # imem_control = np.load(join(simfolder, '%s_imem.npy' % control_name))
-    vmem_psd_control = np.load(join(simfolder, '%s_vmem_psd.npy' % control_name))
-    # imem_psd_control = np.load(join(simfolder, '%s_imem_psd.npy' % control_name))
-
+    freqs = np.load(join(simfolder, '%s_sim_0_freqs.npy' % control_name))
     if hold_potential == -80:
         reduced_name = '%d_Im_INaP_%+d' % (input_idx, hold_potential)
         reduced_label = 'No Ih'
@@ -465,10 +460,15 @@ def plot_resonance_to_ax(ax, input_idx, hold_potential, simfolder):
         reduced_label = 'No Im'
     else:
         raise RuntimeError, "Not recognized holding potential"
-    vmem_reduced = np.load(join(simfolder, '%s_vmem.npy' % reduced_name))
-    # imem_reduced = np.load(join(simfolder, '%s_imem.npy' % reduced_name))
-    vmem_psd_reduced = np.load(join(simfolder, '%s_vmem_psd.npy' % reduced_name))
-    # imem_psd_reduced = np.load(join(simfolder, '%s_imem_psd.npy' % reduced_name))
+
+    vmem_psd_control = np.zeros(len(freqs))
+    vmem_psd_reduced = np.zeros(len(freqs))
+    for sim_idx in xrange(numsims):
+        vmem_psd_control += np.load(join(simfolder, '%s_sim_%d_vmem_psd.npy' % (control_name, sim_idx)))
+        vmem_psd_reduced += np.load(join(simfolder, '%s_sim_%d_vmem_psd.npy' % (reduced_name, sim_idx)))
+
+    vmem_psd_control /= numsims
+    vmem_psd_reduced /= numsims
 
     lc, = ax.plot(freqs[1:16], vmem_psd_control[1:16], color=control_clr)
     lr, = ax.plot(freqs[1:16], vmem_psd_reduced[1:16], color=reduced_clr)
@@ -685,7 +685,7 @@ def run_all_sims():
         'tstopms': tstopms,
     }
 
-    for sim_idx in xrange(10):
+    for sim_idx in xrange(0, 10):
         input_array = input_scaling * make_WN_input(cell_params, max_freq)
 
         run_single_test(cell_params, input_array, soma_idx, -80, ['Ih', 'Im', 'INaP'], sim_idx)
@@ -701,20 +701,20 @@ def run_all_sims():
         run_single_test(cell_params, input_array, apic_idx, -60, ['Ih', 'INaP'], sim_idx)
 
 
-def simple_test():
+def simple_test(input_idx, hold_potential):
 
     timeres = 2**-4
     cut_off = 0
     tstopms = 1000
     tstartms = -cut_off
-    model_path = '.'
+    model_path = 'c12861'
 
     cell_params = {
         'morphology': join(model_path, 'n120.hoc'),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
-        'v_init': int(sys.argv[2]),             # initial crossmembrane potential
+        'v_init': hold_potential,             # initial crossmembrane potential
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
         'lambda_f': 100,           # segments are isopotential at this frequency
@@ -724,7 +724,7 @@ def simple_test():
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
         'custom_fun_args': [{'use_channels': ['Ih', 'Im', 'INaP'],
-                             'hold_potential': int(sys.argv[2])}],
+                             'hold_potential': hold_potential}],
     }
 
     cell = LFPy.Cell(**cell_params)
@@ -733,7 +733,6 @@ def simple_test():
     figfolder = 'verifications'
     if not os.path.isdir(figfolder): os.mkdir(figfolder)
 
-    input_idx = int(sys.argv[1])#np.random.randint(0, np.max(cell.totnsegs))
     plt.seed(1234)
     apic_tuft_idx = cell.get_closest_idx(-400, 0, -50)
     trunk_idx = cell.get_closest_idx(-100, 0, 0)
@@ -741,14 +740,14 @@ def simple_test():
     basal_idx = cell.get_closest_idx(100, 100, 0)
     soma_idx = 0
 
-    print input_idx, int(sys.argv[2])
+    print input_idx, hold_potential
     idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
                          trunk_idx, axon_idx, basal_idx])
 
     print idx_list
     input_scaling = .01
 
-    cell, vec, syn = make_WN_stimuli(cell, input_idx, input_scaling, max_freq=15)
+    cell, vec, syn = make_WN_stimuli(cell, cell_params, input_idx, input_scaling, max_freq=1000)
     # freqs, psd_sig = find_LFP_power(np.array([vec]), cell.timeres_NEURON/1000.)
     # plt.semilogy(freqs, psd_sig[0,:])
     # plt.show()
@@ -761,7 +760,8 @@ def simple_test():
 
     simfolder = 'simresults'
     if not os.path.isdir(simfolder): os.mkdir(simfolder)
-    simname = join(simfolder, '%d_%1.3f' % (input_idx, input_scaling))
+
+    simname = join(simfolder, 'simple_%d_%1.3f' % (input_idx, input_scaling))
     if 'use_channels' in cell_params['custom_fun_args'][0] and \
                     len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
         for ion in cell_params['custom_fun_args'][0]['use_channels']:
@@ -772,14 +772,14 @@ def simple_test():
     if 'hold_potential' in cell_params['custom_fun_args'][0]:
         simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
 
-    savedata(cell, simname)
-
+    savedata(cell, simname, input_idx)
+    plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfolder)
     # plt.plot(cell.tvec, vec)
     # plt.show()
     #plot_cell_steady_state(cell)
 
-
-
 if __name__ == '__main__':
-    run_all_sims()
-    recreate_Hu_figs('simresults', '')
+    # run_all_sims()
+    # recreate_Hu_figs('simresults', '')
+    simple_test(0, -80)
+    simple_test(0, -60)

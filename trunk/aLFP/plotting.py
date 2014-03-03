@@ -1,13 +1,18 @@
+
 import pylab as plt
 from matplotlib.colors import LogNorm
 import numpy as np
 import sys
+import neuron
+from neuron import h as nrn
+
 import neuron
 try:
     from ipdb import set_trace
 except:
     pass
 from os.path import join
+import LFPy
 import aLFP
 import matplotlib.mlab as mlab
 
@@ -1522,3 +1527,34 @@ def LFP_arrow_to_axis(pos, ax_origin, ax_target, clr, ax_xpos):
     
     ax_origin.plot(upper_line_x, upper_line_y, lw=1, 
               color=clr, clip_on=False, alpha=1.)
+
+
+def explore_morphology(morph_path):
+
+    cell_params = {
+        'morphology': morph_path,
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+    }
+
+    cell = LFPy.Cell(**cell_params)
+    # for sec in nrn.allsec():
+    #     n3d = int(nrn.n3d())
+    #     for i in xrange(n3d):
+    #         plt.plot(nrn.x3d(i), nrn.y3d(i), '.')
+    # plt.axis('equal')
+    # plt.show()
+
+    comp = 0
+    for sec in cell.allseclist:
+        name = sec.name()
+        clr = 'r' if name == 'apic[92]' else 'k'
+        for segnum, seg in enumerate(sec):
+            plt.plot([cell.xstart[comp], cell.xend[comp]], [cell.ystart[comp], cell.yend[comp]],
+                     lw=cell.diam[comp], color=clr)
+            #if segnum == sec.nseg - 1:
+            #    plt.text(cell.xend[comp], cell.yend[comp], name)
+            comp += 1
+    plt.axis('equal')
+    plt.show()
