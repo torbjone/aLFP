@@ -1553,8 +1553,8 @@ def explore_morphology(morph_path):
         for segnum, seg in enumerate(sec):
             plt.plot([cell.xstart[comp], cell.xend[comp]], [cell.ystart[comp], cell.yend[comp]],
                      lw=cell.diam[comp], color=clr)
-            #if segnum == sec.nseg - 1:
-            #    plt.text(cell.xend[comp], cell.yend[comp], name)
+            if segnum == sec.nseg - 1:
+                plt.text(cell.xend[comp], cell.yend[comp], name)
             comp += 1
     plt.axis('equal')
     plt.show()

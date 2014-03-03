@@ -6,7 +6,7 @@
 
 proc celldef() {
   topol()
-  subsets()
+  //subsets()
   geom()
   biophys()
   geom_nseg()
@@ -1735,37 +1735,38 @@ proc basic_shape() {
   shape3d_8()
 }
 
-objref all, somatic, basal, apical, axonal_hillock, axonal_IS, myelinated_axonal
-proc subsets() { local i
-  objref all, somatic, basal, apical, axonal_hillock, axonal_IS, myelinated_axonal
-  all = new SectionList()
-    soma all.append()
-    for i=0, 59 dend[i] all.append()
-    for i=0, 120 apic[i] all.append()
-    for i=0, 3 axon_hillock[i] all.append()
-    for i=0, 3 axon_IS[i] all.append()
-    for i=0, 4 myelinated_axon[i] all.append()
+//objref all, somatic, basal, apical, axonal_hillock, axonal_IS, myelinated_axonal
+//proc subsets() { local i
+//  objref all, somatic, basal, apical, axonal_hillock, axonal_IS, myelinated_axonal
+//  all = new SectionList()
+//    soma all.append()
+//    for i=0, 59 dend[i] all.append()
+//    for i=0, 120 apic[i] all.append()
+//   for i=0, 3 axon_hillock[i] all.append()
+//    for i=0, 3 axon_IS[i] all.append()
+//    for i=0, 4 myelinated_axon[i] all.append()
+//
+//
+//  somatic = new SectionList()
+//    soma somatic.append()
+//
+//  basal = new SectionList()
+//    for i=0, 59 dend[i] basal.append()
+//
+//  apical = new SectionList()
+//    for i=0, 120 apic[i] apical.append()
+//
+//  axonal_hillock = new SectionList()
+//    for i=0, 3 axon_hillock[i] axonal_hillock.append()
+//
+//  axonal_IS = new SectionList()
+//    for i=0, 3 axon_IS[i] axonal_IS.append()
+//
+//  myelinated_axonal = new SectionList()
+//    for i=0, 4 myelinated_axon[i] myelinated_axonal.append()
+//
+//}
 
-
-  somatic = new SectionList()
-    soma somatic.append()
-
-  basal = new SectionList()
-    for i=0, 59 dend[i] basal.append()
-
-  apical = new SectionList()
-    for i=0, 120 apic[i] apical.append()
-
-  axonal_hillock = new SectionList()
-    for i=0, 3 axon_hillock[i] axonal_hillock.append()
-
-  axonal_IS = new SectionList()
-    for i=0, 3 axon_IS[i] axonal_IS.append()
-
-  myelinated_axonal = new SectionList()
-    for i=0, 4 myelinated_axon[i] myelinated_axonal.append()
-
-}
 proc geom() {
 }
 proc geom_nseg() {
