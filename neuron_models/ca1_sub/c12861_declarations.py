@@ -24,6 +24,12 @@ def insert_Ih(section_dict):
             dist = nrn.distance(seg.x)
             seg.ghbar_Ih_BK_prox = 1e-4*(0.2 + (2.0 - 0.2)/(1 + np.exp((250. - dist)/30)))
 
+    for sec in section_dict['oblique_dendrites']:
+        sec.insert("Ih_BK_prox")
+        for seg in sec:
+            dist = nrn.distance(seg.x)
+            seg.ghbar_Ih_BK_prox = 1e-4*(0.2 + (2.0 - 0.2)/(1 + np.exp((250. - dist)/30)))
+
     for sec in section_dict['apic_tuft']:
         sec.insert("Ih_BK_dist")
         sec.ghbar_Ih_BK_dist = 1e-4 * 20.
@@ -55,7 +61,7 @@ def insert_Im(section_dict):
 def insert_INaP(section_dict):
 
     gna = 1e-4 * 50.
-    max_dist = 40  # Changed because distance to soma is much less than distance to soma center.
+    max_dist = 40.  # Changed because distance to soma is much less than distance to soma center.
     nrn.distance()
     key_list = ['axonal_hillock', 'axonal_IS', 'myelinated_axonal']
     for key, sec_list in section_dict.items():
@@ -65,10 +71,10 @@ def insert_INaP(section_dict):
             sec.insert("INaP_BK")
             for seg in sec:
                 if nrn.distance(seg.x) < max_dist:
-                    print sec.name(), "gets INaP"
+                    # print sec.name(), "gets INaP"
                     seg.gnabar_INaP_BK = gna
                 else:
-                    print sec.name(), "doesn't get INaP"
+                    # print sec.name(), "doesn't get INaP"
                     seg.gnabar_INaP_BK = 0
 
 
@@ -88,6 +94,7 @@ def make_uniform(Vrest):
                 # print sec.name(), seg.e_pas, seg.ina, seg.g_pas, seg.ina/seg.g_pas
                 seg.e_pas += seg.ina/seg.g_pas
             if nrn.ismembrane("k_ion"):
+                print sec.name(), "has ik", seg.ik
                 seg.e_pas += seg.ik/seg.g_pas
             if nrn.ismembrane("Ih_BK_prox"):
                 seg.e_pas += seg.ih_Ih_BK_prox/seg.g_pas
@@ -203,7 +210,7 @@ def modify_morphology(section_dict):
             nrn.pt3dchange(i, diam)
         # print sec.name(), nrn.distance(0), nrn.distance(1), nrn.distance(0) + cummulative_L
         if sec.name() == 'apic[92]':
-            apic_tuft_root_diam = nrn.diam3d(npts-2)
+            apic_tuft_root_diam = nrn.diam3d(npts - 1)
             apic_tuft_root_dist = nrn.distance(1.)
 
     for sec in section_dict['apic_tuft']:
@@ -290,11 +297,11 @@ def active_declarations(**kwargs):
         make_uniform(kwargs['hold_potential'])
 
 
-def simple_test(input_idx, hold_potential):
+def test_steady_state(input_idx, hold_potential):
 
     timeres = 2**-4
     cut_off = 0
-    tstopms = 10
+    tstopms = 1000
     tstartms = -cut_off
     model_path = 'c12861'
 
@@ -317,14 +324,8 @@ def simple_test(input_idx, hold_potential):
     }
 
     cell = LFPy.Cell(**cell_params)
-    # TODO: Check if channels work, is resonance frequency corrected? Start populations for both hay and Hu
 
-    sys.exit()
-
-    plt.scatter(cell.xmid, cell.ymid)
-    plt.show()
-
-    apic_stim_idx = cell.get_idx('apic[5]')[1]
+    apic_stim_idx = cell.get_idx('apic[66]')[0]
     figfolder = join(model_path, 'verifications')
     if not os.path.isdir(figfolder): os.mkdir(figfolder)
 
@@ -339,7 +340,6 @@ def simple_test(input_idx, hold_potential):
     idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
                          trunk_idx, axon_idx, basal_idx])
 
-    print idx_list
     input_scaling = .01
 
     sim_params = {'rec_vmem': True,
@@ -361,12 +361,12 @@ def simple_test(input_idx, hold_potential):
     if 'hold_potential' in cell_params['custom_fun_args'][0]:
         simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
 
-
-    plt.plot(cell.tvec, cell.somav)
+    [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in idx_list]
+    # plt.plot(cell.tvec, cell.somav)
     plt.show()
     #plot_cell_steady_state(cell)
 
 if __name__ == '__main__':
     # aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
 
-    simple_test(0, -80)
+    test_steady_state(0, -60)
