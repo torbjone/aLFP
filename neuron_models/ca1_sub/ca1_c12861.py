@@ -56,6 +56,20 @@ def make_WN_stimuli(cell, cell_params, input_idx, input_scaling, max_freq=1000):
     return cell, noiseVec, syn
 
 
+def make_ZAP_stimuli(cell, input_idx, input_scaling):
+    ZAP_clamp = {
+        'idx' : input_idx,
+        'record_current' : True,
+        'dur' : 20000,
+        'delay': 0,
+        'freq_start' : 0,
+        'freq_end': 15,
+        'pkamp' : input_scaling,
+        'pptype' : 'ZAPClamp',
+        }
+    current_clamp = LFPy.StimIntElectrode(cell, **ZAP_clamp)
+    return cell, current_clamp
+
 def insert_synapses(synparams, cell, section, n, spTimesFun, args):
     ''' find n compartments to insert synapses onto '''
     idx = cell.get_rand_idx_area_norm(section=section, nidx=n)
@@ -143,7 +157,7 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfo
     plt.subplot(235, title='Imem')
     [plt.plot(cell.tvec, imem[numb, :], color=clr(numb)) for numb, idx in enumerate(idx_list)]
 
-    plt.subplot(233, xlim=[0, 15], ylim=[0, .4], title='Vmem PSD')
+    plt.subplot(233, xlim=[0, 15], ylim=[0, .15], title='Vmem PSD')
     plt.grid()
     freqs, vmem_psd = find_LFP_power(vmem[:, :-1], cell.timeres_python/1000.)
     [plt.plot(freqs, vmem_psd[numb], color=clr(numb)) for numb, idx in enumerate(idx_list)]
@@ -441,10 +455,10 @@ def simple_test(input_idx, hold_potential, use_channels):
     cut_off = 0
     tstopms = 1000
     tstartms = -cut_off
-    model_path = 'c12861'
+    model_path = 'n120'#'c12861'
 
     cell_params = {
-        'morphology': join(model_path, 'c12861.hoc'),
+        'morphology': join(model_path, 'n120.hoc'),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
@@ -483,9 +497,9 @@ def simple_test(input_idx, hold_potential, use_channels):
                          trunk_idx, axon_idx, basal_idx])
 
     print idx_list
-    input_scaling = .001
+    input_scaling = .01
 
-    cell, vec, syn = make_WN_stimuli(cell, cell_params, input_idx, input_scaling, max_freq=15)
+    cell, vec, syn = make_WN_stimuli(cell, cell_params, input_idx, input_scaling, max_freq=1000)
     # freqs, psd_sig = find_LFP_power(np.array([vec]), cell.timeres_NEURON/1000.)
     # plt.semilogy(freqs, psd_sig[0,:])
     # plt.show()
@@ -517,15 +531,172 @@ def simple_test(input_idx, hold_potential, use_channels):
     #plot_cell_steady_state(cell)
     del cell, vec, syn
 
+
+def plot_ZAP(cell, input_idx, input_scaling, idx_list, cell_params, figfolder, stim):
+
+    plt.figure(figsize=[12, 8])
+    clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
+
+    vmem = cell.vmem[idx_list, :]
+    imem = cell.imem[idx_list, :]
+
+    plt.subplot(121, title='Star marks white noise input')
+    plt.scatter(cell.xmid, cell.ymid, c='grey', edgecolor='none')
+    [plt.plot(cell.xmid[idx], cell.ymid[idx], 'D', color=clr(numb)) for numb, idx in enumerate(idx_list)]
+    plt.plot(cell.xmid[input_idx], cell.ymid[input_idx], '*', color='y', ms=15)
+    plt.axis('equal')
+
+    plt.subplot(222, title='Vmem')
+    plt.plot(cell.tvec, vmem[input_idx, :], 'k')
+
+    plt.subplot(224, title='Imem')
+    plt.plot(cell.tvec, stim.i, 'r')
+    plt.plot(cell.tvec, imem[input_idx, :], 'k')
+
+    fig_name = 'ZAP_%d_%1.3f' % (input_idx, input_scaling)
+    if 'use_channels' in cell_params['custom_fun_args'][0] and \
+                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
+        for ion in cell_params['custom_fun_args'][0]['use_channels']:
+            fig_name += '_%s' % ion
+    else:
+        fig_name += '_passive'
+
+    if 'hold_potential' in cell_params['custom_fun_args'][0]:
+        fig_name += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
+    print "Saving ", fig_name
+    plt.savefig(join(figfolder, '%s.png' % fig_name), dpi=150)
+    #plt.show()
+
+
+def ZAP_test(input_idx, hold_potential, use_channels):
+
+    timeres = 2**-4
+    cut_off = 0
+    tstopms = 10000
+    tstartms = -cut_off
+    model_path = 'c12861'
+
+    cell_params = {
+        'morphology': join(model_path, 'c12861.hoc'),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init': hold_potential,             # initial crossmembrane potential
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': 2**-4,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+        'custom_fun': [active_declarations],  # will execute this function
+        'custom_fun_args': [{'use_channels': use_channels,
+                             'hold_potential': hold_potential}],
+    }
+    neuron.h('forall delete_section()')
+    cell = LFPy.Cell(**cell_params)
+    # for sec in cell.allseclist:
+    #     for seg in sec:
+    #         print sec.name(), seg.diam
+
+    apic_stim_idx = cell.get_idx('apic[66]')[0]
+
+    figfolder = join(model_path, 'verifications')
+    if not os.path.isdir(figfolder): os.mkdir(figfolder)
+
+    plt.seed(1)
+    apic_tuft_idx = cell.get_closest_idx(-100, 500, 0)
+    trunk_idx = cell.get_closest_idx(0, 300, 0)
+    axon_idx = cell.get_idx('axon_IS')[0]
+    basal_idx = cell.get_closest_idx(-50, -100, 0)
+    soma_idx = 0
+
+    print input_idx, hold_potential
+    idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
+                         trunk_idx, axon_idx, basal_idx])
+
+    print idx_list
+    input_scaling = .05
+    cell, stim = make_ZAP_stimuli(cell, input_idx, input_scaling)
+
+    sim_params = {'rec_vmem': True,
+                  'rec_imem': True,
+                  'rec_istim': True,
+                  'rec_variables': []}
+    cell.simulate(**sim_params)
+
+    #import ipdb; ipdb.set_trace()
+    simfolder = join(model_path, 'simresults')
+    if not os.path.isdir(simfolder): os.mkdir(simfolder)
+    # plt.plot(cell.tvec, stim.i)
+    # plt.show()
+
+    simname = join(simfolder, 'simple_%d_%1.3f' % (input_idx, input_scaling))
+    if 'use_channels' in cell_params['custom_fun_args'][0] and \
+                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
+        for ion in cell_params['custom_fun_args'][0]['use_channels']:
+            simname += '_%s' % ion
+    else:
+        simname += '_passive'
+
+    if 'hold_potential' in cell_params['custom_fun_args'][0]:
+        simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
+
+    savedata(cell, simname, input_idx)
+    plot_ZAP(cell, input_idx, input_scaling, idx_list, cell_params, figfolder, stim)
+    # plt.plot(cell.tvec, vec)
+    # plt.show()
+    #plot_cell_steady_state(cell)
+
 if __name__ == '__main__':
+
+    # Things to try: No uniformifying. One and one frequency?
+
+
     # run_all_sims()
     # recreate_Hu_figs(join('c12861', 'simresults'), '')
-    simple_test(0, -60, ['Ih', 'Im'])
-    simple_test(0, -80, ['Ih', 'Im'])
-    simple_test(573, -60, ['Ih', 'Im'])
-    simple_test(573, -80, ['Ih', 'Im'])
+
+    simple_test(0, -60, ['Im'])
+    # simple_test(0, -60, [])
+    # simple_test(0, -60, ['Im'])
+    # ZAP_test(0, -60, ['Im'])
+    # ZAP_test(0, -80, ['Ih'])
+    #
+    # ZAP_test(0, -60, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(0, -62, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(0, -65, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(0, -70, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(0, -80, ['Ih', 'Im', 'INaP'])
+    #
+    # ZAP_test(573, -60, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(573, -62, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(573, -65, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(573, -70, ['Ih', 'Im', 'INaP'])
+    # ZAP_test(573, -80, ['Ih', 'Im', 'INaP'])
+    #
+    # ZAP_test(573, -60, [])
+    # ZAP_test(573, -62, [])
+    # ZAP_test(573, -65, [])
+    # ZAP_test(573, -70, [])
+    # ZAP_test(573, -80, [])
+    #
+    # ZAP_test(0, -60, [])
+    # ZAP_test(0, -62, [])
+    # ZAP_test(0, -65, [])
+    # ZAP_test(0, -70, [])
+    # ZAP_test(0, -80, [])
+
+
+    # simple_test(573, -50, [])
+    # simple_test(573, -60, [])
+    # simple_test(573, -80, [])
+
+
+    # simple_test(0, -80, ['Ih', 'Im'])
+    # simple_test(573, -50, ['Ih', 'Im'])
+    # simple_test(573, -80, ['Ih', 'Im'])
     
-    simple_test(0, -60, ['Ih'])
-    simple_test(0, -80, ['Im'])
-    simple_test(573, -60, ['Ih'])
-    simple_test(573, -80, ['Im'])
+    # simple_test(0, -50, ['Ih'])
+    # simple_test(0, -80, ['Im'])
+    # simple_test(573, -50, ['Ih'])
+    # simple_test(573, -80, ['Im'])

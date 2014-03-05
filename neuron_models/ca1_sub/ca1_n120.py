@@ -444,6 +444,43 @@ def plot_resonances(cell, input_idx, input_scaling, idx_list, cell_params, figfo
     #plt.show()
 
 
+def plot_ZAP(cell, input_idx, input_scaling, idx_list, cell_params, figfolder):
+
+    plt.figure(figsize=[12, 8])
+    clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
+
+    vmem = cell.vmem[idx_list, :]
+    imem = cell.imem[idx_list, :]
+
+    plt.subplot(121, title='Star marks white noise input')
+    plt.scatter(cell.ymid, -cell.xmid, c='grey', edgecolor='none')
+    [plt.plot(cell.ymid[idx], -cell.xmid[idx], 'D', color=clr(numb)) for numb, idx in enumerate(idx_list)]
+    plt.plot(cell.ymid[input_idx], -cell.xmid[input_idx], '*', color='y', ms=15)
+    plt.axis('equal')
+
+    plt.subplot(222, title='Vmem')
+    [plt.plot(cell.tvec, vmem[numb, :], color=clr(numb)) for numb, idx in enumerate(idx_list)]
+
+    plt.subplot(224, title='Imem')
+    [plt.plot(cell.tvec, imem[numb, :], color=clr(numb)) for numb, idx in enumerate(idx_list)]
+
+
+    fig_name = 'ZAP_%d_%1.3f' % (input_idx, input_scaling)
+    if 'use_channels' in cell_params['custom_fun_args'][0] and \
+                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
+        for ion in cell_params['custom_fun_args'][0]['use_channels']:
+            fig_name += '_%s' % ion
+    else:
+        fig_name += '_passive'
+
+    if 'hold_potential' in cell_params['custom_fun_args'][0]:
+        fig_name += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
+    print "Saving ", fig_name
+    plt.savefig(join(figfolder, '%s.png' % fig_name), dpi=150)
+    #plt.show()
+
+
+
 def plot_resonance_to_ax(ax, input_idx, hold_potential, simfolder):
 
     control_clr = 'r'
@@ -781,5 +818,5 @@ def simple_test(input_idx, hold_potential):
 if __name__ == '__main__':
     # run_all_sims()
     # recreate_Hu_figs('simresults', '')
-    simple_test(0, -80)
+    # simple_test(0, -80)
     simple_test(0, -60)

@@ -149,7 +149,7 @@ proc topol() { local i
 proc shape3d_1() {
   soma {pt3dclear()
 	pt3dadd(0.6111, 1.111, 1.944, 10.998)
-	pt3dadd(2.5, -14.5, 0.5, 4.)
+	pt3dadd(2.5, -14.5, 0.5, 0.3)
   }
   axon_hillock[0] {pt3dclear()
 	pt3dadd(2.5, -14.5, 0.5, 4)

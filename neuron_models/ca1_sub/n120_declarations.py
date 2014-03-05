@@ -11,16 +11,17 @@ import pylab as plt
 import aLFP
 from ca1_sub_declarations import active_declarations
 
+
 def test_steady_state(input_idx, hold_potential):
 
     timeres = 2**-4
     cut_off = 0
     tstopms = 500
     tstartms = -cut_off
-    model_path = 'c12861'
+    model_path = 'n120'
 
     cell_params = {
-        'morphology': join(model_path, 'c12861.hoc'),
+        'morphology': join(model_path, 'n120.hoc'),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
@@ -34,14 +35,14 @@ def test_steady_state(input_idx, hold_potential):
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
         'custom_fun_args': [{'use_channels': ['Im'],
-                             'apic_root_segment': 'apic[92]',
+                             'apic_root_segment': 'apic[9]',
                              'cellname': model_path,
                              'hold_potential': hold_potential}],
     }
 
     cell = LFPy.Cell(**cell_params)
 
-    apic_stim_idx = cell.get_idx('apic[66]')[0]
+    apic_stim_idx = cell.get_idx('apic[8]')[0]
     figfolder = join(model_path, 'verifications')
     if not os.path.isdir(figfolder): os.mkdir(figfolder)
 
@@ -83,6 +84,6 @@ def test_steady_state(input_idx, hold_potential):
     #plot_cell_steady_state(cell)
 
 if __name__ == '__main__':
-    aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
+    # aLFP.explore_morphology(join('n120', 'n120.hoc'))
 
-    #test_steady_state(0, -80)
+    test_steady_state(0, -80)
