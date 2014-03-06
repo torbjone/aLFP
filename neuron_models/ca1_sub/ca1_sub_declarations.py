@@ -54,10 +54,10 @@ def insert_Im(section_dict):
             sec.insert("Im_BK")
             for seg in sec:
                 if nrn.distance(seg.x) < max_dist:
-                    print sec.name(), "gets IM"
+                    # print sec.name(), "gets IM"
                     seg.gkbar_Im_BK = gkm
                 else:
-                    print sec.name(), "doesn't get IM"
+                    # print sec.name(), "doesn't get IM"
                     seg.gkbar_Im_BK = 0
 
 
@@ -109,7 +109,7 @@ def make_uniform(Vrest):
 
 def make_section_lists(cellname):
 
-    # Apical tuft root is at end of apic[9]
+
     section_dict = {'somatic': nrn.SectionList(),
                     'myelinated_axonal': nrn.SectionList(),
                     'axonal_hillock': nrn.SectionList(),
@@ -120,7 +120,7 @@ def make_section_lists(cellname):
                     'apic_tuft': nrn.SectionList(),
                    }
 
-    if name == 'n120':
+    if cellname == 'n120':
         apic_trunk_numbs = np.arange(10)
         apic_tuft_numbs = np.arange(10, 26)
         oblique_tuft_numbs = np.arange(26, 52)
@@ -199,7 +199,7 @@ def plot_cell_sections(section_dict):
     plt.show()
 
 
-def modify_morphology(section_dict, apic_root_segment):
+def modify_morphology(section_dict, cellname):
 
     for sec in section_dict['basal']:
         for i in xrange(int(nrn.n3d())):
@@ -208,6 +208,13 @@ def modify_morphology(section_dict, apic_root_segment):
     for sec in section_dict['oblique_dendrites']:
         for i in xrange(int(nrn.n3d())):
             nrn.pt3dchange(i, 0.73)
+
+    if cellname == 'n120':
+        apic_root_segment = 'apic[9]'
+    elif cellname == 'c12861':
+        apic_root_segment = 'apic[92]'
+    else:
+        raise RuntimeError("Not known cellname!")
 
     nrn.distance()
     apic_tuft_root_diam = None
@@ -260,7 +267,6 @@ def biophys_passive(section_dict, **kwargs):
                'oblique_dendrites': 90000.,
                'apic_tuft': 20000.,
     }
-    
     cm_dict = {'somatic': 1.5,
                'axonal_IS': 1.5,
                'axonal_hillock': 1.5,
@@ -271,7 +277,6 @@ def biophys_passive(section_dict, **kwargs):
                'apic_tuft': 1.5,
     }
     ra = 100.
-
     for key, sec_list in section_dict.items():
         for sec in sec_list:
             sec.insert('pas')
@@ -279,6 +284,22 @@ def biophys_passive(section_dict, **kwargs):
             sec.g_pas = 1./rm_dict[key]
             sec.Ra = ra
             sec.cm = cm_dict[key]
+
+
+def area_study(cell):
+
+    soma_area = 0
+    total_area = 0
+
+    comp = 0
+    for sec in cell.allseclist:
+        for seg in sec:
+            if 'soma' in sec.name():
+                soma_area += cell.area[comp]
+            total_area += cell.area[comp]
+            comp += 1
+    print comp, cell.totnsegs
+    print "Cell total area: %1.3f\n Soma area: %1.3f" % (total_area, soma_area)
 
 
 def active_declarations(**kwargs):
@@ -292,7 +313,7 @@ def active_declarations(**kwargs):
 
     section_dict = make_section_lists(kwargs['cellname'])
 
-    modify_morphology(section_dict, kwargs['apic_root_segment'])
+    modify_morphology(section_dict, kwargs['cellname'])
     biophys_passive(section_dict, **kwargs)
     added_channels = 0
     if 'use_channels' in kwargs:
@@ -315,16 +336,16 @@ def active_declarations(**kwargs):
         make_uniform(kwargs['hold_potential'])
 
 
-def test_steady_state(input_idx, hold_potential):
+def test_steady_state(input_idx, hold_potential, cellname):
 
     timeres = 2**-4
     cut_off = 0
     tstopms = 500
     tstartms = -cut_off
-    model_path = 'n120'
+    model_path = cellname
 
     cell_params = {
-        'morphology': join(model_path, 'n120.hoc'),
+        'morphology': join(model_path, '%s.hoc' % cellname),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
@@ -337,15 +358,13 @@ def test_steady_state(input_idx, hold_potential):
         'tstartms': tstartms,          # start time, recorders start at t=0
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{'use_channels': ['Im'],
-                             'apic_root_segment': 'apic[9]',
+        'custom_fun_args': [{'use_channels': ['Ih', 'Im', 'INaP'],
                              'cellname': model_path,
                              'hold_potential': hold_potential}],
     }
 
     cell = LFPy.Cell(**cell_params)
-
-    apic_stim_idx = cell.get_idx('apic[8]')[0]
+    area_study(cell)
     figfolder = join(model_path, 'verifications')
     if not os.path.isdir(figfolder): os.mkdir(figfolder)
 
@@ -357,8 +376,6 @@ def test_steady_state(input_idx, hold_potential):
     soma_idx = 0
 
     print input_idx, hold_potential
-    idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
-                         trunk_idx, axon_idx, basal_idx])
 
     input_scaling = .01
 
@@ -384,9 +401,15 @@ def test_steady_state(input_idx, hold_potential):
     [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
     # plt.plot(cell.tvec, cell.somav)
     plt.show()
+    print cell.vmem[:, -1]
+    # plt.figure()
+    img = plt.scatter(cell.xmid, cell.ymid, c=cell.vmem[:, -1], edgecolor='none')
+    plt.axis('equal')
+    plt.colorbar(img)
+    plt.show()
     #plot_cell_steady_state(cell)
 
 if __name__ == '__main__':
     # aLFP.explore_morphology(join('n120', 'n120.hoc'))
 
-    test_steady_state(0, -80)
+    test_steady_state(0, -80, 'c12861')

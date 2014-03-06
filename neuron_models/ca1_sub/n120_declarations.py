@@ -21,7 +21,7 @@ def test_steady_state(input_idx, hold_potential):
     model_path = 'n120'
 
     cell_params = {
-        'morphology': join(model_path, 'n120.hoc'),
+        'morphology': join(model_path, '%s.hoc' % model_path),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
@@ -35,7 +35,6 @@ def test_steady_state(input_idx, hold_potential):
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
         'custom_fun_args': [{'use_channels': ['Im'],
-                             'apic_root_segment': 'apic[9]',
                              'cellname': model_path,
                              'hold_potential': hold_potential}],
     }
