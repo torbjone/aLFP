@@ -96,7 +96,7 @@ cell_params_py = {
     #'rm' : 30000,               # membrane resistance
     #'cm' : 1.0,                 # membrane capacitance
     #'Ra' : 100,                 # axial resistance
-    'v_init': -60,             # initial crossmembrane potential
+    'v_init': -70,             # initial crossmembrane potential
     'passive': False,           # switch on passive mechs
     'nsegs_method': 'lambda_f',  # method for setting number of segments,
     'lambda_f': 100,           # segments are isopotential at this frequency
@@ -279,13 +279,13 @@ def test_linearized_no_input():
                                        join(model_path, 'biophys3_Ih_linearized_mod.hoc')]
 
     cell_params_py['custom_fun_args'] = [{'conductance_type': 'Ih_linearized',
-                                           'hold_potential': -70}]
+                                          'hold_potential': -70}]
 
-    plt.seed(0)
-    neuron.h('forall delete_section()')
-    cell = LFPy.Cell(**cell_params_hoc)
-    cell.simulate(rec_vmem=True, rec_imem=True)
-    plot_cell(cell, '6_linearized_no_input_hoc')
+    # plt.seed(0)
+    # neuron.h('forall delete_section()')
+    # cell = LFPy.Cell(**cell_params_hoc)
+    # cell.simulate(rec_vmem=True, rec_imem=True)
+    # plot_cell(cell, '6_linearized_no_input_hoc')
 
     plt.seed(0)
     neuron.h('forall delete_section()')
@@ -323,11 +323,11 @@ def test_linearized():
 
 if __name__ == '__main__':
 
-    test_active_mod()
-    test_active_orig()
-    test_active_mod_no_input()
-    test_active_no_input()
-    test_passive_no_input()
-    test_passive()
+    # test_active_mod()
+    # test_active_orig()
+    # test_active_mod_no_input()
+    # test_active_no_input()
+    # test_passive_no_input()
+    # test_passive()
     test_linearized_no_input()
-    test_linearized()
+    # test_linearized()

@@ -5,6 +5,7 @@ import neuron
 import LFPy
 from os.path import join
 
+
 def make_cell_uniform(Vrest=-60):
     neuron.h.t = 0
     neuron.h.finitialize(Vrest)
@@ -13,13 +14,15 @@ def make_cell_uniform(Vrest=-60):
         for seg in sec:
             seg.e_pas = seg.v
             if neuron.h.ismembrane("na_ion"):
-                seg.e_pas = seg.e_pas + seg.ina/seg.g_pas
+                seg.e_pas += seg.ina/seg.g_pas
             if neuron.h.ismembrane("k_ion"):
-                seg.e_pas = seg.e_pas + seg.ik/seg.g_pas
+                seg.e_pas += seg.ik/seg.g_pas
             if neuron.h.ismembrane("Ih"):
-                seg.e_pas = seg.e_pas + seg.ihcn_Ih/seg.g_pas
+                seg.e_pas += seg.ihcn_Ih/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_mod"):
                 seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_mod/seg.g_pas
+                # seg.e_pas += (seg.gIhbar_Ih_linearized_mod * seg.mInf_Ih_linearized_mod *
+                #               (Vrest-seg.ehcn_Ih_linearized_mod)/seg.g_pas)
             if neuron.h.ismembrane("ca_ion"):
                 seg.e_pas = seg.e_pas + seg.ica/seg.g_pas
 
@@ -54,7 +57,7 @@ def biophys_passive(**kwargs):
 
 def biophys_Ih_linearized(**kwargs):
 
-    Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -60
+    Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
 
     for sec in neuron.h.allsec():
         sec.insert('pas')

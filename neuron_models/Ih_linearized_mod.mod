@@ -4,7 +4,7 @@
 NEURON	{
 	SUFFIX Ih_linearized_mod
 	NONSPECIFIC_CURRENT ihcn
-	RANGE gIhbar, vss, ihcn
+	RANGE gIhbar, vss, ihcn, mInf, ehcn
 }
 
 UNITS	{
@@ -61,5 +61,5 @@ INITIAL{
 	foo 	= mAlpha/(a3*a1) * exp((vss + a2)/a3) + (vss + a2)/b2 - 1
 	dminf 	= - mBeta/mAlpha / (1 + mBeta/mAlpha)^2 /(vss + a2) * foo
 	mTau 	= 1/(mAlpha + mBeta)
-	m 	= mInf : SURE ABOUT THIS ONE? Not as in qa.mod
+	m 	= 0 :mInf : SURE ABOUT THIS ONE? Not as in qa.mod
 }
