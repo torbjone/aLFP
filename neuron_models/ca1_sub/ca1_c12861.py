@@ -903,16 +903,16 @@ if __name__ == '__main__':
     # Things to try: No uniformifying. One and one frequency?
 
     # run_all_sims()
-    # recreate_Hu_figs('n120')
+    recreate_Hu_figs('n120')
     # recreate_Hu_figs('c12861')
 
     # simple_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
 
     # Sim 1
-    ZAP_test(0, -65, ['Ih', 'Im', 'INaP'], 'n120')
-    ZAP_test(0, -65, ['Ih', 'Im', 'INaP'], 'c12861')
-    ZAP_test('apic', -65, ['Ih', 'Im', 'INaP'], 'n120')
-    ZAP_test('apic', -65, ['Ih', 'Im', 'INaP'], 'c12861')
+    # ZAP_test(0, -65, ['Ih', 'Im', 'INaP'], 'n120')
+    # ZAP_test(0, -65, ['Ih', 'Im', 'INaP'], 'c12861')
+    # ZAP_test('apic', -65, ['Ih', 'Im', 'INaP'], 'n120')
+    # ZAP_test('apic', -65, ['Ih', 'Im', 'INaP'], 'c12861')
     #
     # ZAP_test(0, -60, ['Ih', 'Im'], 'n120')
     # ZAP_test(0, -60, ['Ih', 'Im'], 'c12861')
