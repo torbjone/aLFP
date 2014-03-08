@@ -97,7 +97,7 @@ def make_uniform(Vrest):
                 # print sec.name(), seg.e_pas, seg.ina, seg.g_pas, seg.ina/seg.g_pas
                 seg.e_pas += seg.ina/seg.g_pas
             if nrn.ismembrane("k_ion"):
-                print sec.name(), "has ik", seg.ik
+                # print sec.name(), "has ik", seg.ik
                 seg.e_pas += seg.ik/seg.g_pas
             if nrn.ismembrane("Ih_BK_prox"):
                 seg.e_pas += seg.ih_Ih_BK_prox/seg.g_pas
@@ -331,6 +331,8 @@ def active_declarations(**kwargs):
             added_channels += 1
         if not added_channels == len(kwargs['use_channels']):
             raise RuntimeError("The right number of channels was not inserted!")
+    else:
+        raise RuntimeError("Not specified how to initialize cell!")
 
     if 'hold_potential' in kwargs:
         make_uniform(kwargs['hold_potential'])
@@ -401,7 +403,7 @@ def test_steady_state(input_idx, hold_potential, cellname):
     [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
     # plt.plot(cell.tvec, cell.somav)
     plt.show()
-    print cell.vmem[:, -1]
+    # print cell.vmem[:, -1]
     # plt.figure()
     img = plt.scatter(cell.xmid, cell.ymid, c=cell.vmem[:, -1], edgecolor='none')
     plt.axis('equal')

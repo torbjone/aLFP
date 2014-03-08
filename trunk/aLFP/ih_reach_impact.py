@@ -14,24 +14,24 @@ except:
 import aLFP
 from matplotlib.colors import LogNorm
 
-def save_synaptic_data(cell, sim_name, cell_name, electrode):
-
-    np.save(join(cell_name, '%s_tvec.npy' % sim_name), cell.tvec)
-    np.save(join(cell_name, '%s_sig.npy' % sim_name), electrode.LFP)
-    np.save(join(cell_name, '%s_vmem.npy' % sim_name), cell.vmem)
-    np.save(join(cell_name, '%s_imem.npy' % sim_name), cell.imem)
-    np.save(join(cell_name, '%s_mapping.npy' % sim_name), electrode.electrodecoeff)
-    if not os.path.isfile(join(cell_name, 'xstart.npy')):
-        np.save(join(cell_name, 'xstart.npy'), cell.xstart)
-        np.save(join(cell_name, 'ystart.npy'), cell.ystart)
-        np.save(join(cell_name, 'zstart.npy'), cell.zstart)
-        np.save(join(cell_name, 'xend.npy'), cell.xend)
-        np.save(join(cell_name, 'yend.npy'), cell.yend)
-        np.save(join(cell_name, 'zend.npy'), cell.zend)
-        np.save(join(cell_name, 'xmid.npy'), cell.xmid)
-        np.save(join(cell_name, 'ymid.npy'), cell.ymid)
-        np.save(join(cell_name, 'zmid.npy'), cell.zmid)
-        np.save(join(cell_name, 'diam.npy'), cell.diam)
+def save_synaptic_data(cell, sim_name, cellname, electrode):
+    if not os.path.isdir(cellname): os.mkdir(cellname)
+    np.save(join(cellname, '%s_tvec.npy' % sim_name), cell.tvec)
+    np.save(join(cellname, '%s_sig.npy' % sim_name), electrode.LFP)
+    np.save(join(cellname, '%s_vmem.npy' % sim_name), cell.vmem)
+    np.save(join(cellname, '%s_imem.npy' % sim_name), cell.imem)
+    np.save(join(cellname, '%s_mapping.npy' % sim_name), electrode.electrodecoeff)
+    if not os.path.isfile(join(cellname, 'xstart.npy')):
+        np.save(join(cellname, 'xstart.npy'), cell.xstart)
+        np.save(join(cellname, 'ystart.npy'), cell.ystart)
+        np.save(join(cellname, 'zstart.npy'), cell.zstart)
+        np.save(join(cellname, 'xend.npy'), cell.xend)
+        np.save(join(cellname, 'yend.npy'), cell.yend)
+        np.save(join(cellname, 'zend.npy'), cell.zend)
+        np.save(join(cellname, 'xmid.npy'), cell.xmid)
+        np.save(join(cellname, 'ymid.npy'), cell.ymid)
+        np.save(join(cellname, 'zmid.npy'), cell.zmid)
+        np.save(join(cellname, 'diam.npy'), cell.diam)
 
 
 def quick_plot(cell, electrode, sim_name, cell_name,
@@ -90,9 +90,8 @@ def quick_plot(cell, electrode, sim_name, cell_name,
     plt.savefig('%s.png' %sim_name)
 
 
-
 def synaptic_reach_simulation(cell_name, cell_params, input_pos,
-                              hold_potential, conductance_type, just_plot):
+                              hold_potential, just_plot, **kwargs):
 
     num_elecs_x = 20
     num_elecs_z = 60
@@ -108,16 +107,23 @@ def synaptic_reach_simulation(cell_name, cell_params, input_pos,
         'z': elec_z.flatten()
     }
 
-
     electrode = LFPy.RecExtElectrode(**electrode_parameters)
 
     neuron.h('forall delete_section()')
     cell = LFPy.Cell(**cell_params)
 
+    if 0:
+        plt.scatter(cell.xmid, cell.zmid)
+        plt.scatter(elec_x.flatten(), elec_z.flatten())
+        plt.show()
+
     if input_pos == 'soma':
         input_idx = 0
     elif input_pos == 'apic':
-        input_idx = cell.get_closest_idx(0, 0, 1000)
+        if cell_name == 'hay':
+            input_idx = cell.get_closest_idx(0, 0, 1000)
+        else:
+            input_idx = cell.get_closest_idx(0, 0, 400)
     else:
         raise RuntimeError("Unknown input position: %s" % input_pos)
 
@@ -133,7 +139,14 @@ def synaptic_reach_simulation(cell_name, cell_params, input_pos,
 
     synapse = LFPy.Synapse(cell, **synapse_parameters)
     synapse.set_spike_times(np.array([5.]))
-    sim_name = '%s_%d_%+d_%s' % (cell_name, input_idx, hold_potential, conductance_type)
+    if 'conductance_type' in kwargs:
+        sim_name = '%s_%d_%+d_%s' % (cell_name, input_idx, hold_potential, kwargs['conductance_type'])
+    elif 'use_channels' in kwargs:
+        sim_name = '%s_%d_%+d' % (cell_name, input_idx, hold_potential)
+        for ion in kwargs['use_channels']:
+            sim_name += '_%s' % ion
+    else:
+        raise RuntimeError("Can't find proper name!")
     if not just_plot:
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
         save_synaptic_data(cell, sim_name, cell_name, electrode)

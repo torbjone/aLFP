@@ -14,26 +14,45 @@ try:
     from ipdb import set_trace
 except:
     pass
-import pylab as pl
+import pylab as plt
 from os.path import join
 import aLFP
-from hay_active_declarations import active_declarations
+from hay_active_declarations import active_declarations as hay_active
+from ca1_sub_declarations import active_declarations as ca1_sub_active
+
+neuron_models = join('..', 'neuron_models')
+
+hay_dict = {
+    'cellname': 'hay',
+    'mechanisms': [join(neuron_models, 'hay', 'mod'), neuron_models],
+    'morphology': join(neuron_models, 'hay', 'lfpy_version', 'morphologies', 'cell1.hoc'),
+    'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
+    'active_declarations': hay_active,
+}
+
+c12861_sub_dict = {
+    'cellname': 'c12861',
+    'mechanisms': [join(neuron_models, 'ca1_sub')],
+    'morphology': join(neuron_models, 'ca1_sub', 'c12861', 'c12861.hoc'),
+    'active_declarations': ca1_sub_active,
+}
+n120_sub_dict = {
+    'cellname': 'n120',
+    'mechanisms': [join(neuron_models, 'ca1_sub')],
+    'morphology': join(neuron_models, 'ca1_sub', 'n120', 'n120.hoc'),
+    'active_declarations': ca1_sub_active,
+}
 
 
-def simulate(cell_name, input_pos, hold_potential, conductance_type, just_plot):
-    model = 'hay'
-    if at_stallo:
-        neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
-    else:
-        neuron_model = join('..', 'neuron_models', model)
-    model_path = join(neuron_model, 'lfpy_version')
-    LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
-    LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))
+def simulate(model_dict, input_pos, hold_potential, just_plot, **kwargs):
+
+    cellname = model_dict['cellname']
+    [neuron.load_mechanisms(mech) for mech in model_dict['mechanisms']]
     timeres = 2**-4
     tstopms = 100
 
     cell_params = {
-        'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
+        'morphology': model_dict['morphology'],
         'v_init': hold_potential,             # initial crossmembrane potential
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
@@ -42,35 +61,33 @@ def simulate(cell_name, input_pos, hold_potential, conductance_type, just_plot):
         'timeres_python': timeres,
         'tstartms': 0,          # start time, recorders start at t=0
         'tstopms': tstopms,
-        'custom_code': [join(model_path, 'custom_codes.hoc')],
-        'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{'conductance_type': conductance_type,
-                             'hold_potential': hold_potential}],
+        'custom_fun': [model_dict['active_declarations']],  # will execute this function
+
     }
+    if model_dict['cellname'] == 'hay':
+        cell_params['custom_fun_args'] = [{
+                                    'conductance_type': kwargs['conductance_type'],
+                                    'hold_potential': hold_potential}]
+        cell_params['custom_code'] = model_dict['custom_code']
+    elif model_dict['cellname'] == 'c12861' or model_dict['cellname'] == 'n120':
+        cell_params['custom_fun_args'] = [{'use_channels': kwargs['use_channels'],
+                                            'cellname': cellname,
+                                            'hold_potential': hold_potential}]
     np.random.seed(1234)
-    aLFP.synaptic_reach_simulation(cell_name, cell_params, input_pos,
-                                   hold_potential, conductance_type, just_plot)
+    aLFP.synaptic_reach_simulation(cellname, cell_params, input_pos,
+                                   hold_potential, just_plot, **kwargs)
 
 if __name__ == '__main__':
 
     just_plot = False
-    # simulate('hay', 'soma', -60, 'active', just_plot)
-    # simulate('hay', 'apic', -60, 'active', just_plot)
-    # simulate('hay', 'soma', -60, 'Ih_linearized', just_plot)
-    # simulate('hay', 'apic', -60, 'Ih_linearized', just_plot)
-    # simulate('hay', 'soma', -60, 'passive', just_plot)
-    # simulate('hay', 'apic', -60, 'passive', just_plot)
 
-    # simulate('hay', 'soma', -70, 'active', just_plot)
-    # simulate('hay', 'apic', -70, 'active', just_plot)
-    # simulate('hay', 'soma', -70, 'Ih_linearized', just_plot)
-    simulate('hay', 'apic', -70, 'Ih_linearized', just_plot)
-    # simulate('hay', 'soma', -70, 'passive', just_plot)
-    # simulate('hay', 'apic', -70, 'passive', just_plot)
+    channel_pert = [['Ih', 'Im', 'INaP'],
+                    ['Ih', 'INaP'],
+                    ['Im', 'INaP']]
 
-    # simulate('hay', 'soma', -80, 'active', just_plot)
-    # simulate('hay', 'apic', -80, 'active', just_plot)
-    # simulate('hay', 'soma', -80, 'Ih_linearized', just_plot)
-    # simulate('hay', 'apic', -80, 'Ih_linearized', just_plot)
-    # simulate('hay', 'soma', -80, 'passive', just_plot)
-    # simulate('hay', 'apic', -80, 'passive', just_plot)
+    for di in [c12861_sub_dict, n120_sub_dict]:
+        for pot in [-60, -70, -80]:
+            for chan_list in channel_pert:
+                for input_pos in ['soma', 'apic']:
+                    print di, input_pos, pot, chan_list
+                    simulate(di, input_pos, pot, just_plot, use_channels=chan_list)
