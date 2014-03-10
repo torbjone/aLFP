@@ -1551,10 +1551,10 @@ def explore_morphology(morph_path):
         name = sec.name()
         clr = 'r' if name == 'apic[92]' else 'k'
         for segnum, seg in enumerate(sec):
-            plt.plot([cell.xstart[comp], cell.xend[comp]], [cell.ystart[comp], cell.yend[comp]],
+            plt.plot([cell.xstart[comp], cell.xend[comp]], [cell.zstart[comp], cell.zend[comp]],
                      lw=cell.diam[comp], color=clr)
             if segnum == sec.nseg - 1:
-                plt.text(cell.xend[comp], cell.yend[comp], name)
+                plt.text(cell.xend[comp], cell.zend[comp], name)
             comp += 1
     plt.axis('equal')
     plt.show()

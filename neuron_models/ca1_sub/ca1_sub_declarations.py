@@ -94,10 +94,8 @@ def make_uniform(Vrest):
         for seg in sec:
             seg.e_pas = seg.v
             if nrn.ismembrane("na_ion"):
-                # print sec.name(), seg.e_pas, seg.ina, seg.g_pas, seg.ina/seg.g_pas
                 seg.e_pas += seg.ina/seg.g_pas
             if nrn.ismembrane("k_ion"):
-                # print sec.name(), "has ik", seg.ik
                 seg.e_pas += seg.ik/seg.g_pas
             if nrn.ismembrane("Ih_BK_prox"):
                 seg.e_pas += seg.ih_Ih_BK_prox/seg.g_pas
@@ -276,14 +274,38 @@ def biophys_passive(section_dict, **kwargs):
                'oblique_dendrites': 1.5,
                'apic_tuft': 1.5,
     }
-    ra = 100.
+
+    area_of_spine = lambda diam_head, diam_neck, length_neck: np.pi * (diam_head**2 +
+                                                                       diam_neck * length_neck -
+                                                                       0.25 * diam_neck**2)
+    spine_factors = {'somatic': 1,
+                    'axonal_IS': 1,
+                    'axonal_hillock': 1,
+                    'myelinated_axonal': 1,
+                    'basal': 1 + 1.26 * area_of_spine(0.45, 0.15, 0.45),
+                    'apic_trunk': 1 + 1.27 * area_of_spine(0.45, 0.15, 0.45),
+                    'oblique_dendrites': 1 + 1.43 * area_of_spine(0.45, 0.15, 0.45),
+                    'apic_tuft': 1 + 0.6 * area_of_spine(0.56, 0.15, 0.45)}
+    nrn.distance()
     for key, sec_list in section_dict.items():
         for sec in sec_list:
             sec.insert('pas')
             sec.e_pas = Vrest
+            sec.Ra = 100.
             sec.g_pas = 1./rm_dict[key]
-            sec.Ra = ra
             sec.cm = cm_dict[key]
+            if key == 'apic_trunk':
+                for seg in sec:
+                    spine_corr = spine_factors[key] if nrn.distance(seg.x) > 100 else 1.
+                    # print sec.name(), nrn.distance(seg.x), spine_corr
+            elif key == 'basal':
+                for seg in sec:
+                    spine_corr = spine_factors[key] if nrn.distance(seg.x) > 20 else 1.
+                    # print sec.name(), nrn.distance(seg.x), spine_corr
+            else:
+                spine_corr = spine_factors[key]
+            sec.g_pas *= spine_corr
+            sec.cm *= spine_corr
 
 
 def area_study(cell):
@@ -312,6 +334,8 @@ def active_declarations(**kwargs):
     # TODO: Do we see the resonance properties we expect?
 
     section_dict = make_section_lists(kwargs['cellname'])
+
+    # TODO: Does all sections only have one segment initially?
 
     modify_morphology(section_dict, kwargs['cellname'])
     biophys_passive(section_dict, **kwargs)
@@ -412,6 +436,6 @@ def test_steady_state(input_idx, hold_potential, cellname):
     #plot_cell_steady_state(cell)
 
 if __name__ == '__main__':
-    # aLFP.explore_morphology(join('n120', 'n120.hoc'))
+    aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
 
-    test_steady_state(0, -80, 'c12861')
+    # test_steady_state(0, -80, 'c12861')

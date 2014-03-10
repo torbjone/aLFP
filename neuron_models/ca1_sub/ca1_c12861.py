@@ -9,7 +9,7 @@ import LFPy
 import numpy as np
 import pylab as plt
 import scipy.fftpack as ff
-from c12861_declarations import active_declarations
+from ca1_sub_declarations import active_declarations
 from scipy.signal import argrelextrema
 
 def find_LFP_power(sig, timestep):
@@ -336,16 +336,16 @@ def recreate_Hu_figs(cellname):
     # clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
 
     if cellname == 'n120':
-        apic_idx = 455
+        apic_idx = 631
     elif cellname == 'c12861':
-        apic_idx = 573
+        apic_idx = 793
     else:
         raise RuntimeError("Unknown cellname!")
     soma_idx = 0
     simfolder = join(cellname, 'simresults')
 
     hyp_potential = -80
-    dep_potential = -62
+    dep_potential = -60
 
     morph_ax = fig.add_subplot(131, title='Star marks white noise input')
     soma_hyp_ax = fig.add_subplot(232, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
@@ -365,6 +365,7 @@ def recreate_Hu_figs(cellname):
     plot_ZAP_PSD_to_ax(soma_hyp_ax, soma_idx, hyp_potential, simfolder, hyp_potential, dep_potential)
 
     plt.savefig(join('Hu_fig_4_%s_ZAP.png' % cellname), dpi=150)
+
 
 def insert_bunch_of_synapses(cell):
 
@@ -463,7 +464,6 @@ def savedata_ZAP(cell, simname, input_idx, stim, input_scaling, max_freq):
     impedance = (cell.vmem[input_idx, :] - cell.vmem[input_idx, 0]) / input_scaling
     lower_idxs = argrelextrema(impedance, np.less)
     upper_idxs = argrelextrema(impedance, np.greater)
-    print lower_idxs, upper_idxs
 
     np.save('%s_impedance_u.npy' % simname, impedance[upper_idxs])
     np.save('%s_freqs_u.npy' % simname, freqs[upper_idxs])
@@ -683,13 +683,11 @@ def loaddata_ZAP(cell, simname, input_idx, stim):
 
 def plot_ZAP(cell, input_idx, input_scaling, idx_list, cell_params, figfolder, stim_i, max_freq):
 
-
     clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
 
     freqs, imem_psd = find_LFP_power(cell.imem[input_idx, :-1], cell.timeres_python/1000.)
     freqs, stim_psd = find_LFP_power(stim_i[:-1], cell.timeres_python/1000.)
     freqs, vmem_psd = find_LFP_power(cell.vmem[input_idx, :-1], cell.timeres_python/1000.)
-
 
     t_freqs = np.linspace(0, 1, len(cell.tvec)) * max_freq
 
@@ -709,12 +707,12 @@ def plot_ZAP(cell, input_idx, input_scaling, idx_list, cell_params, figfolder, s
     # plt.semilogy(freqs, stim_psd, 'k')
     #
     # plt.show()
-
+    plt.close('all')
     plt.figure(figsize=[12, 8])
     plt.subplot(131, title='Star marks white noise input')
-    plt.scatter(cell.xmid, cell.ymid, c='grey', edgecolor='none')
-    [plt.plot(cell.xmid[idx], cell.ymid[idx], 'D', color=clr(numb)) for numb, idx in enumerate(idx_list)]
-    plt.plot(cell.xmid[input_idx], cell.ymid[input_idx], '*', color='y', ms=15)
+    plt.scatter(cell.xmid, cell.zmid, c='grey', edgecolor='none')
+    [plt.plot(cell.xmid[idx], cell.zmid[idx], 'D', color=clr(numb)) for numb, idx in enumerate(idx_list)]
+    plt.plot(cell.xmid[input_idx], cell.zmid[input_idx], '*', color='y', ms=15)
     plt.axis('equal')
 
     plt.subplot(232, title='Vmem')
@@ -847,9 +845,9 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
     cell = LFPy.Cell(**cell_params)
 
     if cellname == 'c12861':
-        apic_stim_idx = cell.get_idx('apic[66]')[0]
+        apic_stim_idx = cell.get_idx('apic[66]')[len(cell.get_idx('apic[5]'))/2]
     elif cellname == 'n120':
-        apic_stim_idx = cell.get_idx('apic[1]')[-1]
+        apic_stim_idx = cell.get_idx('apic[5]')[len(cell.get_idx('apic[5]'))/2]
     else:
         raise RuntimeError("Cellname not recognized!")
     if input_idx == 'apic':
@@ -859,10 +857,10 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
     if not os.path.isdir(figfolder): os.mkdir(figfolder)
 
     plt.seed(1)
-    apic_tuft_idx = cell.get_closest_idx(-100, 500, 0)
-    trunk_idx = cell.get_closest_idx(0, 300, 0)
+    apic_tuft_idx = cell.get_closest_idx(-100, 0, 500)
+    trunk_idx = cell.get_closest_idx(0, 0, 300)
     axon_idx = cell.get_idx('axon_IS')[0]
-    basal_idx = cell.get_closest_idx(-50, -100, 0)
+    basal_idx = cell.get_closest_idx(-50, 0, -100)
     soma_idx = 0
 
     print input_idx, hold_potential
@@ -896,30 +894,35 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
              figfolder, stim.i, 15)
 
 
-
-
 if __name__ == '__main__':
 
-    # Things to try: No uniformifying. One and one frequency?
-
     # run_all_sims()
-    recreate_Hu_figs('n120')
-    # recreate_Hu_figs('c12861')
+
 
     # simple_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
 
-    # Sim 1
-    # ZAP_test(0, -65, ['Ih', 'Im', 'INaP'], 'n120')
-    # ZAP_test(0, -65, ['Ih', 'Im', 'INaP'], 'c12861')
-    # ZAP_test('apic', -65, ['Ih', 'Im', 'INaP'], 'n120')
-    # ZAP_test('apic', -65, ['Ih', 'Im', 'INaP'], 'c12861')
-    #
-    # ZAP_test(0, -60, ['Ih', 'Im'], 'n120')
-    # ZAP_test(0, -60, ['Ih', 'Im'], 'c12861')
-    # ZAP_test('apic', -60, ['Ih', 'Im'], 'n120')
-    # ZAP_test('apic', -60, ['Ih', 'Im'], 'c12861')
+    # Control
+    ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test('apic', -80, ['Im', 'INaP'], 'n120')
+    ZAP_test('apic', -60, ['Ih', 'INaP'], 'n120')
 
-    # ZAP_test(0, -50, ['Ih', 'Im'], 'n120')
-    # ZAP_test(0, -50, ['Ih', 'Im'], 'c12861')
-    # ZAP_test('apic', -50, ['Ih', 'Im'], 'n120')
-    # ZAP_test('apic', -50, ['Ih', 'Im'], 'c12861')
+    ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test(0, -80, ['Im', 'INaP'], 'n120')
+    ZAP_test(0, -60, ['Ih', 'INaP'], 'n120')
+
+    # Control
+    ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'c12861')
+    ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'c12861')
+    ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
+    ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'c12861')
+
+    # Reduced
+    ZAP_test(0, -80, ['Im', 'INaP'], 'c12861')
+    ZAP_test('apic', -80, ['Im', 'INaP'], 'c12861')
+    ZAP_test(0, -60, ['Ih', 'INaP'], 'c12861')
+    ZAP_test('apic', -60, ['Ih', 'INaP'], 'c12861')
+
+    recreate_Hu_figs('n120')
+    recreate_Hu_figs('c12861')

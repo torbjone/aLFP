@@ -63,8 +63,6 @@ def quick_plot(cell, electrode, sim_name, cell_name,
     [ax2.plot([cell.ystart[comp], cell.yend[comp]], [cell.zstart[comp], cell.zend[comp]],
               color='k') for comp in xrange(cell.totnsegs)]
 
-
-
     max_t_idxs = np.argmax(np.abs(LFP), axis=1)
     amps = np.array([LFP[elec_idx, max_t_idxs[elec_idx]] for elec_idx in xrange(len(max_t_idxs))])
 
@@ -81,7 +79,6 @@ def quick_plot(cell, electrode, sim_name, cell_name,
                        amps.reshape(num_elecs_z, num_elecs_x),
                        vmin=vmin, vmax=vmax, colors='k', levels=vlims)
     plt.colorbar(img, ax=ax3)
-
 
     [ax4.plot(tvec, vmem[idx, :]) for idx in xrange(cell.totnsegs)]
     ax1.plot(cell.xmid[input_idx], cell.zmid[input_idx], '*', color='y', ms=15)
@@ -135,7 +132,7 @@ def synaptic_reach_simulation(cell_name, cell_params, input_pos,
         'tau': 10.,                # syn. time constant
         'weight': 0.001,            # syn. weight
         'record_current': True,
-        }
+    }
 
     synapse = LFPy.Synapse(cell, **synapse_parameters)
     synapse.set_spike_times(np.array([5.]))
