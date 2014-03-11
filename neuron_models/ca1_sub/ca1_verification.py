@@ -272,12 +272,11 @@ def plot_resonance_to_ax(ax, input_idx, hold_potential, simfolder):
 #     ax.legend(lines, line_names, frameon=False)
 
 
-def plot_ZAP_PSD_to_ax(ax, input_idx, hold_potential, simfolder, hyp_potential, dep_potential):
+def plot_ZAP_PSD_to_ax(ax_c, ax_r, ax_imp, input_idx, hold_potential, simfolder, hyp_potential, dep_potential):
 
-    control_clr = 'r'
-    reduced_clr = 'b'
+    clr = 'b' if input_idx == 0 else 'r'
+
     input_scaling = 0.01
-
     control_name = 'ZAP_%d_%1.3f_Ih_Im_INaP_%+d' % (input_idx, input_scaling, hold_potential)
 
     if hold_potential == hyp_potential:
@@ -294,6 +293,13 @@ def plot_ZAP_PSD_to_ax(ax, input_idx, hold_potential, simfolder, hyp_potential, 
     control_vmem = np.load(join(simfolder, '%s_vmem.npy' % control_name))
     reduced_vmem = np.load(join(simfolder, '%s_vmem.npy' % reduced_name))
 
+    # padding = 0
+    # stim_i = np.r_[np.zeros(padding), stim_i, np.zeros(padding)]
+    # control_vmem = np.r_[np.ones(padding) * hold_potential, control_vmem, np.ones(padding) * hold_potential]
+    # reduced_vmem = np.r_[np.ones(padding) * hold_potential, reduced_vmem, np.ones(padding) * hold_potential]
+
+
+    t_freqs = np.linspace(0, 1, len(stim_i)) * 15
     freqs, stim_psd = find_LFP_power(stim_i[:-1], 1./1000.)
     freqs, control_vmem_psd = find_LFP_power(control_vmem[:-1], 1./1000.)
     freqs, reduced_vmem_psd = find_LFP_power(reduced_vmem[:-1], 1./1000.)
@@ -307,36 +313,40 @@ def plot_ZAP_PSD_to_ax(ax, input_idx, hold_potential, simfolder, hyp_potential, 
     impedance_reduced = reduced_vmem_psd / stim_psd
     impedance_control = control_vmem_psd / stim_psd
 
-    lc, = ax.plot(freqs, impedance_control, color=control_clr)
-    lr, = ax.plot(freqs, impedance_reduced, color=reduced_clr)
+    ax_c.plot(t_freqs, control_vmem, color=clr)
+    ax_r.plot(t_freqs, reduced_vmem, color=clr)
+
+    lc, = ax_imp.plot(freqs, impedance_control, color=clr)
+    lr, = ax_imp.plot(freqs, impedance_reduced, color=clr)
 
     lines = [lc, lr]
     line_names = ['Control', reduced_label]
-    ax.legend(lines, line_names, frameon=False)
+    ax_imp.legend(lines, line_names, frameon=False)
 
 
 def plot_morph_to_ax(ax, apic_idx, soma_idx, simfolder):
     xstart = np.load(join(simfolder, 'xstart.npy'))
-    ystart = np.load(join(simfolder, 'ystart.npy'))
+    zstart = np.load(join(simfolder, 'zstart.npy'))
     xend = np.load(join(simfolder, 'xend.npy'))
-    yend = np.load(join(simfolder, 'yend.npy'))
+    zend = np.load(join(simfolder, 'zend.npy'))
     xmid = np.load(join(simfolder, 'xmid.npy'))
-    ymid = np.load(join(simfolder, 'ymid.npy'))
+    zmid = np.load(join(simfolder, 'zmid.npy'))
 
-    [ax.plot([xstart[idx], xend[idx]], [ystart[idx], yend[idx]], color='gray')
+    [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], color='gray')
                 for idx in xrange(len(xend))]
-    ax.plot(xmid[soma_idx], ymid[soma_idx], 'D', color='r', ms=10)
-    ax.plot(xmid[apic_idx], ymid[apic_idx], '*', color='y', ms=15)
+    ax.plot(xmid[soma_idx], zmid[soma_idx], 'D', color='b', ms=10)
+    ax.plot(xmid[apic_idx], zmid[apic_idx], '*', color='r', ms=15)
     ax.axis('equal')
 
 
 def recreate_Hu_figs(cellname):
 
-    fig = plt.figure(figsize=[12, 8])
+    fig = plt.figure(figsize=[8, 12])
+    fig.subplots_adjust(hspace=0.5, wspace=0.5)
     # clr = lambda idx: plt.cm.jet(int(256. * idx/(len(idx_list) - 1)))
 
     if cellname == 'n120':
-        apic_idx = 631
+        apic_idx = 629
     elif cellname == 'c12861':
         apic_idx = 793
     else:
@@ -347,22 +357,51 @@ def recreate_Hu_figs(cellname):
     hyp_potential = -80
     dep_potential = -60
 
-    morph_ax = fig.add_subplot(131, title='Star marks white noise input')
-    soma_hyp_ax = fig.add_subplot(232, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
-                                  title='Soma input %d mV' % hyp_potential)
-    apic_hyp_ax = fig.add_subplot(233, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
+    morph_ax = fig.add_subplot(131, title='Star and diamond marks ZAP input')
+
+    soma_hyp_ax_c = fig.add_subplot(632, ylim=[hyp_potential - 1.5, hyp_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
+                                    title='Soma input control %d mV' % hyp_potential)
+    soma_hyp_ax_r = fig.add_subplot(635, ylim=[hyp_potential - 1.5, hyp_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
+                                    title='Soma input (No Ih) %d mV' % hyp_potential)
+    soma_hyp_ax_imp = fig.add_subplot(638, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
+                                    title='Soma input impedance %d mV' % hyp_potential)
+
+    apic_hyp_ax_c = fig.add_subplot(633, ylim=[hyp_potential - 1.5, hyp_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
                                   title='Apic input %d mV' % hyp_potential)
-    soma_dep_ax = fig.add_subplot(235, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
-                                  title='Soma input %d mV' % dep_potential)
-    apic_dep_ax = fig.add_subplot(236, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
-                                  title='Apic input %d mV' % dep_potential)
+
+    apic_hyp_ax_r = fig.add_subplot(636, ylim=[hyp_potential - 1.5, hyp_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
+                                  title='Apic input (No Ih) %d mV' % hyp_potential)
+    apic_hyp_ax_imp = fig.add_subplot(639, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
+                                  title='Apic input impedance %d mV' % hyp_potential)
+
+
+    soma_dep_ax_c = fig.add_subplot(6, 3, 11, ylim=[dep_potential - 1.5, dep_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
+                                  title='Soma input control %d mV' % dep_potential)
+
+    soma_dep_ax_r = fig.add_subplot(6, 3, 14, ylim=[dep_potential - 1.5, dep_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
+                                  title='Soma input (No Im) %d mV' % dep_potential)
+    soma_dep_ax_imp = fig.add_subplot(6, 3, 17, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
+                                  title='Soma input impedance %d mV' % dep_potential)
+
+    apic_dep_ax_c = fig.add_subplot(6, 3, 12, ylim=[dep_potential - 1.5, dep_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
+                                  title='Apic input control %d mV' % dep_potential)
+
+    apic_dep_ax_r = fig.add_subplot(6, 3, 15, ylim=[dep_potential - 1.5, dep_potential + 1.5], xlim=[0, 16], xlabel='Hz', ylabel='mV',
+                                  title='Apic input (No Im) %d mV' % dep_potential)
+
+    apic_dep_ax_imp = fig.add_subplot(6, 3, 18, ylim=[0, 200], xlim=[0, 16], xlabel='Hz', ylabel='M$\Omega$',
+                                  title='Apic input impedance %d mV' % dep_potential)
 
     plot_morph_to_ax(morph_ax, apic_idx, soma_idx, simfolder)
 
-    plot_ZAP_PSD_to_ax(apic_dep_ax, apic_idx, dep_potential, simfolder, hyp_potential, dep_potential)
-    plot_ZAP_PSD_to_ax(soma_dep_ax, soma_idx, dep_potential, simfolder, hyp_potential, dep_potential)
-    plot_ZAP_PSD_to_ax(apic_hyp_ax, apic_idx, hyp_potential, simfolder, hyp_potential, dep_potential)
-    plot_ZAP_PSD_to_ax(soma_hyp_ax, soma_idx, hyp_potential, simfolder, hyp_potential, dep_potential)
+    plot_ZAP_PSD_to_ax(apic_dep_ax_c, apic_dep_ax_r, apic_dep_ax_imp, apic_idx, dep_potential,
+                       simfolder, hyp_potential, dep_potential)
+    plot_ZAP_PSD_to_ax(soma_dep_ax_c, soma_dep_ax_r, soma_dep_ax_imp, soma_idx, dep_potential,
+                       simfolder, hyp_potential, dep_potential)
+    plot_ZAP_PSD_to_ax(apic_hyp_ax_c, apic_hyp_ax_r, apic_hyp_ax_imp, apic_idx, hyp_potential,
+                       simfolder, hyp_potential, dep_potential)
+    plot_ZAP_PSD_to_ax(soma_hyp_ax_c, soma_hyp_ax_r, soma_hyp_ax_imp, soma_idx, hyp_potential,
+                       simfolder, hyp_potential, dep_potential)
 
     plt.savefig(join('Hu_fig_4_%s_ZAP.png' % cellname), dpi=150)
 
@@ -440,17 +479,17 @@ def savedata(cell, simname, input_idx):
     np.save('%s_freqs.npy' % simname, freqs)
 
     folder = os.path.dirname(simname)
-    if not os.path.isfile(join(folder, 'xmid.npy')):
-        np.save(join(folder, 'xmid.npy'), cell.xmid)
-        np.save(join(folder, 'ymid.npy'), cell.ymid)
-        np.save(join(folder, 'zmid.npy'), cell.zmid)
-        np.save(join(folder, 'xend.npy'), cell.xend)
-        np.save(join(folder, 'yend.npy'), cell.yend)
-        np.save(join(folder, 'zend.npy'), cell.zend)
-        np.save(join(folder, 'xstart.npy'), cell.xstart)
-        np.save(join(folder, 'ystart.npy'), cell.ystart)
-        np.save(join(folder, 'zstart.npy'), cell.zstart)
-        np.save(join(folder, 'diam.npy'), cell.diam)
+    # if not os.path.isfile(join(folder, 'xmid.npy')):
+    np.save(join(folder, 'xmid.npy'), cell.xmid)
+    np.save(join(folder, 'ymid.npy'), cell.ymid)
+    np.save(join(folder, 'zmid.npy'), cell.zmid)
+    np.save(join(folder, 'xend.npy'), cell.xend)
+    np.save(join(folder, 'yend.npy'), cell.yend)
+    np.save(join(folder, 'zend.npy'), cell.zend)
+    np.save(join(folder, 'xstart.npy'), cell.xstart)
+    np.save(join(folder, 'ystart.npy'), cell.ystart)
+    np.save(join(folder, 'zstart.npy'), cell.zstart)
+    np.save(join(folder, 'diam.npy'), cell.diam)
 
 
 def savedata_ZAP(cell, simname, input_idx, stim, input_scaling, max_freq):
@@ -472,17 +511,17 @@ def savedata_ZAP(cell, simname, input_idx, stim, input_scaling, max_freq):
     np.save('%s_freqs_l.npy' % simname, freqs[lower_idxs])
 
     folder = os.path.dirname(simname)
-    if not os.path.isfile(join(folder, 'xmid.npy')):
-        np.save(join(folder, 'xmid.npy'), cell.xmid)
-        np.save(join(folder, 'ymid.npy'), cell.ymid)
-        np.save(join(folder, 'zmid.npy'), cell.zmid)
-        np.save(join(folder, 'xend.npy'), cell.xend)
-        np.save(join(folder, 'yend.npy'), cell.yend)
-        np.save(join(folder, 'zend.npy'), cell.zend)
-        np.save(join(folder, 'xstart.npy'), cell.xstart)
-        np.save(join(folder, 'ystart.npy'), cell.ystart)
-        np.save(join(folder, 'zstart.npy'), cell.zstart)
-        np.save(join(folder, 'diam.npy'), cell.diam)
+    #if not os.path.isfile(join(folder, 'xmid.npy')):
+    np.save(join(folder, 'xmid.npy'), cell.xmid)
+    np.save(join(folder, 'ymid.npy'), cell.ymid)
+    np.save(join(folder, 'zmid.npy'), cell.zmid)
+    np.save(join(folder, 'xend.npy'), cell.xend)
+    np.save(join(folder, 'yend.npy'), cell.yend)
+    np.save(join(folder, 'zend.npy'), cell.zend)
+    np.save(join(folder, 'xstart.npy'), cell.xstart)
+    np.save(join(folder, 'ystart.npy'), cell.ystart)
+    np.save(join(folder, 'zstart.npy'), cell.zstart)
+    np.save(join(folder, 'diam.npy'), cell.diam)
 
 
 def run_single_test(cell_params, input_array, input_idx, hold_potential, use_channels, sim_idx):
@@ -822,7 +861,6 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
     tstopms = 20000
     tstartms = -cut_off
     model_path = cellname
-
     cell_params = {
         'morphology': join(model_path, '%s.hoc' % cellname),
         #'rm' : 30000,               # membrane resistance
@@ -840,21 +878,42 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
         'custom_fun_args': [{'use_channels': use_channels,
                              'cellname': cellname,
                              'hold_potential': hold_potential}],
-    }
+        }
+    input_scaling = .01
     neuron.h('forall delete_section()')
     cell = LFPy.Cell(**cell_params)
 
     if cellname == 'c12861':
-        apic_stim_idx = cell.get_idx('apic[66]')[len(cell.get_idx('apic[5]'))/2]
+        apic_stim_idx = cell.get_idx('apic[66]')[len(cell.get_idx('apic[66]'))/2]
     elif cellname == 'n120':
-        apic_stim_idx = cell.get_idx('apic[5]')[len(cell.get_idx('apic[5]'))/2]
+        apic_stim_idx = cell.get_idx('apic[5]')[0]
     else:
         raise RuntimeError("Cellname not recognized!")
     if input_idx == 'apic':
         input_idx = apic_stim_idx
 
+    if 0:
+        plt.scatter(cell.xmid, cell.zmid)
+        plt.plot(cell.xmid[apic_stim_idx], cell.zmid[apic_stim_idx], 'rD')
+        plt.axis('equal')
+        plt.show()
+
     figfolder = join(model_path, 'verifications')
-    if not os.path.isdir(figfolder): os.mkdir(figfolder)
+    if not os.path.isdir(figfolder):
+        os.mkdir(figfolder)
+    simfolder = join(model_path, 'simresults')
+    if not os.path.isdir(simfolder):
+        os.mkdir(simfolder)
+    simname = join(simfolder, 'ZAP_%d_%1.3f' % (input_idx, input_scaling))
+    if 'use_channels' in cell_params['custom_fun_args'][0] and \
+                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
+        for ion in cell_params['custom_fun_args'][0]['use_channels']:
+            simname += '_%s' % ion
+    else:
+        simname += '_passive'
+
+    if 'hold_potential' in cell_params['custom_fun_args'][0]:
+        simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
 
     plt.seed(1)
     apic_tuft_idx = cell.get_closest_idx(-100, 0, 500)
@@ -867,27 +926,14 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
     idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
                          trunk_idx, axon_idx, basal_idx])
 
-    input_scaling = .01
     cell, stim = make_ZAP_stimuli(cell, input_idx, input_scaling)
 
     sim_params = {'rec_vmem': True,
                   'rec_imem': True,
                   'rec_istim': True,
                   'rec_variables': []}
+
     cell.simulate(**sim_params)
-
-    simfolder = join(model_path, 'simresults')
-    if not os.path.isdir(simfolder): os.mkdir(simfolder)
-    simname = join(simfolder, 'ZAP_%d_%1.3f' % (input_idx, input_scaling))
-    if 'use_channels' in cell_params['custom_fun_args'][0] and \
-                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
-        for ion in cell_params['custom_fun_args'][0]['use_channels']:
-            simname += '_%s' % ion
-    else:
-        simname += '_passive'
-
-    if 'hold_potential' in cell_params['custom_fun_args'][0]:
-        simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
 
     savedata_ZAP(cell, simname, input_idx, stim, input_scaling, 15)
     plot_ZAP(cell, input_idx, input_scaling, idx_list, cell_params,
@@ -896,33 +942,25 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
 
 if __name__ == '__main__':
 
-    # run_all_sims()
+    # ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'n120')
+    # ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'n120')
+    # ZAP_test('apic', -80, ['Im', 'INaP'], 'n120')
+    # ZAP_test('apic', -60, ['Ih', 'INaP'], 'n120')
+    #
+    # ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'n120')
+    # ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'n120')
+    # ZAP_test(0, -80, ['Im', 'INaP'], 'n120')
+    # ZAP_test(0, -60, ['Ih', 'INaP'], 'n120')
 
-
-    # simple_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
-
-    # Control
-    ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'n120')
-    ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'n120')
-    ZAP_test('apic', -80, ['Im', 'INaP'], 'n120')
-    ZAP_test('apic', -60, ['Ih', 'INaP'], 'n120')
-
-    ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'n120')
-    ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'n120')
-    ZAP_test(0, -80, ['Im', 'INaP'], 'n120')
-    ZAP_test(0, -60, ['Ih', 'INaP'], 'n120')
-
-    # Control
-    ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'c12861')
     ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'c12861')
-    ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
     ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'c12861')
-
-    # Reduced
-    ZAP_test(0, -80, ['Im', 'INaP'], 'c12861')
     ZAP_test('apic', -80, ['Im', 'INaP'], 'c12861')
-    ZAP_test(0, -60, ['Ih', 'INaP'], 'c12861')
     ZAP_test('apic', -60, ['Ih', 'INaP'], 'c12861')
 
-    recreate_Hu_figs('n120')
+    ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
+    ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'c12861')
+    ZAP_test(0, -80, ['Im', 'INaP'], 'c12861')
+    ZAP_test(0, -60, ['Ih', 'INaP'], 'c12861')
+
     recreate_Hu_figs('c12861')
+    # recreate_Hu_figs('n120')

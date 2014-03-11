@@ -35,7 +35,7 @@ BREAKPOINT {
 	   else{ 
               if (t < del+dur) {
 	      	 freq = freq_start + (freq_end - freq_start)*t/dur
-              	 i = -pkamp*sin(2*3.141592*freq*(t-del)*(0.001))
+              	 i = pkamp*sin(2*3.141592*freq*(t-del)*(0.001))
       	      }
 	      else{ i = 0 }
 	   }

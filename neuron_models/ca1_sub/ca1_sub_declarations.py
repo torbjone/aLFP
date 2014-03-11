@@ -38,7 +38,7 @@ def insert_Ih(section_dict):
 def insert_Im(section_dict):
 
     gkm = 1e-4 * 12.
-    max_dist = 40.  # Changed because distance to soma is much less than distance to soma center.
+    max_dist = 40.
 
     nrn.distance()
     for sec in section_dict['somatic']:
@@ -106,7 +106,6 @@ def make_uniform(Vrest):
 
 
 def make_section_lists(cellname):
-
 
     section_dict = {'somatic': nrn.SectionList(),
                     'myelinated_axonal': nrn.SectionList(),
@@ -199,6 +198,10 @@ def plot_cell_sections(section_dict):
 
 def modify_morphology(section_dict, cellname):
 
+    for key, sec_list in section_dict.items():
+        for sec in sec_list:
+            sec.nseg = 10
+
     for sec in section_dict['basal']:
         for i in xrange(int(nrn.n3d())):
             nrn.pt3dchange(i, 0.76)
@@ -220,37 +223,54 @@ def modify_morphology(section_dict, cellname):
 
     for sec in section_dict['apic_trunk']:
         npts = int(nrn.n3d())
-        # cummulative_L = 0
+        cummulative_L = 0
         for i in xrange(npts):
-            # delta_x = (nrn.x3d(i + 1) - nrn.x3d(i))**2
-            # delta_y = (nrn.y3d(i + 1) - nrn.y3d(i))**2
-            # delta_z = (nrn.z3d(i + 1) - nrn.z3d(i))**2
-            # cummulative_L += np.sqrt(delta_x + delta_y + delta_z)
-            # dist_from_soma = nrn.distance(0) + cummulative_L
-            # diam = 3.5 - 4.7e-3 * dist_from_soma
-            diam = 3.5 - 4.7e-3 * nrn.distance(0.5)
-            # print nrn.diam3d(i), diam
+            if not i == 0:
+                delta_x = (nrn.x3d(i) - nrn.x3d(i - 1))**2
+                delta_y = (nrn.y3d(i) - nrn.y3d(i - 1))**2
+                delta_z = (nrn.z3d(i) - nrn.z3d(i - 1))**2
+                cummulative_L += np.sqrt(delta_x + delta_y + delta_z)
+            dist_from_soma = nrn.distance(0) + cummulative_L
+            diam = 3.5 - 4.7e-3 * dist_from_soma
+            # print diam, nrn.diam3d(i)
             nrn.pt3dchange(i, diam)
-        # print sec.name(), nrn.distance(0), nrn.distance(1), nrn.distance(0) + cummulative_L
         if sec.name() == apic_root_segment:
             apic_tuft_root_diam = nrn.diam3d(npts - 1)
             apic_tuft_root_dist = nrn.distance(1.)
 
+    longest_tuft_branch = find_longest_tuft_branch(section_dict, apic_tuft_root_dist)
+
+    tuft_smallest_diam = 0.3
     for sec in section_dict['apic_tuft']:
         npts = int(nrn.n3d())
-        # cummulative_L = 0
-        # start_dist_from_soma = nrn.distance(0.5)
-        # start_dist_from_tuft_root = start_dist_from_soma - apic_tuft_root_dist
+        cummulative_L = 0
+        start_dist_from_tuft_root = nrn.distance(0.0) - apic_tuft_root_dist
         for i in xrange(npts):
-            # delta_x = (nrn.x3d(i + 1) - nrn.x3d(i))**2
-            # delta_y = (nrn.y3d(i + 1) - nrn.y3d(i))**2
-            # delta_z = (nrn.z3d(i + 1) - nrn.z3d(i))**2
-            # cummulative_L += np.sqrt(delta_x + delta_y + delta_z)
-            # dist_from_root = start_dist_from_tuft_root + cummulative_L
-            diam = apic_tuft_root_diam - 18e-3 * (nrn.distance(0.5) - apic_tuft_root_dist)
-            if diam < 0.5:
-                diam = 0.5
+            if not i == 0:
+                delta_x = (nrn.x3d(i) - nrn.x3d(i - 1))**2
+                delta_y = (nrn.y3d(i) - nrn.y3d(i - 1))**2
+                delta_z = (nrn.z3d(i) - nrn.z3d(i - 1))**2
+                cummulative_L += np.sqrt(delta_x + delta_y + delta_z)
+            dist_from_root = start_dist_from_tuft_root + cummulative_L
+            diam = apic_tuft_root_diam - dist_from_root/longest_tuft_branch * (apic_tuft_root_diam - tuft_smallest_diam)
+            # print nrn.diam3d(i), diam
             nrn.pt3dchange(i, diam, sec=sec)
+
+
+def find_longest_tuft_branch(section_dict, apic_tuft_root_dist):
+    longest_branch = 0
+    for sec in section_dict['apic_tuft']:
+        npts = int(nrn.n3d())
+        cummulative_L = 0
+        start_dist_from_tuft_root = nrn.distance(0.0) - apic_tuft_root_dist
+        for i in xrange(npts):
+            if not i == 0:
+                delta_x = (nrn.x3d(i) - nrn.x3d(i - 1))**2
+                delta_y = (nrn.y3d(i) - nrn.y3d(i - 1))**2
+                delta_z = (nrn.z3d(i) - nrn.z3d(i - 1))**2
+                cummulative_L += np.sqrt(delta_x + delta_y + delta_z)
+        longest_branch = np.max([longest_branch, start_dist_from_tuft_root + cummulative_L])
+    return longest_branch
 
 
 def biophys_passive(section_dict, **kwargs):
@@ -330,13 +350,9 @@ def active_declarations(**kwargs):
     '''
 
     # TODO: Documents methods and code better.
-    # TODO: Diameter modifications give negative diameters?
     # TODO: Do we see the resonance properties we expect?
 
     section_dict = make_section_lists(kwargs['cellname'])
-
-    # TODO: Does all sections only have one segment initially?
-
     modify_morphology(section_dict, kwargs['cellname'])
     biophys_passive(section_dict, **kwargs)
     added_channels = 0
@@ -385,57 +401,63 @@ def test_steady_state(input_idx, hold_potential, cellname):
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
         'custom_fun_args': [{'use_channels': ['Ih', 'Im', 'INaP'],
-                             'cellname': model_path,
+                             'cellname': cellname,
                              'hold_potential': hold_potential}],
     }
 
     cell = LFPy.Cell(**cell_params)
     area_study(cell)
-    figfolder = join(model_path, 'verifications')
-    if not os.path.isdir(figfolder): os.mkdir(figfolder)
-
     plt.seed(1234)
-    apic_tuft_idx = cell.get_closest_idx(-400, 0, -50)
-    trunk_idx = cell.get_closest_idx(-100, 0, 0)
-    axon_idx = cell.get_idx('axon_IS')[0]
-    basal_idx = cell.get_closest_idx(100, 100, 0)
-    soma_idx = 0
-
     print input_idx, hold_potential
-
-    input_scaling = .01
-
     sim_params = {'rec_vmem': True,
-                  'rec_imem': True,
-                  'rec_variables': []}
+                  'rec_imem': True}
     cell.simulate(**sim_params)
-
-    simfolder = join(model_path, 'simresults')
-    if not os.path.isdir(simfolder): os.mkdir(simfolder)
-
-    simname = join(simfolder, 'simple_%d_%1.3f' % (input_idx, input_scaling))
-    if 'use_channels' in cell_params['custom_fun_args'][0] and \
-                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
-        for ion in cell_params['custom_fun_args'][0]['use_channels']:
-            simname += '_%s' % ion
-    else:
-        simname += '_passive'
-
-    if 'hold_potential' in cell_params['custom_fun_args'][0]:
-        simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
-
     [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
-    # plt.plot(cell.tvec, cell.somav)
     plt.show()
-    # print cell.vmem[:, -1]
-    # plt.figure()
     img = plt.scatter(cell.xmid, cell.ymid, c=cell.vmem[:, -1], edgecolor='none')
     plt.axis('equal')
     plt.colorbar(img)
     plt.show()
-    #plot_cell_steady_state(cell)
+
+
+def test_morphology(hold_potential, cellname):
+
+    timeres = 2**-4
+    cut_off = 0
+    tstopms = 500
+    tstartms = -cut_off
+    model_path = cellname
+
+    cell_params = {
+        'morphology': join(model_path, '%s.hoc' % cellname),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init': hold_potential,             # initial crossmembrane potential
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': timeres,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+        'custom_fun': [active_declarations],  # will execute this function
+        'custom_fun_args': [{'use_channels': ['Ih', 'Im', 'INaP'],
+                             'cellname': model_path,
+                             'hold_potential': hold_potential}],
+    }
+
+    cell = LFPy.Cell(**cell_params)
+
+    if 1:
+        [plt.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]], 'k') for i in xrange(cell.totnsegs)]
+        [plt.text(cell.xmid[i], cell.zend[i], '%1.2f' % cell.diam[i], color='r') for i in xrange(cell.totnsegs)]
+
+        plt.axis('equal')
+        plt.show()
+
 
 if __name__ == '__main__':
-    aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
-
+    # aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
+    test_morphology(-80, 'n120')
     # test_steady_state(0, -80, 'c12861')
