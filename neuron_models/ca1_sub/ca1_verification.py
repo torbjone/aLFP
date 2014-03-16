@@ -942,25 +942,26 @@ def ZAP_test(input_idx, hold_potential, use_channels, cellname):
 
 if __name__ == '__main__':
 
-    # ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'n120')
-    # ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'n120')
-    # ZAP_test('apic', -80, ['Im', 'INaP'], 'n120')
-    # ZAP_test('apic', -60, ['Ih', 'INaP'], 'n120')
+    ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test(0, -80, ['Im', 'INaP'], 'n120')
+    ZAP_test(0, -60, ['Ih', 'INaP'], 'n120')
+
+    ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'n120')
+    ZAP_test('apic', -80, ['Im', 'INaP'], 'n120')
+    ZAP_test('apic', -60, ['Ih', 'INaP'], 'n120')
+
     #
-    # ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'n120')
-    # ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'n120')
-    # ZAP_test(0, -80, ['Im', 'INaP'], 'n120')
-    # ZAP_test(0, -60, ['Ih', 'INaP'], 'n120')
-
-    ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'c12861')
-    ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'c12861')
-    ZAP_test('apic', -80, ['Im', 'INaP'], 'c12861')
-    ZAP_test('apic', -60, ['Ih', 'INaP'], 'c12861')
-
-    ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
-    ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'c12861')
-    ZAP_test(0, -80, ['Im', 'INaP'], 'c12861')
-    ZAP_test(0, -60, ['Ih', 'INaP'], 'c12861')
-
-    recreate_Hu_figs('c12861')
-    # recreate_Hu_figs('n120')
+    # ZAP_test('apic', -80, ['Ih', 'Im', 'INaP'], 'c12861')
+    # ZAP_test('apic', -60, ['Ih', 'Im', 'INaP'], 'c12861')
+    # ZAP_test('apic', -80, ['Im', 'INaP'], 'c12861')
+    # ZAP_test('apic', -60, ['Ih', 'INaP'], 'c12861')
+    #
+    # ZAP_test(0, -60, ['Ih', 'Im', 'INaP'], 'c12861')
+    # ZAP_test(0, -80, ['Ih', 'Im', 'INaP'], 'c12861')
+    # ZAP_test(0, -80, ['Im', 'INaP'], 'c12861')
+    # ZAP_test(0, -60, ['Ih', 'INaP'], 'c12861')
+    #
+    # recreate_Hu_figs('c12861')
+    recreate_Hu_figs('n120')

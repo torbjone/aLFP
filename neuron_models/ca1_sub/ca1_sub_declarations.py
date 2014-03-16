@@ -458,6 +458,6 @@ def test_morphology(hold_potential, cellname):
 
 
 if __name__ == '__main__':
-    # aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
-    test_morphology(-80, 'n120')
+    aLFP.explore_morphology(join('n120', 'n120.hoc'))
+    #test_morphology(-80, 'n120')
     # test_steady_state(0, -80, 'c12861')

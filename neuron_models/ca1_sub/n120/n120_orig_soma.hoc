@@ -9,18 +9,19 @@ proc celldef() {
   geom_nseg()
 }
 
-create soma[1], dend[101], apic[52], axon_hillock[4], axon_IS[4], myelinated_axon[5]
+create soma[3], dend[101], apic[52], axon_hillock[4], axon_IS[4], myelinated_axon[5]
 
 proc topol() { local i
 
-  connect axon_hillock[0](0), soma(1)
+  connect axon_hillock[0](0), soma[1](1)
   for i = 1, 3 connect axon_hillock[i](0), axon_hillock[i-1](1)
   connect axon_IS[0](0), axon_hillock[3](1)
   for i = 1, 3 connect axon_IS[i](0), axon_IS[i-1](1)
   connect myelinated_axon[0](0), axon_IS[3](1)
   for i = 1, 4 connect myelinated_axon[i](0), myelinated_axon[i-1](1)
 
-  connect dend(0), soma(1)
+  for i = 1, 2 connect soma[i](0), soma(0.5)
+  connect dend(0), soma[1](1)
   for i = 1, 2 connect dend[i](0), dend[i-1](1)
   connect dend[3](0), dend[1](1)
   for i = 4, 5 connect dend[i](0), dend[3](1)
@@ -83,7 +84,7 @@ proc topol() { local i
   connect dend[96](0), dend[31](1)
   for i = 97, 98 connect dend[i](0), dend[96](1)
   for i = 99, 100 connect dend[i](0), dend[98](1)
-  connect apic(0), soma(0)
+  connect apic(0), soma[2](1)
   for i = 1, 14 connect apic[i](0), apic[i-1](1)
   connect apic[15](0), apic[13](1)
   connect apic[16](0), apic[12](1)
@@ -114,10 +115,17 @@ proc topol() { local i
 }
 proc shape3d_1() {
   soma[0] {pt3dclear()
-	pt3dadd(-15.323, 2.463, 4.96, 16.5)
-	pt3dadd(5.435, -1.456, 24.135, 16.5)
+	pt3dadd(-11.509, 0.181, 4.96, 16.238)
+	pt3dadd(-3.39, 0.181, 4.96, 16.238)
+	pt3dadd(4.729, 0.181, 4.96, 16.238)
   }
-
+  soma[1] {pt3dclear()
+	pt3dstyle(1, -3.39, 0.181, 4.96)
+	pt3dadd(-1.785, -0.35, 4.96, 15.92)
+	pt3dadd(1.074, -0.701, 4.96, 15.92)
+	pt3dadd(4.814, -1.051, 4.96, 15.6)
+	pt3dadd(5.435, -1.456, 32.385, 2.292)
+  }
   dend {pt3dclear()
 	pt3dadd(5.435, -1.456, 32.385, 1.42)
 	pt3dadd(10.125, -5.198, 59.84, 1.42)
@@ -2267,6 +2275,17 @@ proc shape3d_10() {
 	pt3dadd(86.513, 154.415, 49.44, 1.1)
 	pt3dadd(86.671, 154.347, 49.44, 1.1)
   }
+  soma[2] {pt3dclear()
+	pt3dstyle(1, -3.39, 0.181, 4.96)
+	pt3dadd(-7.661, 1.401, 4.96, 14.46)
+	pt3dadd(-9.628, 1.232, 4.96, 12.56)
+	pt3dadd(-10.871, 1.051, 4.96, 11.62)
+	pt3dadd(-12.114, 1.051, 4.96, 8.68)
+	pt3dadd(-12.294, 1.051, 4.96, 8.68)
+	pt3dadd(-13.549, 1.401, 4.96, 8.038)
+	pt3dadd(-14.08, 1.582, 4.96, 7.72)
+	pt3dadd(-15.323, 2.463, 4.96, 5.2)
+  }
   apic {pt3dclear()
 	pt3dadd(-15.323, 2.463, 4.96, 3.32)
 	pt3dadd(-24.95, 3.865, 7.84, 3.32)
@@ -3394,7 +3413,7 @@ objref all, somatic, basal, apical, axonal_hillock, axonal_IS, myelinated_axonal
 proc subsets() { local i
   objref all, somatic, basal, apical, axonal_hillock, axonal_IS, myelinated_axonal
   all = new SectionList()
-    for i=0, 0 soma[i] all.append()
+    for i=0, 2 soma[i] all.append()
     for i=0, 100 dend[i] all.append()
     for i=0, 51 apic[i] all.append()
     for i=0, 3 axon_hillock[i] all.append()
@@ -3402,7 +3421,7 @@ proc subsets() { local i
     for i=0, 4 myelinated_axon[i] all.append()
 
   somatic = new SectionList()
-    for i=0, 0 soma[i] somatic.append()
+    for i=0, 2 soma[i] somatic.append()
 
   basal = new SectionList()
     for i=0, 100 dend[i] basal.append()
