@@ -1,10 +1,15 @@
 __author__ = 'torbjone'
+#!/usr/bin/env python
 
-from ipdb import set_trace
-import neuron
-import LFPy
+import os
 from os.path import join
-
+import sys
+import numpy as np
+import pylab as plt
+import neuron
+nrn = neuron.h
+import LFPy
+import aLFP
 
 def make_cell_uniform(Vrest=-60):
     neuron.h.t = 0
@@ -77,7 +82,7 @@ def biophys_Ih_linearized(**kwargs):
         sec.g_pas = 0.0000589
         sec.vss_Ih_linearized_mod = Vrest
 
-    neuron.h.distribute_channels("apic", "gIhbar_Ih_linearized_mod",
+    nrn.distribute_channels("apic", "gIhbar_Ih_linearized_mod",
                                  2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
 
     for sec in neuron.h.dend:
@@ -150,9 +155,9 @@ def biophys_active(**kwargs):
         sec.gImbar_Im = 0.0000675
         sec.g_pas = 0.0000589
 
-    neuron.h.distribute_channels("apic","gIhbar_Ih",2,-0.8696,3.6161,0.0,2.0870,0.00020000000)
-    neuron.h.distribute_channels("apic","gCa_LVAstbar_Ca_LVAst",3,1.000000,0.010000,685.000000,885.000000,0.0187000000)
-    neuron.h.distribute_channels("apic","gCa_HVAbar_Ca_HVA",3,1.000000,0.100000,685.000000,885.000000,0.0005550000)
+    nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
+    nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.000000, 0.010000, 685.000000, 885.000000, 0.0187000000)
+    nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.000000, 0.100000, 685.000000, 885.000000, 0.0005550000)
 
     for sec in neuron.h.dend:
         sec.cm = 2
@@ -176,30 +181,34 @@ def biophys_active(**kwargs):
 
 
 def active_declarations(**kwargs):
-    '''set active conductances for Hay model 2011'''
+    ''' set active conductances for Hay model 2011 '''
 
-    neuron.h.delete_axon()
-    neuron.h.geom_nseg()
-    neuron.h.define_shape()
+    for sec in nrn.allsec():
+        print sec.name(), sec.diam
+
+    nrn.delete_axon()
+    nrn.geom_nseg()
+    nrn.define_shape()
+
     exec('biophys_%s(**kwargs)' % kwargs['conductance_type'])
 
 
 if __name__ == '__main__':
 
     timeres = 2**-4
-    cut_off = 500
-    tstopms = 1000
+    cut_off = 0
+    tstopms = 100
     tstartms = -cut_off
     model_path = join('lfpy_version')
-    neuron.load_mechanisms(join('mod'))
+    # neuron.load_mechanisms(join('mod'))
 
 
-    cell_params_pythonized_mod = {
+    cell_params = {
         'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
-        'v_init': -60,             # initial crossmembrane potential
+        'v_init': -80,             # initial crossmembrane potential
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
         'lambda_f': 100,           # segments are isopotential at this frequency
@@ -209,9 +218,11 @@ if __name__ == '__main__':
         'tstopms': tstopms,
         'custom_code': [join(model_path, 'custom_codes.hoc')],
         'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{'conductance_type': 'active',
-                             'uniform': True}],
+        'custom_fun_args': [{'conductance_type': 'passive',
+                             'hold_potential': -80}],
     }
 
-    cell = LFPy.Cell(**cell_params_pythonized_mod)
+    cell = LFPy.Cell(**cell_params)
     cell.simulate(rec_vmem=True, rec_imem=True)
+    plt.plot(cell.tvec, cell.somav)
+    plt.show()

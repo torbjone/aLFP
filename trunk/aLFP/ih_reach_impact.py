@@ -13,6 +13,7 @@ except:
     pass
 import aLFP
 from matplotlib.colors import LogNorm
+# from mayavi import mlab
 
 def save_synaptic_data(cell, sim_name, cellname, electrode):
     if not os.path.isdir(cellname): os.mkdir(cellname)
@@ -34,8 +35,33 @@ def save_synaptic_data(cell, sim_name, cellname, electrode):
         np.save(join(cellname, 'diam.npy'), cell.diam)
 
 
+def detectable_volume_plot(cell, electrode, sim_name, cell_name):
+
+    if hasattr(cell, 'tvec'):
+        tvec = cell.tvec
+        vmem = cell.vmem
+        LFP = 1e3 * electrode.LFP
+    else:
+        tvec = np.load(join(cell_name, '%s_tvec.npy' % sim_name))
+        vmem = np.load(join(cell_name, '%s_vmem.npy' % sim_name))
+        LFP = 1e3 * np.load(join(cell_name, '%s_sig.npy' % sim_name))
+
+    max_t_idxs = np.argmax(np.abs(LFP), axis=1)
+    amps = np.array([np.abs(LFP[elec_idx, max_t_idxs[elec_idx]]) for elec_idx in xrange(len(max_t_idxs))])
+
+    detected_idxs = np.where(amps > 0.005)
+    mlab.close('all')
+    mlab.points3d(electrode.x, electrode.y, electrode.z, color=(1, 1, 1), scale_factor=10,
+                  transparent=True)
+    mlab.points3d(electrode.x[detected_idxs], electrode.y[detected_idxs], electrode.z[detected_idxs],
+                  color=(1, 0, 0), scale_factor=50, transparent=True)
+
+    mlab.savefig('detectable_%s.png' %sim_name)
+
+
+
 def quick_plot(cell, electrode, sim_name, cell_name,
-               num_elecs_x, num_elecs_z, input_idx):
+               num_elecs_x, num_elecs_y, num_elecs_z, input_idx):
 
     if hasattr(cell, 'tvec'):
         tvec = cell.tvec
@@ -90,12 +116,18 @@ def quick_plot(cell, electrode, sim_name, cell_name,
 def synaptic_reach_simulation(cell_name, cell_params, input_pos,
                               hold_potential, just_plot, **kwargs):
 
-    num_elecs_x = 20
-    num_elecs_z = 60
+    num_elecs_x = 10
+    num_elecs_y = 10
+    num_elecs_z = 18
 
-    elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, num_elecs_x),
-                                 np.linspace(-200, 1200, num_elecs_z))
-    elec_y = np.ones(elec_x.shape) * 100
+    # elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, num_elecs_x),
+    #                              np.linspace(-200, 1200, num_elecs_z))
+    #elec_y = np.ones(elec_x.shape) * 100
+
+    grid_x = np.linspace(-500, 500, num_elecs_x)
+    grid_y = np.linspace(-500, 500, num_elecs_y)
+    grid_z = np.linspace(-500, 1600, num_elecs_z)
+    elec_x, elec_y, elec_z = np.meshgrid(grid_x, grid_y, grid_z)
 
     electrode_parameters = {
         'sigma': 0.3,      # extracellular conductivity
@@ -110,8 +142,15 @@ def synaptic_reach_simulation(cell_name, cell_params, input_pos,
     cell = LFPy.Cell(**cell_params)
 
     if 0:
+        plt.subplot(121, xlabel='x', ylabel='z')
         plt.scatter(cell.xmid, cell.zmid)
         plt.scatter(elec_x.flatten(), elec_z.flatten())
+        plt.axis('equal')
+
+        plt.subplot(122, xlabel='y', ylabel='z')
+        plt.scatter(cell.ymid, cell.zmid)
+        plt.scatter(elec_y.flatten(), elec_z.flatten())
+        plt.axis('equal')
         plt.show()
 
     if input_pos == 'soma':
@@ -148,4 +187,4 @@ def synaptic_reach_simulation(cell_name, cell_params, input_pos,
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
         save_synaptic_data(cell, sim_name, cell_name, electrode)
 
-    quick_plot(cell, electrode, sim_name, cell_name, num_elecs_x, num_elecs_z, input_idx)
+    detectable_volume_plot(cell, electrode, sim_name, cell_name)
