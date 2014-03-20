@@ -9,7 +9,6 @@ import pylab as plt
 import neuron
 nrn = neuron.h
 import LFPy
-import aLFP
 
 def make_cell_uniform(Vrest=-60):
     neuron.h.t = 0
@@ -183,9 +182,6 @@ def biophys_active(**kwargs):
 def active_declarations(**kwargs):
     ''' set active conductances for Hay model 2011 '''
 
-    for sec in nrn.allsec():
-        print sec.name(), sec.diam
-
     nrn.delete_axon()
     nrn.geom_nseg()
     nrn.define_shape()
@@ -200,7 +196,6 @@ if __name__ == '__main__':
     tstopms = 100
     tstartms = -cut_off
     model_path = join('lfpy_version')
-    # neuron.load_mechanisms(join('mod'))
 
 
     cell_params = {

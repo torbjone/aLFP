@@ -7,21 +7,22 @@ import numpy as np
 import pylab as plt
 import LFPy
 import neuron
-try:
-    from ipdb import set_trace
-except:
-    pass
-import aLFP
-from matplotlib.colors import LogNorm
-# from mayavi import mlab
 
-def save_synaptic_data(cell, sim_name, cellname, electrode):
+
+def save_synaptic_data(cell, sim_name, cellname, electrode, amps):
     if not os.path.isdir(cellname): os.mkdir(cellname)
-    np.save(join(cellname, '%s_tvec.npy' % sim_name), cell.tvec)
-    np.save(join(cellname, '%s_sig.npy' % sim_name), electrode.LFP)
-    np.save(join(cellname, '%s_vmem.npy' % sim_name), cell.vmem)
-    np.save(join(cellname, '%s_imem.npy' % sim_name), cell.imem)
-    np.save(join(cellname, '%s_mapping.npy' % sim_name), electrode.electrodecoeff)
+    # np.save(join(cellname, '%s_tvec.npy' % sim_name), cell.tvec)
+    # np.save(join(cellname, '%s_sig.npy' % sim_name), electrode.LFP)
+    # np.save(join(cellname, '%s_vmem.npy' % sim_name), cell.vmem)
+    # np.save(join(cellname, '%s_imem.npy' % sim_name), cell.imem)
+    np.save(join(cellname, '%s_amps.npy' % sim_name), amps)
+    # np.save(join(cellname, '%s_mapping.npy' % sim_name), electrode.electrodecoeff)
+
+    if not os.path.isfile(join(cellname, 'elec_x.npy')):
+        np.save(join(cellname, 'elec_x.npy'), electrode.x)
+        np.save(join(cellname, 'elec_y.npy'), electrode.y)
+        np.save(join(cellname, 'elec_z.npy'), electrode.z)
+
     if not os.path.isfile(join(cellname, 'xstart.npy')):
         np.save(join(cellname, 'xstart.npy'), cell.xstart)
         np.save(join(cellname, 'ystart.npy'), cell.ystart)
@@ -35,29 +36,111 @@ def save_synaptic_data(cell, sim_name, cellname, electrode):
         np.save(join(cellname, 'diam.npy'), cell.diam)
 
 
-def detectable_volume_plot(cell, electrode, sim_name, cell_name):
+def plot_detectable_volume(cell, electrode, sim_name, cell_name, input_idx,
+                           num_elecs_x, num_elecs_y, num_elecs_z, detection_limit, amps):
 
     if hasattr(cell, 'tvec'):
-        tvec = cell.tvec
-        vmem = cell.vmem
         LFP = 1e3 * electrode.LFP
     else:
-        tvec = np.load(join(cell_name, '%s_tvec.npy' % sim_name))
-        vmem = np.load(join(cell_name, '%s_vmem.npy' % sim_name))
         LFP = 1e3 * np.load(join(cell_name, '%s_sig.npy' % sim_name))
 
-    max_t_idxs = np.argmax(np.abs(LFP), axis=1)
-    amps = np.array([np.abs(LFP[elec_idx, max_t_idxs[elec_idx]]) for elec_idx in xrange(len(max_t_idxs))])
+    if amps is None:
+        amps = np.load(join(cell_name, '%s_amps.npy' % sim_name))
 
-    detected_idxs = np.where(amps > 0.005)
-    mlab.close('all')
-    mlab.points3d(electrode.x, electrode.y, electrode.z, color=(1, 1, 1), scale_factor=10,
-                  transparent=True)
-    mlab.points3d(electrode.x[detected_idxs], electrode.y[detected_idxs], electrode.z[detected_idxs],
-                  color=(1, 0, 0), scale_factor=50, transparent=True)
+    detected_idxs = np.where(amps > detection_limit)[0]
+    x_plane = electrode.x[np.argmin(np.abs(electrode.x))]
+    y_plane = electrode.y[np.argmin(np.abs(electrode.y))]
+    z_plane = electrode.z[np.argmin(np.abs(electrode.z - 1000))]
 
-    mlab.savefig('detectable_%s.png' %sim_name)
+    x_plane_idxs = np.where((np.abs(electrode.x - x_plane) < 1e-6))[0]
+    y_plane_idxs = np.where((np.abs(electrode.y - y_plane) < 1e-6))[0]
+    z_plane_idxs = np.where((np.abs(electrode.z - z_plane) < 1e-6))[0]
 
+    detected_x_plane_idxs = np.array(list(set(detected_idxs) & set(x_plane_idxs)))
+    detected_y_plane_idxs = np.array(list(set(detected_idxs) & set(y_plane_idxs)))
+    detected_z_plane_idxs = np.array(list(set(detected_idxs) & set(z_plane_idxs)))
+
+    detected_x = np.zeros(electrode.x.shape)
+    if len(detected_x_plane_idxs) > 0:
+        detected_x[detected_x_plane_idxs] = 1
+    detected_x = detected_x[x_plane_idxs].reshape(num_elecs_y, num_elecs_z)
+    y_x_plane = electrode.y[x_plane_idxs].reshape(num_elecs_y, num_elecs_z)
+    z_x_plane = electrode.z[x_plane_idxs].reshape(num_elecs_y, num_elecs_z)
+
+    detected_y = np.zeros(electrode.x.shape)
+    if len(detected_y_plane_idxs) > 0:
+        detected_y[detected_y_plane_idxs] = 1
+    detected_y = detected_y[y_plane_idxs].reshape(num_elecs_x, num_elecs_z)
+    x_y_plane = electrode.x[y_plane_idxs].reshape(num_elecs_x, num_elecs_z)
+    z_y_plane = electrode.z[y_plane_idxs].reshape(num_elecs_x, num_elecs_z)
+
+    detected_z = np.zeros(electrode.x.shape)
+    if len(detected_z_plane_idxs) > 0:
+        detected_z[detected_z_plane_idxs] = 1
+    detected_z = detected_z[z_plane_idxs].reshape(num_elecs_x, num_elecs_y)
+    x_z_plane = electrode.x[z_plane_idxs].reshape(num_elecs_x, num_elecs_y)
+    y_z_plane = electrode.y[z_plane_idxs].reshape(num_elecs_x, num_elecs_y)
+
+    fig = plt.figure(figsize=[12, 8])
+    fig.suptitle("Signal detectable ( > %1.4f) at %d electrodes" % (detection_limit, len(detected_idxs)))
+    ax1 = fig.add_subplot(131, xlabel='x', ylabel='z', aspect='equal')
+    ax2 = fig.add_subplot(132, xlabel='y', ylabel='z', aspect='equal')
+    ax3 = fig.add_subplot(133, xlabel='x', ylabel='y', aspect='equal')
+
+    ax1.plot([x_plane, x_plane], [np.min(electrode.z), np.max(electrode.z)], 'g')
+    ax1.plot([np.min(electrode.x), np.max(electrode.x)], [z_plane, z_plane], 'g')
+
+    ax2.plot([y_plane, y_plane], [np.min(electrode.z), np.max(electrode.z)], 'g')
+    ax2.plot([np.min(electrode.y), np.max(electrode.y)], [z_plane, z_plane], 'g')
+
+    ax3.plot([x_plane, x_plane], [np.min(electrode.y), np.max(electrode.y)], 'g')
+    ax3.plot([np.min(electrode.x), np.max(electrode.x)], [y_plane, y_plane], 'g')
+
+    ax1.plot(cell.xmid[input_idx], cell.zmid[input_idx], 'y*', zorder=10, ms=10)
+    ax2.plot(cell.ymid[input_idx], cell.zmid[input_idx], 'y*', zorder=10, ms=10)
+    ax3.plot(cell.xmid[input_idx], cell.ymid[input_idx], 'y*', zorder=10, ms=10)
+
+    [ax1.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], lw=1, color='gray')
+            for idx in xrange(cell.totnsegs)]
+    [ax2.plot([cell.ystart[idx], cell.yend[idx]], [cell.zstart[idx], cell.zend[idx]], lw=1, color='gray')
+        for idx in xrange(cell.totnsegs)]
+    [ax3.plot([cell.xstart[idx], cell.xend[idx]], [cell.ystart[idx], cell.yend[idx]], lw=1, color='gray')
+        for idx in xrange(cell.totnsegs)]
+    colors = ('w', '0.8')
+
+    ax1.contourf(x_y_plane, z_y_plane, detected_y, levels=[-0.1, 0, 1], colors=colors)
+    ax2.contourf(y_x_plane, z_x_plane, detected_x, levels=[-0.1, 0, 1], colors=colors)
+    ax3.contourf(x_z_plane, y_z_plane, detected_z, levels=[-0.1, 0, 1], colors=colors)
+
+    # ax1.scatter(electrode.x[y_plane_idxs], electrode.z[y_plane_idxs], marker='o',
+    #             c='k', edgecolor='none')
+    # if not len(detected_y_plane_idxs) == 0:
+    #     ax1.scatter(electrode.x[detected_y_plane_idxs], electrode.z[detected_y_plane_idxs],
+    #                 marker='o', c='r', edgecolor='none')
+    #
+    #
+    # ax2.scatter(electrode.y[x_plane_idxs], electrode.z[x_plane_idxs],
+    #             marker='o', c='k', edgecolor='none')
+    # if not len(detected_x_plane_idxs) == 0:
+    #     ax2.scatter(electrode.y[detected_x_plane_idxs], electrode.z[detected_x_plane_idxs],
+    #                 marker='o', c='r', edgecolor='none')
+    #
+    # ax3.scatter(electrode.x[z_plane_idxs], electrode.y[z_plane_idxs],
+    #             marker='o', c='k', edgecolor='none')
+    # if not len(detected_z_plane_idxs) == 0:
+    #     ax3.scatter(electrode.x[detected_z_plane_idxs], electrode.y[detected_z_plane_idxs],
+    #                 marker='o', c='r', edgecolor='none')
+    plt.savefig('detectable_volume_%s.png' % sim_name)
+
+
+
+def compare_detectable_volumes():
+
+    hold_potential = -80
+    input_idx = 0
+    cell_name = 'hay'
+    conductance_type = 'active'
+    sim_name = '%s_%d_%+d_%s' % (cell_name, input_idx, hold_potential, conductance_type)
 
 
 def quick_plot(cell, electrode, sim_name, cell_name,
@@ -110,24 +193,25 @@ def quick_plot(cell, electrode, sim_name, cell_name,
     ax1.plot(cell.xmid[input_idx], cell.zmid[input_idx], '*', color='y', ms=15)
     ax2.plot(cell.ymid[input_idx], cell.zmid[input_idx], '*', color='y', ms=15)
     ax3.plot(cell.xmid[input_idx], cell.zmid[input_idx], '*', color='y', ms=15)
-    plt.savefig('%s.png' %sim_name)
+    plt.savefig('%s.png' % sim_name)
+
+
 
 
 def synaptic_reach_simulation(cell_name, cell_params, input_pos,
                               hold_potential, just_plot, **kwargs):
 
-    num_elecs_x = 10
-    num_elecs_y = 10
-    num_elecs_z = 18
-
-    # elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, num_elecs_x),
-    #                              np.linspace(-200, 1200, num_elecs_z))
-    #elec_y = np.ones(elec_x.shape) * 100
+    num_elecs_x = 20
+    num_elecs_y = 20
+    num_elecs_z = 30
 
     grid_x = np.linspace(-500, 500, num_elecs_x)
     grid_y = np.linspace(-500, 500, num_elecs_y)
     grid_z = np.linspace(-500, 1600, num_elecs_z)
     elec_x, elec_y, elec_z = np.meshgrid(grid_x, grid_y, grid_z)
+
+    single_elec_box_volume = ((grid_x[1]-grid_x[0]) * (grid_y[1]-grid_y[0]) *
+                              (grid_z[1]-grid_z[0]))
 
     electrode_parameters = {
         'sigma': 0.3,      # extracellular conductivity
@@ -183,8 +267,17 @@ def synaptic_reach_simulation(cell_name, cell_params, input_pos,
             sim_name += '_%s' % ion
     else:
         raise RuntimeError("Can't find proper name!")
+
+    detection_limit = 0.005
+
+    amps = None
     if not just_plot:
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        save_synaptic_data(cell, sim_name, cell_name, electrode)
+        max_t_idxs = np.argmax(np.abs(electrode.LFP), axis=1)
+        amps = np.array([np.abs(electrode.LFP[elec_idx, max_t_idxs[elec_idx]])
+                              for elec_idx in xrange(len(max_t_idxs))])
 
-    detectable_volume_plot(cell, electrode, sim_name, cell_name)
+        save_synaptic_data(cell, sim_name, cell_name, electrode, amps)
+
+    plot_detectable_volume(cell, electrode, sim_name, cell_name, input_idx,
+                           num_elecs_x, num_elecs_y, num_elecs_z, detection_limit, amps)

@@ -47,7 +47,6 @@ n120_sub_dict = {
 def simulate(model_dict, input_pos, hold_potential, just_plot, **kwargs):
 
     cellname = model_dict['cellname']
-
     timeres = 2**-4
     tstopms = 100
 
@@ -64,9 +63,7 @@ def simulate(model_dict, input_pos, hold_potential, just_plot, **kwargs):
         'custom_fun': [model_dict['active_declarations']],  # will execute this function
     }
 
-
     if model_dict['cellname'] == 'hay':
-        print "Hay"
         cell_params['custom_fun_args'] = [{
                                     'conductance_type': kwargs['conductance_type'],
                                     'hold_potential': hold_potential}]
@@ -75,10 +72,6 @@ def simulate(model_dict, input_pos, hold_potential, just_plot, **kwargs):
         cell_params['custom_fun_args'] = [{'use_channels': kwargs['use_channels'],
                                             'cellname': cellname,
                                             'hold_potential': hold_potential}]
-    print cell_params
-    LFPy.cell.neuron.load_mechanisms(join(neuron_models, 'hay', 'mod'))
-    cell = LFPy.Cell(**cell_params)
-    sys.exit()
     np.random.seed(1234)
     aLFP.synaptic_reach_simulation(cellname, cell_params, input_pos,
                                    hold_potential, just_plot, **kwargs)
@@ -87,21 +80,22 @@ def simulate(model_dict, input_pos, hold_potential, just_plot, **kwargs):
 if __name__ == '__main__':
 
     just_plot = False
-    channel_pert = [['Ih', 'Im', 'INaP'], ['Ih', 'INaP'], ['Im', 'INaP']]
+
     for di in [hay_dict]:
         [neuron.load_mechanisms(mech) for mech in di['mechanisms']]
         for pot in [-60, -70, -80]:
-            for cond in ['active', 'Ih_linearized', 'passive']:
+            for cond in ['passive', 'active', 'Ih_linearized']:
                 for input_pos in ['apic', 'soma']:
-                    print di, input_pos, pot, cond
+                    print input_pos, pot, cond
                     simulate(di, input_pos, pot, just_plot, conductance_type=cond)
 
+    channel_pert = [['Ih', 'Im', 'INaP'], ['Ih', 'INaP'], ['Im', 'INaP']]
     for di in [c12861_sub_dict, n120_sub_dict]:
         [neuron.load_mechanisms(mech) for mech in di['mechanisms']]
         for pot in [-60, -70, -80]:
             for chan_list in channel_pert:
                 for input_pos in ['soma', 'apic']:
-                    print di, input_pos, pot, chan_list
+                    print input_pos, pot, chan_list
                     simulate(di, input_pos, pot, just_plot, use_channels=chan_list)
 
 
