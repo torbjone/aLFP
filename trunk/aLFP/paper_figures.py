@@ -30,10 +30,11 @@ class PaperFigures():
          for idx in xrange(len(xmid))]
 
     @staticmethod
-    def save_synaptic_data(cell, sim_folder, electrode, input_idx, conductance_type):
+    def save_synaptic_data(cell, sim_folder, electrode, input_idx,
+                           conductance_type, holding_potential):
 
         if not os.path.isdir(sim_folder): os.mkdir(sim_folder)
-        sim_name = '%d_%s' % (input_idx, conductance_type)
+        sim_name = '%d_%s_%+d' % (input_idx, conductance_type, holding_potential)
         np.save(join(sim_folder, 'tvec.npy'), cell.tvec)
         np.save(join(sim_folder, 'sig_%s.npy' % sim_name), electrode.LFP)
         np.save(join(sim_folder, 'vmem_%s.npy' % sim_name), cell.vmem)
@@ -116,15 +117,16 @@ class PaperFigures():
         synapse = LFPy.Synapse(cell, **synapse_parameters)
         synapse.set_spike_times(np.array([5.]))
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        self.save_synaptic_data(cell, sim_folder, electrode, input_idx, conductance_type)
+        self.save_synaptic_data(cell, sim_folder, electrode, input_idx,
+                                conductance_type, holding_potential)
         del synapse, cell
 
-    def _do_all_fig_1_simulations(self, holding_potential, plot_positions, sim_folder,
+    def _do_all_fig_1_simulations(self, holding_potentials, plot_positions, sim_folder,
                                   conductance_types, soma_idx, apic_idx):
-
-        for input_idx in [apic_idx, soma_idx]:
-            for conductance_type in conductance_types:
-                self._do_single_fig_1_simulation(conductance_type, holding_potential,
+        for holding_potential in holding_potentials:
+            for input_idx in [apic_idx, soma_idx]:
+                for conductance_type in conductance_types:
+                    self._do_single_fig_1_simulation(conductance_type, holding_potential,
                                                  input_idx, sim_folder, plot_positions)
     @staticmethod
     def _find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z):
@@ -135,12 +137,11 @@ class PaperFigures():
         return [cls._find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z) for pos in position_list]
 
     @classmethod
-    def _plot_EC_signal_to_ax(cls, ax1, idx, signal, elec_x_pos, elec_z_pos, scale_factor_EP,
-                              scale_factor_time, tvec):
+    def _plot_EC_signal_to_ax(cls, ax, idx, signal, elec_x_pos, elec_z_pos, scale_factor_EP,
+                              scale_factor_time, tvec, conductance_type):
         x = elec_x_pos + (tvec * scale_factor_time)
-        for conductance_type, sig in signal.items():
-            y = elec_z_pos + (sig[idx] * scale_factor_EP)
-            ax1.plot(x, y, color=cls.conductance_clr[conductance_type], lw=2)
+        y = elec_z_pos + (signal[idx] * scale_factor_EP)
+        ax.plot(x, y, color=cls.conductance_clr[conductance_type], lw=2)
 
     def make_fig_1(self, do_simulations=False):
 
@@ -157,11 +158,11 @@ class PaperFigures():
         elec_y = np.zeros(len(elec_x))
         plot_positions = np.array([elec_x, elec_y, elec_z]).T
 
-        cell_dict = {'holding_potential': -70,
+        cell_dict = {'holding_potentials': [-80, -70, -60],
                      'soma_idx': 0,
                      'apic_idx': 852,
                      'plot_positions': plot_positions
-                     }
+        }
 
         sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig')
         if do_simulations:
@@ -173,39 +174,48 @@ class PaperFigures():
         elec_z = np.load(join(sim_folder, 'elec_z.npy'))
 
         start_t = 0
-        end_t = 60
+        end_t = 80
         start_idx = np.argmin(np.abs(tvec - start_t))
         end_idx = np.argmin(np.abs(tvec - end_t))
 
         tvec = tvec[start_idx:end_idx]
-
-        apic_LFP = {}
-        soma_LFP = {}
-        for conductance_type in conductance_types:
-            soma_LFP[conductance_type] = 1e3*np.load(join(sim_folder, 'sig_%d_%s.npy' %
-                            (cell_dict['soma_idx'], conductance_type)))[:, start_idx:end_idx]
-            apic_LFP[conductance_type] = 1e3*np.load(join(sim_folder, 'sig_%d_%s.npy' %
-                            (cell_dict['apic_idx'], conductance_type)))[:, start_idx:end_idx]
         plt.close('all')
-        fig = plt.figure(figsize=[5, 5])
-        fig.subplots_adjust(wspace=0.5)
-        ax1 = plt.subplot(121, aspect='equal')
-        ax2 = plt.subplot(122, sharey=ax1, sharex=ax1)
-        [ax.axis('off') for ax in [ax1, ax2]]
+        fig = plt.figure(figsize=[5, 10])
+        fig.subplots_adjust(hspace=0.0, top=0.95, bottom=0.)
+        ax1 = plt.subplot(321, ylim=[-150, 1000], xlim=[-200, 200])
+        ax2 = plt.subplot(322, sharey=ax1, sharex=ax1)
+        ax3 = plt.subplot(323, sharey=ax1, sharex=ax1)
+        ax4 = plt.subplot(324, sharey=ax1, sharex=ax1)
+        ax5 = plt.subplot(325, sharey=ax1, sharex=ax1)
+        ax6 = plt.subplot(326, sharey=ax1, sharex=ax1)
+
 
         idx_list = self._return_idxs_from_positions(cell_dict['plot_positions'], elec_x, elec_y, elec_z)
 
-        scale_factor_EP = 200. / 0.1  # 0.1 uV should be 200 um on figure
-        scale_factor_time = 100. / (end_t - start_t)  # Ten ms should be 200 um on figure
+        scale_factor_length = 500.
+        bar_length = 0.1
+        scale_factor_EP = scale_factor_length / bar_length  # 0.1 uV should be 200 um on figure
+        scale_factor_time = 100. / (end_t - start_t)
 
-        for idx in idx_list:
-            self._plot_EC_signal_to_ax(ax1, idx, soma_LFP, elec_x[idx], elec_z[idx],
-                                       scale_factor_EP, scale_factor_time, tvec)
-            self._plot_EC_signal_to_ax(ax2, idx, apic_LFP, elec_x[idx], elec_z[idx],
-                                       scale_factor_EP, scale_factor_time, tvec)
+        ax_list = [ax1, ax2, ax3, ax4, ax5, ax6]
 
-        self._draw_morph_to_axis(ax1, sim_folder, cell_dict['soma_idx'])
-        self._draw_morph_to_axis(ax2, sim_folder, cell_dict['apic_idx'])
+        ax1.plot([300, 300], [-500, -500 - scale_factor_length], 'k', lw=3)
+        ax1.text(310, -500 - scale_factor_length/2, '0.1 $\mu$V',
+                 verticalalignment='center',
+                 horizontalalignment='left')
+        # ax1.text(190, -300, '200 $\mu$m', verticalalignment='center', horizontalalignment='right')
+        ax_numb = 0
+        for holding_potential in cell_dict['holding_potentials']:
+            for input_idx in [cell_dict['soma_idx'], cell_dict['apic_idx']]:
+                for conductance_type in conductance_types:
+                    name = 'Soma' if input_idx == 0 else 'Apic'
+                    ax_list[ax_numb].set_title('%s %d mV' % (name, holding_potential))
+                    self.plot_one_signal(input_idx, conductance_type, holding_potential, start_idx, end_idx, idx_list,
+                                         sim_folder, ax_list[ax_numb], elec_x, elec_z, scale_factor_EP, scale_factor_time, tvec)
+                ax_numb += 1
+
+        [self._draw_morph_to_axis(ax, sim_folder, cell_dict['soma_idx']) for ax in [ax1, ax3, ax5]]
+        [self._draw_morph_to_axis(ax, sim_folder, cell_dict['apic_idx']) for ax in [ax2, ax4, ax6]]
 
         # ax1.scatter(elec_x[idx_list], elec_z[idx_list], edgecolor='none', c='k', s=20)
         # ax2.scatter(elec_x[idx_list], elec_z[idx_list], edgecolor='none', c='k', s=20)
@@ -216,13 +226,18 @@ class PaperFigures():
             lines.append(l)
             line_names.append(conductance_type)
 
-        ax2.plot([200, 200], [-400, -200], 'k', lw=3)
-        ax2.text(210, -300, '0.1 $\mu$V', verticalalignment='center', horizontalalignment='left')
-        # ax1.text(190, -300, '200 $\mu$m', verticalalignment='center', horizontalalignment='right')
-
-        mark_subplots([ax1, ax2], xpos=0.12, ypos=0.9)
-        fig.legend(lines, line_names, frameon=False)
+        mark_subplots(ax_list, xpos=0.12, ypos=0.9)
+        [ax.axis('off') for ax in ax_list]
+        fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=2)
         fig.savefig(join(self.figure_folder, 'figure_1.png'), dpi=150)
 
+    def plot_one_signal(self, input_idx, conductance_type, holding_potential, start_idx, end_idx,
+                        idx_list, sim_folder, ax, elec_x, elec_z, scale_factor_EP, scale_factor_time, tvec):
+        LFP = 1e3*np.load(join(sim_folder, 'sig_%d_%s_%+d.npy' % (input_idx, conductance_type,
+                                                                  holding_potential)))[:, start_idx:end_idx]
+        for idx in idx_list[::5]:
+            self._plot_EC_signal_to_ax(ax, idx, LFP, elec_x[idx], elec_z[idx],
+                                       scale_factor_EP, scale_factor_time, tvec, conductance_type)
 if __name__ == '__main__':
-    PaperFigures().make_fig_1(do_simulations=True)
+    # TODO: MAKE FIGURE WITH MORE HOLDING POTENTIALS
+    PaperFigures().make_fig_1(do_simulations=False)
