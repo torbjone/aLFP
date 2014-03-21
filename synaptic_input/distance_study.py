@@ -79,24 +79,23 @@ def simulate(model_dict, input_pos, hold_potential, just_plot, **kwargs):
 
 if __name__ == '__main__':
 
+
+    aLFP.compare_detectable_volumes(0.005)
     just_plot = False
-
-    for di in [hay_dict]:
-        [neuron.load_mechanisms(mech) for mech in di['mechanisms']]
-        for pot in [-60, -70, -80]:
-            for cond in ['passive', 'active', 'Ih_linearized']:
-                for input_pos in ['apic', 'soma']:
-                    print input_pos, pot, cond
-                    simulate(di, input_pos, pot, just_plot, conductance_type=cond)
-
-    channel_pert = [['Ih', 'Im', 'INaP'], ['Ih', 'INaP'], ['Im', 'INaP']]
-    for di in [c12861_sub_dict, n120_sub_dict]:
-        [neuron.load_mechanisms(mech) for mech in di['mechanisms']]
-        for pot in [-60, -70, -80]:
-            for chan_list in channel_pert:
-                for input_pos in ['soma', 'apic']:
-                    print input_pos, pot, chan_list
-                    simulate(di, input_pos, pot, just_plot, use_channels=chan_list)
-
-
-
+    #
+    # channel_pert = [['Ih', 'Im', 'INaP'], ['Ih', 'INaP'], ['Im', 'INaP']]
+    # for di in [c12861_sub_dict, n120_sub_dict]:
+    #     [neuron.load_mechanisms(mech) for mech in di['mechanisms']]
+    #     for pot in [-60, -70, -80]:
+    #         for chan_list in channel_pert:
+    #             for input_pos in ['soma', 'apic']:
+    #                 print input_pos, pot, chan_list
+    #                 simulate(di, input_pos, pot, just_plot, use_channels=chan_list)
+    #
+    # for di in [hay_dict]:
+    #    [neuron.load_mechanisms(mech) for mech in di['mechanisms']]
+    #    for pot in [-60, -70, -80]:
+    #        for cond in ['passive', 'active', 'Ih_linearized']:
+    #            for input_pos in ['apic', 'soma']:
+    #                print input_pos, pot, cond
+    #                simulate(di, input_pos, pot, just_plot, conductance_type=cond)

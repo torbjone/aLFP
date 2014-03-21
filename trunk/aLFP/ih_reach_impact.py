@@ -9,31 +9,29 @@ import LFPy
 import neuron
 
 
-def save_synaptic_data(cell, sim_name, cellname, electrode, amps):
-    if not os.path.isdir(cellname): os.mkdir(cellname)
+def save_synaptic_data(cell, sim_name, cell_name, electrode, amps):
+    if not os.path.isdir(cell_name): os.mkdir(cell_name)
     # np.save(join(cellname, '%s_tvec.npy' % sim_name), cell.tvec)
     # np.save(join(cellname, '%s_sig.npy' % sim_name), electrode.LFP)
     # np.save(join(cellname, '%s_vmem.npy' % sim_name), cell.vmem)
     # np.save(join(cellname, '%s_imem.npy' % sim_name), cell.imem)
-    np.save(join(cellname, '%s_amps.npy' % sim_name), amps)
+    np.save(join(cell_name, '%s_amps.npy' % sim_name), amps)
     # np.save(join(cellname, '%s_mapping.npy' % sim_name), electrode.electrodecoeff)
 
-    if not os.path.isfile(join(cellname, 'elec_x.npy')):
-        np.save(join(cellname, 'elec_x.npy'), electrode.x)
-        np.save(join(cellname, 'elec_y.npy'), electrode.y)
-        np.save(join(cellname, 'elec_z.npy'), electrode.z)
+    np.save(join(cell_name, 'elec_x.npy'), electrode.x)
+    np.save(join(cell_name, 'elec_y.npy'), electrode.y)
+    np.save(join(cell_name, 'elec_z.npy'), electrode.z)
 
-    if not os.path.isfile(join(cellname, 'xstart.npy')):
-        np.save(join(cellname, 'xstart.npy'), cell.xstart)
-        np.save(join(cellname, 'ystart.npy'), cell.ystart)
-        np.save(join(cellname, 'zstart.npy'), cell.zstart)
-        np.save(join(cellname, 'xend.npy'), cell.xend)
-        np.save(join(cellname, 'yend.npy'), cell.yend)
-        np.save(join(cellname, 'zend.npy'), cell.zend)
-        np.save(join(cellname, 'xmid.npy'), cell.xmid)
-        np.save(join(cellname, 'ymid.npy'), cell.ymid)
-        np.save(join(cellname, 'zmid.npy'), cell.zmid)
-        np.save(join(cellname, 'diam.npy'), cell.diam)
+    np.save(join(cell_name, 'xstart.npy'), cell.xstart)
+    np.save(join(cell_name, 'ystart.npy'), cell.ystart)
+    np.save(join(cell_name, 'zstart.npy'), cell.zstart)
+    np.save(join(cell_name, 'xend.npy'), cell.xend)
+    np.save(join(cell_name, 'yend.npy'), cell.yend)
+    np.save(join(cell_name, 'zend.npy'), cell.zend)
+    np.save(join(cell_name, 'xmid.npy'), cell.xmid)
+    np.save(join(cell_name, 'ymid.npy'), cell.ymid)
+    np.save(join(cell_name, 'zmid.npy'), cell.zmid)
+    np.save(join(cell_name, 'diam.npy'), cell.diam)
 
 
 def plot_detectable_volume(cell, electrode, sim_name, cell_name, input_idx,
@@ -45,12 +43,14 @@ def plot_detectable_volume(cell, electrode, sim_name, cell_name, input_idx,
         LFP = 1e3 * np.load(join(cell_name, '%s_sig.npy' % sim_name))
 
     if amps is None:
-        amps = np.load(join(cell_name, '%s_amps.npy' % sim_name))
+        amps = 1e3 * np.load(join(cell_name, '%s_amps.npy' % sim_name))
+    else:
+        amps *= 1e3
 
     detected_idxs = np.where(amps > detection_limit)[0]
     x_plane = electrode.x[np.argmin(np.abs(electrode.x))]
     y_plane = electrode.y[np.argmin(np.abs(electrode.y))]
-    z_plane = electrode.z[np.argmin(np.abs(electrode.z - 1000))]
+    z_plane = electrode.z[np.argmin(np.abs(electrode.z - 400))]
 
     x_plane_idxs = np.where((np.abs(electrode.x - x_plane) < 1e-6))[0]
     y_plane_idxs = np.where((np.abs(electrode.y - y_plane) < 1e-6))[0]
@@ -133,14 +133,125 @@ def plot_detectable_volume(cell, electrode, sim_name, cell_name, input_idx,
     plt.savefig('detectable_volume_%s.png' % sim_name)
 
 
+def plot_morph_to_ax(ax, cellname, input_idxs):
 
-def compare_detectable_volumes():
+    xstart = np.load(join(cellname, 'xstart.npy'))
+    ystart = np.load(join(cellname, 'ystart.npy'))
+    zstart = np.load(join(cellname, 'zstart.npy'))
+    xend = np.load(join(cellname, 'xend.npy'))
+    yend = np.load(join(cellname, 'yend.npy'))
+    zend = np.load(join(cellname, 'zend.npy'))
+    xmid = np.load(join(cellname, 'xmid.npy'))
+    ymid = np.load(join(cellname, 'ymid.npy'))
+    zmid = np.load(join(cellname, 'zmid.npy'))
 
-    hold_potential = -80
-    input_idx = 0
-    cell_name = 'hay'
-    conductance_type = 'active'
-    sim_name = '%s_%d_%+d_%s' % (cell_name, input_idx, hold_potential, conductance_type)
+    [ax.plot(xmid[idx], zmid[idx], 'y*', zorder=10, ms=10) for idx in input_idxs]
+    [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1, color='gray')
+            for idx in xrange(len(xmid))]
+
+def hay_detection_values(hold_potentials, soma_idx, conductance_types, apic_idx,
+                         cell_name, detection_limit):
+    names = []
+    soma_values = []
+    apic_values = []
+
+    for hold_potential in hold_potentials:
+        soma_pot_list = []
+        apic_pot_list = []
+        for conductance_type in conductance_types:
+            soma_name = '%s_%d_%+d_%s' % (cell_name, soma_idx, hold_potential, conductance_type)
+            apic_name = '%s_%d_%+d_%s' % (cell_name, apic_idx, hold_potential, conductance_type)
+            soma_amps = 1e3 * np.load(join(cell_name, '%s_amps.npy' % soma_name))
+            apic_amps = 1e3 * np.load(join(cell_name, '%s_amps.npy' % apic_name))
+            num_detection_pts_soma = len(np.where(soma_amps > detection_limit)[0])
+            num_detection_pts_apic = len(np.where(apic_amps > detection_limit)[0])
+            soma_pot_list.append(num_detection_pts_soma)
+            apic_pot_list.append(num_detection_pts_apic)
+        names.append(str(hold_potential))
+        soma_values.append(soma_pot_list)
+        apic_values.append(apic_pot_list)
+    return names, soma_values, apic_values
+
+
+def ca1_detection_values(hold_potentials, soma_idx, conductance_types, apic_idx,
+                         cell_name, detection_limit):
+    names = []
+    soma_values = []
+    apic_values = []
+
+    for hold_potential in hold_potentials:
+        soma_pot_list = []
+        apic_pot_list = []
+        for conductance_type in conductance_types:
+            cond_name = ''
+            for ion in conductance_type:
+                cond_name += '_%s' % ion
+            soma_name = '%s_%d_%+d%s' % (cell_name, soma_idx, hold_potential, cond_name)
+            apic_name = '%s_%d_%+d%s' % (cell_name, apic_idx, hold_potential, cond_name)
+            soma_amps = 1e3 * np.load(join(cell_name, '%s_amps.npy' % soma_name))
+            apic_amps = 1e3 * np.load(join(cell_name, '%s_amps.npy' % apic_name))
+            num_detection_pts_soma = len(np.where(soma_amps > detection_limit)[0])
+            num_detection_pts_apic = len(np.where(apic_amps > detection_limit)[0])
+            soma_pot_list.append(num_detection_pts_soma)
+            apic_pot_list.append(num_detection_pts_apic)
+        names.append(str(hold_potential))
+        soma_values.append(soma_pot_list)
+        apic_values.append(apic_pot_list)
+    return names, soma_values, apic_values
+
+def compare_detectable_volumes(detection_limit=0.005):
+
+    cell_name = 'c12861'
+    if cell_name == 'hay':
+        conductance_types = ['active', 'Ih_linearized', 'passive']
+        max_elecs = 1400
+    elif cell_name == 'c12861' or cell_name == 'n120':
+        conductance_types = [['Ih', 'Im', 'INaP'], ['Ih', 'INaP'], ['Im', 'INaP']]
+        max_elecs = 1400
+    else:
+        raise RuntimeError("Unrecognized cell name")
+
+    soma_idx = 0
+    apic_idx = {'hay': 852, 'c12861': 997, 'n120': 747}[cell_name]
+
+    fig = plt.figure(figsize=[8, 4])
+    ax1 = fig.add_axes([0.05, 0.1, 0.2, 0.8], frameon=False, xticks=[], yticks=[])
+    ax2 = fig.add_axes([0.3, 0.6, 0.6, 0.3], title='Apic synaptic input',
+                       ylabel='Detection volume', ylim=[0, max_elecs])
+    ax3 = fig.add_axes([0.3, 0.1, 0.6, 0.3], title='Somatic synaptic input',
+                       ylabel='Detection volume', ylim=[0, max_elecs])
+    hold_potentials = [-80, -70, -60]
+    plot_morph_to_ax(ax1, cell_name, (soma_idx, apic_idx))
+    dim = len(hold_potentials)
+    w = 0.75
+    dimw = w / dim
+
+    if cell_name == 'hay':
+        names, soma_values, apic_values = hay_detection_values(hold_potentials, soma_idx, conductance_types,
+                                                               apic_idx, cell_name, detection_limit)
+    else:
+        names, soma_values, apic_values = ca1_detection_values(hold_potentials, soma_idx, conductance_types,
+                                                               apic_idx, cell_name, detection_limit)
+
+    x = np.arange(dim)
+    for i in range(len(conductance_types)):
+        y_soma = [d[i] for d in soma_values]
+        y_apic = [d[i] for d in apic_values]
+        ax3.bar(x + i * dimw, y_soma, dimw, color='rgb'[i])
+        ax2.bar(x + i * dimw, y_apic, dimw, color='rgb'[i])
+
+    for ax in [ax2, ax3]:
+        ax.set_xticks(x + 3 * dimw / 2)
+        ax.set_xticklabels(['%s mV' % name for name in names])
+
+    bars = []
+    labels = []
+    for i, conductance_type in enumerate(conductance_types):
+        b = plt.bar(0, 0, 0, color='rgb'[i])
+        bars.append(b)
+        labels.append(conductance_type)
+    fig.legend(bars, labels, frameon=False, ncol=3)
+    plt.savefig('summary_detected_volume_%s.png' % cell_name)
 
 
 def quick_plot(cell, electrode, sim_name, cell_name,
@@ -196,8 +307,6 @@ def quick_plot(cell, electrode, sim_name, cell_name,
     plt.savefig('%s.png' % sim_name)
 
 
-
-
 def synaptic_reach_simulation(cell_name, cell_params, input_pos,
                               hold_potential, just_plot, **kwargs):
 
@@ -219,7 +328,6 @@ def synaptic_reach_simulation(cell_name, cell_params, input_pos,
         'y': elec_y.flatten(),
         'z': elec_z.flatten()
     }
-
     electrode = LFPy.RecExtElectrode(**electrode_parameters)
 
     neuron.h('forall delete_section()')

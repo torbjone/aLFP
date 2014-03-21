@@ -32,7 +32,6 @@ def make_cell_uniform(Vrest=-60):
 
 
 def biophys_passive(**kwargs):
-
     for sec in neuron.h.allsec():
         sec.insert('pas')
         sec.cm = 1.0
