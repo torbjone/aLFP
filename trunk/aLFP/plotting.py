@@ -34,12 +34,12 @@ def plot_comp_numbers(cell, elec_x, elec_y, elec_z):
 def arrow_to_axis(pos, ax_origin, ax_target, clr, x_shift):
 
     if x_shift > 0:
-        upper_pixel_coor = ax_target.transAxes.transform(([0,0.5]))
-        lower_pixel_coor = ax_target.transAxes.transform(([0,0]))
+        upper_pixel_coor = ax_target.transAxes.transform(([0, 0.5]))
+        lower_pixel_coor = ax_target.transAxes.transform(([0, 0]))
         shift = 1000*x_shift
     else:
-        upper_pixel_coor = ax_target.transAxes.transform(([1,0.5]))
-        lower_pixel_coor = ax_target.transAxes.transform(([1,0]))   
+        upper_pixel_coor = ax_target.transAxes.transform(([1, 0.5]))
+        lower_pixel_coor = ax_target.transAxes.transform(([1, 0]))
         shift = 2000*x_shift
     
     upper_coor = ax_origin.transData.inverted().transform(upper_pixel_coor)
@@ -1517,9 +1517,9 @@ def compare_LFPs(ifolder, input_scaling, input_idx, elec_x, elec_y, elec_z,
 
 def LFP_arrow_to_axis(pos, ax_origin, ax_target, clr, ax_xpos):
     if ax_xpos < 0.5:
-        upper_pixel_coor = ax_target.transAxes.transform(([1,0.5]))
+        upper_pixel_coor = ax_target.transAxes.transform(([1, 0.5]))
     else:
-        upper_pixel_coor = ax_target.transAxes.transform(([0,0.5]))
+        upper_pixel_coor = ax_target.transAxes.transform(([0, 0.5]))
     upper_coor = ax_origin.transData.inverted().transform(upper_pixel_coor)
 
     upper_line_x = [pos[0], upper_coor[0]]

@@ -4,16 +4,16 @@ from matplotlib.colors import LogNorm
 
 # THIS IS NOW MY PAPER FIGURE DEFAULT
 plt.rcParams.update({
-    'xtick.labelsize' : 11,
+    'xtick.labelsize': 11,
     'xtick.major.size': 5,
-    'ytick.labelsize' : 11,
+    'ytick.labelsize': 11,
     'ytick.major.size': 5,
-    'font.size' : 15,
-    'axes.labelsize' : 15,
-    'axes.titlesize' : 15,
-    'legend.fontsize' : 14,
-    'figure.subplot.wspace' : 0.4,
-    'figure.subplot.hspace' : 0.4,
+    'font.size': 15,
+    'axes.labelsize': 15,
+    'axes.titlesize': 15,
+    'legend.fontsize': 14,
+    'figure.subplot.wspace': 0.4,
+    'figure.subplot.hspace': 0.4,
     'figure.subplot.left': 0.1,
 })
 
