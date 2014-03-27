@@ -21,14 +21,16 @@ def make_cell_uniform(Vrest=-60):
                 seg.e_pas += seg.ina/seg.g_pas
             if neuron.h.ismembrane("k_ion"):
                 seg.e_pas += seg.ik/seg.g_pas
+            if neuron.h.ismembrane("ca_ion"):
+                seg.e_pas = seg.e_pas + seg.ica/seg.g_pas
             if neuron.h.ismembrane("Ih"):
                 seg.e_pas += seg.ihcn_Ih/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_mod"):
                 seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_mod/seg.g_pas
-                # seg.e_pas += (seg.gIhbar_Ih_linearized_mod * seg.mInf_Ih_linearized_mod *
-                #               (Vrest-seg.ehcn_Ih_linearized_mod)/seg.g_pas)
-            if neuron.h.ismembrane("ca_ion"):
-                seg.e_pas = seg.e_pas + seg.ica/seg.g_pas
+            if neuron.h.ismembrane("Ih_linearized_v2"):
+                seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_v2/seg.g_pas
+            if neuron.h.ismembrane("Ih_linearized_v2_frozen"):
+                seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
 
 
 def biophys_passive(**kwargs):
@@ -58,6 +60,41 @@ def biophys_passive(**kwargs):
     print("Passive dynamics inserted.")
 
 
+def biophys_Ih_linearized_frozen(**kwargs):
+
+    Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
+
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = 1.0
+        sec.Ra = 100.
+        sec.e_pas = Vrest
+    for sec in neuron.h.soma:
+        sec.insert("Ih_linearized_v2_frozen")
+        sec.gIhbar_Ih_linearized_v2_frozen = 0.0002
+        sec.g_pas = 0.0000338
+        sec.V_R_Ih_linearized_v2_frozen = Vrest
+    for sec in neuron.h.apic:
+        sec.insert("Ih_linearized_v2_frozen")
+        sec.cm = 2
+        sec.g_pas = 0.0000589
+        sec.V_R_Ih_linearized_v2_frozen = Vrest
+
+    nrn.distribute_channels("apic", "gIhbar_Ih_linearized_v2_frozen",
+                            2, -0.8696, 3.6161, 0.0, 2.0870, 0.0002)
+    for sec in neuron.h.dend:
+        sec.insert("Ih_linearized_v2_frozen")
+        sec.cm = 2
+        sec.g_pas = 0.0000467
+        sec.gIhbar_Ih_linearized_v2_frozen = 0.0002
+        sec.V_R_Ih_linearized_v2_frozen = Vrest
+    for sec in neuron.h.axon:
+        sec.g_pas = 0.0000325
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
+
+    print("Frozen linearized Ih inserted.")
+
 def biophys_Ih_linearized(**kwargs):
 
     Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
@@ -67,32 +104,30 @@ def biophys_Ih_linearized(**kwargs):
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = Vrest
-
     for sec in neuron.h.soma:
-        sec.insert("Ih_linearized_mod")
-        sec.gIhbar_Ih_linearized_mod = 0.0002
+        sec.insert("Ih_linearized_v2")
+        sec.gIhbar_Ih_linearized_v2 = 0.0002
         sec.g_pas = 0.0000338
-        sec.vss_Ih_linearized_mod = Vrest
-
+        # sec.vss_Ih_linearized_mod = Vrest
+        sec.V_R_Ih_linearized_v2 = Vrest
     for sec in neuron.h.apic:
-        sec.insert("Ih_linearized_mod")
+        sec.insert("Ih_linearized_v2")
         sec.cm = 2
         sec.g_pas = 0.0000589
-        sec.vss_Ih_linearized_mod = Vrest
+        # sec.vss_Ih_linearized_mod = Vrest
+        sec.V_R_Ih_linearized_v2 = Vrest
 
-    nrn.distribute_channels("apic", "gIhbar_Ih_linearized_mod",
-                                 2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
-
+    nrn.distribute_channels("apic", "gIhbar_Ih_linearized_v2",
+                            2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
     for sec in neuron.h.dend:
-        sec.insert("Ih_linearized_mod")
+        sec.insert("Ih_linearized_v2")
         sec.cm = 2
         sec.g_pas = 0.0000467
-        sec.gIhbar_Ih_linearized_mod = 0.0002
-        sec.vss_Ih_linearized_mod = Vrest
-
+        sec.gIhbar_Ih_linearized_v2 = 0.0002
+        # sec.vss_Ih_linearized_v2 = Vrest
+        sec.V_R_Ih_linearized_v2 = Vrest
     for sec in neuron.h.axon:
         sec.g_pas = 0.0000325
-
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
 
@@ -178,24 +213,89 @@ def biophys_active(**kwargs):
     print("active ion-channels inserted.")
 
 
+def make_syaptic_stimuli(cell, input_idx):
+    # Define synapse parameters
+    synapse_parameters = {
+        'idx': input_idx,
+        'e': 0.,                   # reversal potential
+        'syntype': 'ExpSyn',       # synapse type
+        'tau': 10.,                # syn. time constant
+        'weight': 0.001,            # syn. weight
+        'record_current': True,
+    }
+    synapse = LFPy.Synapse(cell, **synapse_parameters)
+    synapse.set_spike_times(np.array([5.]))
+    return cell, synapse
+
+
 def active_declarations(**kwargs):
     ''' set active conductances for Hay model 2011 '''
-
     nrn.delete_axon()
     nrn.geom_nseg()
     nrn.define_shape()
-
     exec('biophys_%s(**kwargs)' % kwargs['conductance_type'])
 
 
-if __name__ == '__main__':
+def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
+
+    timeres = 2**-4
+    cut_off = 0
+    tstopms = 150
+    tstartms = -cut_off
+    model_path = join('lfpy_version')
+    neuron.load_mechanisms('mod')
+    neuron.load_mechanisms('..')
+    cell_params = {
+        'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init': holding_potential,             # initial crossmembrane potential
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': 1,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+        'custom_code': [join(model_path, 'custom_codes.hoc')],
+        'custom_fun': [active_declarations],  # will execute this function
+        'custom_fun_args': [{'conductance_type': conductance_type,
+                             'hold_potential': holding_potential}],
+    }
+
+    cell = LFPy.Cell(**cell_params)
+    make_syaptic_stimuli(cell, input_idx)
+    cell.simulate(rec_vmem=True, rec_imem=True)
+
+    plt.subplot(211, title='Soma')
+    plt.plot(cell.tvec, cell.vmem[0, :], label='%d %s %d mV' % (input_idx, conductance_type,
+                                                                holding_potential))
+
+    plt.subplot(212, title='Input idx %d' % input_idx)
+    plt.plot(cell.tvec, cell.vmem[input_idx, :], label='%d %s %d mV' % (input_idx, conductance_type,
+                                                           holding_potential))
+
+def test_frozen_currents():
+
+    input_idx = 750
+    holding_potential = -80
+    simulate_synaptic_input(input_idx, holding_potential, 'active')
+    simulate_synaptic_input(input_idx, holding_potential, 'passive')
+    simulate_synaptic_input(input_idx, holding_potential, 'Ih_linearized')
+    simulate_synaptic_input(input_idx, holding_potential, 'Ih_linearized_frozen')
+
+    plt.legend()
+    plt.savefig('frozen_test_%d_%d.png' % (input_idx, holding_potential))
+
+
+def test_steady_state():
 
     timeres = 2**-4
     cut_off = 0
     tstopms = 100
     tstartms = -cut_off
     model_path = join('lfpy_version')
-
 
     cell_params = {
         'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
@@ -217,6 +317,12 @@ if __name__ == '__main__':
     }
 
     cell = LFPy.Cell(**cell_params)
+
     cell.simulate(rec_vmem=True, rec_imem=True)
+
     plt.plot(cell.tvec, cell.somav)
     plt.show()
+
+if __name__ == '__main__':
+
+    test_frozen_currents()

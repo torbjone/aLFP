@@ -324,5 +324,7 @@ class IntroFigures():
             self._plot_EC_signal_to_ax(fig, ax, idx, y_vec, elec_x[idx], elec_z[idx], x_vec, conductance_type)
 
 if __name__ == '__main__':
+
+    # TODO: Make compatible with all cell models.
     introfig = IntroFigures()
     introfig.make_figure('figure_2', do_simulations=True)
