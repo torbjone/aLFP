@@ -2,7 +2,7 @@
 :Comment: corrected rates using q10 = 2.3, target temperature 34, orginal 21
 
 NEURON	{
-	SUFFIX Im
+	SUFFIX Im_frozen
 	USEION k READ ek WRITE ik
 	RANGE gImbar, gIm, ik
 }
@@ -26,10 +26,10 @@ ASSIGNED	{
 	mTau
 	mAlpha
 	mBeta
+    m
 }
 
 BREAKPOINT	{
-
 	gIm = gImbar*m
 	ik = gIm*(v-ek)
 }

@@ -2,7 +2,7 @@
 :Reference : :		Reuveni, Friedman, Amitai, and Gutnick, J.Neurosci. 1993
 
 NEURON	{
-	SUFFIX Ca_HVA
+	SUFFIX Ca_HVA_frozen
 	USEION ca READ eca WRITE ica
 	RANGE gCa_HVAbar, gCa_HVA, ica 
 }
@@ -18,6 +18,8 @@ PARAMETER	{
 }
 
 ASSIGNED	{
+    m
+    h
 	v	(mV)
 	eca	(mV)
 	ica	(mA/cm2)

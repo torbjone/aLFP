@@ -4,7 +4,7 @@
 :Comment: corrected rates using q10 = 2.3, target temperature 34, orginal 21
 
 NEURON	{
-	SUFFIX Nap_Et2
+	SUFFIX Nap_Et2_frozen
 	USEION na READ ena WRITE ina
 	RANGE gNap_Et2bar, gNap_Et2, ina
 }
@@ -32,6 +32,8 @@ ASSIGNED	{
 	hTau
 	hAlpha
 	hBeta
+    m
+    h
 }
 
 BREAKPOINT	{

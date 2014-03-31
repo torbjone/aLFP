@@ -2,7 +2,7 @@
 :comment: took the NaTa and shifted both activation/inactivation by 6 mv
 
 NEURON	{
-	SUFFIX NaTs2_t
+	SUFFIX NaTs2_t_frozen
 	USEION na READ ena WRITE ina
 	RANGE gNaTs2_tbar, gNaTs2_t, ina
 }
@@ -30,6 +30,8 @@ ASSIGNED	{
 	hTau
 	hAlpha
 	hBeta
+    m
+    h
 }
 
 BREAKPOINT	{

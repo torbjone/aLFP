@@ -10,7 +10,6 @@ import numpy as np
 import pylab as plt
 import aLFP
 
-
 def insert_Ih(section_dict):
 
     for sec in section_dict['basal']:
@@ -34,6 +33,28 @@ def insert_Ih(section_dict):
         sec.insert("Ih_BK_dist")
         sec.ghbar_Ih_BK_dist = 1e-4 * 20.
 
+def insert_Ih_frozen(section_dict):
+
+    for sec in section_dict['basal']:
+        sec.insert("Ih_BK_prox_frozen")
+        sec.ghbar_Ih_BK_prox_frozen = 1e-4 * 0.2
+
+    nrn.distance()
+    for sec in section_dict['apic_trunk']:
+        sec.insert("Ih_BK_prox_frozen")
+        for seg in sec:
+            dist = nrn.distance(seg.x)
+            seg.ghbar_Ih_BK_prox_frozen = 1e-4*(0.2 + (2.0 - 0.2)/(1 + np.exp((250. - dist)/30)))
+
+    for sec in section_dict['oblique_dendrites']:
+        sec.insert("Ih_BK_prox_frozen")
+        for seg in sec:
+            dist = nrn.distance(seg.x)
+            seg.ghbar_Ih_BK_prox_frozen = 1e-4*(0.2 + (2.0 - 0.2)/(1 + np.exp((250. - dist)/30)))
+
+    for sec in section_dict['apic_tuft']:
+        sec.insert("Ih_BK_dist_frozen")
+        sec.ghbar_Ih_BK_dist_frozen = 1e-4 * 20.
 
 def insert_Im(section_dict):
 
@@ -60,6 +81,31 @@ def insert_Im(section_dict):
                     # print sec.name(), "doesn't get IM"
                     seg.gkbar_Im_BK = 0
 
+def insert_Im_frozen(section_dict):
+
+    gkm = 1e-4 * 12.
+    max_dist = 40.
+
+    nrn.distance()
+    for sec in section_dict['somatic']:
+        if sec.name() == 'soma[1]':
+            nrn.distance(0, 1)
+
+    key_list = ['axonal_hillock', 'axonal_IS', 'myelinated_axonal', 'somatic']
+
+    for key, sec_list in section_dict.items():
+        if not key in key_list:
+            continue
+        for sec in sec_list:
+            sec.insert("Im_BK_frozen")
+            for seg in sec:
+                if nrn.distance(seg.x) < max_dist:
+                    # print sec.name(), "gets IM"
+                    seg.gkbar_Im_BK_frozen = gkm
+                else:
+                    # print sec.name(), "doesn't get IM"
+                    seg.gkbar_Im_BK_frozen = 0
+
 
 def insert_INaP(section_dict):
 
@@ -80,6 +126,25 @@ def insert_INaP(section_dict):
                     # print sec.name(), "doesn't get INaP"
                     seg.gnabar_INaP_BK = 0
 
+def insert_INaP_frozen(section_dict):
+
+    gna = 1e-4 * 50.
+    max_dist = 40.  # Changed because distance to soma is much less than distance to soma center.
+    nrn.distance()
+    key_list = ['axonal_hillock', 'axonal_IS', 'myelinated_axonal']
+    for key, sec_list in section_dict.items():
+        if not key in key_list:
+            continue
+        for sec in sec_list:
+            sec.insert("INaP_BK_frozen")
+            for seg in sec:
+                if nrn.distance(seg.x) < max_dist:
+                    # print sec.name(), "gets INaP"
+                    seg.gnabar_INaP_BK_frozen = gna
+                else:
+                    # print sec.name(), "doesn't get INaP"
+                    seg.gnabar_INaP_BK_frozen = 0
+
 
 def make_uniform(Vrest):
     """ Makes the cell uniform. Doesn't really work for INaP yet,
@@ -97,13 +162,16 @@ def make_uniform(Vrest):
                 seg.e_pas += seg.ina/seg.g_pas
             if nrn.ismembrane("k_ion"):
                 seg.e_pas += seg.ik/seg.g_pas
+            if nrn.ismembrane("ca_ion"):
+                seg.e_pas += seg.ica/seg.g_pas
             if nrn.ismembrane("Ih_BK_prox"):
                 seg.e_pas += seg.ih_Ih_BK_prox/seg.g_pas
             if nrn.ismembrane("Ih_BK_dist"):
                 seg.e_pas += seg.ih_Ih_BK_dist/seg.g_pas
-            if nrn.ismembrane("ca_ion"):
-                seg.e_pas += seg.ica/seg.g_pas
-
+            if nrn.ismembrane("Ih_BK_prox_frozen"):
+                seg.e_pas += seg.ih_Ih_BK_prox_frozen/seg.g_pas
+            if nrn.ismembrane("Ih_BK_dist_frozen"):
+                seg.e_pas += seg.ih_Ih_BK_dist_frozen/seg.g_pas
 
 def make_section_lists(cellname):
 
@@ -346,7 +414,6 @@ def area_study(cell):
 
 def active_declarations(**kwargs):
     ''' Set active conductances for modified CA1 cell
-
     '''
 
     # TODO: Documents methods and code better.
@@ -361,22 +428,47 @@ def active_declarations(**kwargs):
             print "Inserting Ih"
             insert_Ih(section_dict)
             added_channels += 1
+        if 'Ih_frozen' in kwargs['use_channels']:
+            print "Inserting frozen Ih"
+            insert_Ih_frozen(section_dict)
+            added_channels += 1
         if 'Im' in kwargs['use_channels']:
             print "Inserting Im"
             insert_Im(section_dict)
+            added_channels += 1
+        if 'Im_frozen' in kwargs['use_channels']:
+            print "Inserting frozen Im"
+            insert_Im_frozen(section_dict)
             added_channels += 1
         if 'INaP' in kwargs['use_channels']:
             print "Inserting INaP"
             insert_INaP(section_dict)
             added_channels += 1
+        if 'INaP_frozen' in kwargs['use_channels']:
+            print "Inserting frozen INaP"
+            insert_INaP_frozen(section_dict)
+            added_channels += 1
         if not added_channels == len(kwargs['use_channels']):
             raise RuntimeError("The right number of channels was not inserted!")
     else:
         raise RuntimeError("Not specified how to initialize cell!")
-
     if 'hold_potential' in kwargs:
         make_uniform(kwargs['hold_potential'])
 
+
+def make_syaptic_stimuli(cell, input_idx):
+    # Define synapse parameters
+    synapse_parameters = {
+        'idx': input_idx,
+        'e': 0.,                   # reversal potential
+        'syntype': 'ExpSyn',       # synapse type
+        'tau': 10.,                # syn. time constant
+        'weight': 0.001,            # syn. weight
+        'record_current': True,
+    }
+    synapse = LFPy.Synapse(cell, **synapse_parameters)
+    synapse.set_spike_times(np.array([5.]))
+    return cell, synapse
 
 def test_steady_state(input_idx, hold_potential, cellname):
 
@@ -414,17 +506,70 @@ def test_steady_state(input_idx, hold_potential, cellname):
     cell.simulate(**sim_params)
     [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
     plt.show()
-    img = plt.scatter(cell.xmid, cell.ymid, c=cell.vmem[:, -1], edgecolor='none')
+    img = plt.scatter(cell.xmid, cell.zmid, c=cell.vmem[:, -1], edgecolor='none')
     plt.axis('equal')
     plt.colorbar(img)
     plt.show()
+
+
+
+def simulate_synaptic_input(input_idx, holding_potential, use_channels, cellname):
+
+    timeres = 2**-4
+    cut_off = 0
+    tstopms = 500
+    tstartms = -cut_off
+    model_path = cellname
+
+    cell_params = {
+        'morphology': join(model_path, '%s.hoc' % cellname),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init': holding_potential,             # initial crossmembrane potential
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': timeres,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+        'custom_fun': [active_declarations],  # will execute this function
+        'custom_fun_args': [{'use_channels': use_channels,
+                             'cellname': cellname,
+                             'hold_potential': holding_potential}],
+    }
+
+    cell = LFPy.Cell(**cell_params)
+    plt.seed(1234)
+    print input_idx, holding_potential
+    sim_params = {'rec_vmem': True,
+                  'rec_imem': True}
+    make_syaptic_stimuli(cell, input_idx)
+    cell.simulate(**sim_params)
+
+    plt.subplot(211, title='Soma')
+    plt.plot(cell.tvec, cell.vmem[0, :], label='%d %d mV %s' % (input_idx, holding_potential, str(use_channels)))
+
+    plt.subplot(212, title='Input idx %d' % input_idx)
+    plt.plot(cell.tvec, cell.vmem[input_idx, :], label='%d %d mV %s' % (input_idx, holding_potential, str(use_channels)))
+
+def test_frozen_currents(input_idx, holding_potential, cellname):
+
+    plt.close('all')
+    simulate_synaptic_input(input_idx, holding_potential, [], cellname)
+    simulate_synaptic_input(input_idx, holding_potential, ['Ih_frozen', 'Im_frozen', 'INaP_frozen'], cellname)
+    simulate_synaptic_input(input_idx, holding_potential, ['Ih', 'Im', 'INaP'], cellname)
+
+    plt.legend(frameon=False)
+    plt.savefig('frozen_test_%d_%d_%s.png' % (input_idx, holding_potential, cellname))
 
 
 def test_morphology(hold_potential, cellname):
 
     timeres = 2**-4
     cut_off = 0
-    tstopms = 500
+    tstopms = 100
     tstartms = -cut_off
     model_path = cellname
 
@@ -442,7 +587,7 @@ def test_morphology(hold_potential, cellname):
         'tstartms': tstartms,          # start time, recorders start at t=0
         'tstopms': tstopms,
         'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{'use_channels': ['Ih', 'Im', 'INaP'],
+        'custom_fun_args': [{'use_channels': ['Ih_frozen', 'Im_frozen', 'INaP_frozen'],
                              'cellname': model_path,
                              'hold_potential': hold_potential}],
     }
@@ -458,6 +603,23 @@ def test_morphology(hold_potential, cellname):
 
 
 if __name__ == '__main__':
-    aLFP.explore_morphology(join('n120', 'n120.hoc'))
+    # aLFP.explore_morphology(join('n120', 'n120.hoc'))
     #test_morphology(-80, 'n120')
     # test_steady_state(0, -80, 'c12861')
+
+
+    test_frozen_currents(0, -80, 'c12861')
+    test_frozen_currents(0, -70, 'c12861')
+    test_frozen_currents(0, -60, 'c12861')
+
+    test_frozen_currents(500, -80, 'c12861')
+    test_frozen_currents(500, -70, 'c12861')
+    test_frozen_currents(500, -60, 'c12861')
+
+    test_frozen_currents(0, -80, 'n120')
+    test_frozen_currents(0, -70, 'n120')
+    test_frozen_currents(0, -60, 'n120')
+    
+    test_frozen_currents(500, -80, 'n120')
+    test_frozen_currents(500, -70, 'n120')
+    test_frozen_currents(500, -60, 'n120')

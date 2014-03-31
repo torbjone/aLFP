@@ -4,7 +4,7 @@
 :Comment: corrected rates using q10 = 2.3, target temperature 34, orginal 21
 
 NEURON	{
-	SUFFIX K_Tst
+	SUFFIX K_Tst_frozen
 	USEION k READ ek WRITE ik
 	RANGE gK_Tstbar, gK_Tst, ik
 }
@@ -28,6 +28,8 @@ ASSIGNED	{
 	mTau
 	hInf
 	hTau
+    m
+    h
 }
 
 BREAKPOINT	{

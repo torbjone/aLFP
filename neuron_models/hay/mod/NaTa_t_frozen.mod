@@ -1,7 +1,7 @@
 :Reference :Colbert and Pan 2002
 
 NEURON	{
-	SUFFIX NaTa_t
+	SUFFIX NaTa_t_frozen
 	USEION na READ ena WRITE ina
 	RANGE gNaTa_tbar, gNaTa_t, ina
 }
@@ -29,6 +29,8 @@ ASSIGNED	{
 	hTau
 	hAlpha
 	hBeta
+    m
+    h
 }
 
 BREAKPOINT	{

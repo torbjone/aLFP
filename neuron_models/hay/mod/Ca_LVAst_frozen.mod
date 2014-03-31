@@ -4,7 +4,7 @@
 :Comment: corrected rates using q10 = 2.3, target temperature 34, orginal 21
 
 NEURON	{
-	SUFFIX Ca_LVAst
+	SUFFIX Ca_LVAst_frozen
 	USEION ca READ eca WRITE ica
 	RANGE gCa_LVAstbar, gCa_LVAst, ica
 }
@@ -28,10 +28,11 @@ ASSIGNED	{
 	mTau
 	hInf
 	hTau
+    h
+    m
 }
 
 BREAKPOINT	{
-	SOLVE states METHOD cnexp
 	gCa_LVAst = gCa_LVAstbar*m*m*h
 	ica = gCa_LVAst*(v-eca)
 }

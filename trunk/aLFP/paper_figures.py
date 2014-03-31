@@ -9,7 +9,8 @@ import scipy.fftpack as ff
 
 class IntroFigures():
     np.random.seed(1234)
-    conductance_clr = {'active': 'r', 'Ih_linearized': 'g', 'passive': 'b'}
+    conductance_clr = {'active': 'r', 'active_frozen': 'k', 'Ih_linearized': 'g', 'passive': 'b',
+                       'Ih_linearized_frozen': 'c'}
     def __init__(self):
         self.figure_folder = join('/home', 'torbjone', 'work', 'aLFP', 'paper_figures')
         self.sim_folder = join('/home', 'torbjone', 'work', 'aLFP', 'paper_simulations')
@@ -20,14 +21,14 @@ class IntroFigures():
         elec_z = elec_z.flatten()
         elec_y = np.zeros(len(elec_x))
         self.plot_positions = np.array([elec_x, elec_y, elec_z]).T
-        self.conductance_types = ['passive', 'active']
+        self.conductance_types = ['active_frozen', 'Ih_linearized', 'Ih_linearized_frozen']
         # plot_positions = ((0, 0, -170), (-170, 0, 0), (100, 0, -30),
         #                                 (50, 0, 300), (-100, 0, 400), (70, 0, 600),
         #                                 (-80, 0, 900), (160, 0, 1000))
         self.holding_potentials = [-80, -70, -60]
         self.soma_idx = 0
         self.apic_idx = 852
-        self.use_elec_idxs = [21, 8, 36, 12, 58, 25, 74, 96, 46, 86, 100]
+        self.use_elec_idxs = [8, 36, 25, 74, 86]
 
     @staticmethod
     def _draw_morph_to_axis(ax, folder, input_pos):
@@ -82,7 +83,7 @@ class IntroFigures():
         plt.show()
 
     def _do_single_neural_simulation(self, conductance_type, holding_potential,
-                                    input_idx, sim_folder, stimuli_function, end_t):
+                                    input_idx, sim_folder, stimuli_function, end_t, cut_off):
         import neuron
         from hay_active_declarations import active_declarations as hay_active
         import LFPy
@@ -107,7 +108,7 @@ class IntroFigures():
             'lambda_f': 100,           # segments are isopotential at this frequency
             'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
             'timeres_python': timeres,
-            'tstartms': -6000,          # start time, recorders start at t=0
+            'tstartms': -cut_off,          # start time, recorders start at t=0
             'tstopms': end_t,
             'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
             'custom_fun': [hay_active],  # will execute this function
@@ -196,12 +197,12 @@ class IntroFigures():
         synapse.set_spike_times(np.array([5.]))
         return cell, synapse, None
 
-    def _do_all_simulations(self, sim_folder, stimuli_function, end_t):
+    def _do_all_simulations(self, sim_folder, stimuli_function, end_t, cut_off):
         for holding_potential in self.holding_potentials:
             for input_idx in [self.apic_idx, self.soma_idx]:
                 for conductance_type in self.conductance_types:
                     self._do_single_neural_simulation(conductance_type, holding_potential,
-                                                 input_idx, sim_folder, stimuli_function, end_t)
+                                                 input_idx, sim_folder, stimuli_function, end_t, cut_off)
 
     @staticmethod
     def _find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z):
@@ -212,17 +213,25 @@ class IntroFigures():
         return [cls._find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z) for pos in position_list]
 
     def _plot_EC_signal_to_ax(self, fig, ax, idx, signal, elec_x_pos, elec_z_pos, x_vec, conductance_type):
-        ec_ax_dict = {'frameon': True,
-                      'xticks': [1e0, 1e1, 1e2],
-                      'xticklabels': [],
-                      'yticks': [1e-4, 1e-3, 1e-2, 1e-1],
-                      'yticklabels': [], 'xscale': 'log', 'yscale': 'log',
-                      'ylim': [1e-5, 1e-3],
-                      'xlim': [1, 500]}
+        # ec_ax_dict = {'frameon': True,
+        #               'xticks': [1e0, 1e1, 1e2],
+        #               'xticklabels': [],
+        #               'yticks': [1e-4, 1e-3, 1e-2, 1e-1],
+        #               'yticklabels': [], 'xscale': 'log', 'yscale': 'log',
+        #               'ylim': [1e-5, 1e-3],
+        #               'xlim': [1, 500]}
 
-        ec_plot_dict = {'color':self.conductance_clr[conductance_type],
+        ec_ax_dict = {'frameon': False,
+                      'xticks': [],
+                      'xticklabels': [],
+                      'yticks': [],
+                      'yticklabels': [],
+                      'ylim': [0, 0.05],
+                      'xlim': [0, 80]}
+
+        ec_plot_dict = {'color': self.conductance_clr[conductance_type],
                         'lw': 2,
-                        'clip_on': True}
+                        'clip_on': False}
         ax_ = fig.add_axes(self.return_ax_coors(fig, ax, (elec_x_pos, elec_z_pos)), **ec_ax_dict)
 
         ax_.minorticks_off()
@@ -239,18 +248,20 @@ class IntroFigures():
         if figure_name == 'figure_1':
             start_t = 0
             end_t = 80
+            cut_off = 1000
             sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_synapse')
             stimuli_function = self._make_syaptic_stimuli
         elif figure_name == 'figure_2':
             start_t = 0
             end_t = 1000
+            cut_off = 6000
             sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_white_noise')
             stimuli_function = self._make_white_noise_stimuli
         else:
             raise RuntimeError("Unrecognized figure name")
 
         if do_simulations:
-            self._do_all_simulations(sim_folder, stimuli_function, end_t)
+            self._do_all_simulations(sim_folder, stimuli_function, end_t, cut_off)
         tvec = np.load(join(sim_folder, 'tvec.npy'))
         elec_x = np.load(join(sim_folder, 'elec_x.npy'))
         elec_y = np.load(join(sim_folder, 'elec_y.npy'))

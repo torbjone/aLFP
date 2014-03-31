@@ -2,7 +2,7 @@
 :Reference : :		Characterization of a Shaw-related potassium channel family in rat brain, The EMBO Journal, vol.11, no.7,2473-2486 (1992)
 
 NEURON	{
-	SUFFIX SKv3_1
+	SUFFIX SKv3_1_frozen
 	USEION k READ ek WRITE ik
 	RANGE gSKv3_1bar, gSKv3_1, ik 
 }
@@ -24,6 +24,7 @@ ASSIGNED	{
 	gSKv3_1	(S/cm2)
 	mInf
 	mTau
+    m
 }
 
 BREAKPOINT	{

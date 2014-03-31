@@ -2,7 +2,7 @@
 :Reference : :		Kole,Hallermann,and Stuart, J. Neurosci. 2006
 
 NEURON	{
-	SUFFIX Ih
+	SUFFIX Ih_frozen
 	NONSPECIFIC_CURRENT ihcn
 	RANGE gIhbar, gIh, ihcn 
 }
@@ -26,10 +26,10 @@ ASSIGNED	{
 	mTau
 	mAlpha
 	mBeta
+    m
 }
 
 BREAKPOINT	{
-
 	gIh = gIhbar*m
 	ihcn = gIh*(v-ehcn)
 }
