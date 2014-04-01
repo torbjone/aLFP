@@ -509,7 +509,6 @@ def test_steady_state(input_idx, hold_potential, cellname):
     plt.show()
 
 
-
 def simulate_synaptic_input(input_idx, holding_potential, use_channels, cellname):
 
     timeres = 2**-4
@@ -550,6 +549,7 @@ def simulate_synaptic_input(input_idx, holding_potential, use_channels, cellname
 
     plt.subplot(212, title='Input idx %d' % input_idx)
     plt.plot(cell.tvec, cell.vmem[input_idx, :], label='%d %d mV %s' % (input_idx, holding_potential, str(use_channels)))
+
 
 def test_frozen_currents(input_idx, holding_potential, cellname):
 
@@ -604,7 +604,6 @@ if __name__ == '__main__':
     #test_morphology(-80, 'n120')
     # test_steady_state(0, -80, 'c12861')
 
-
     test_frozen_currents(0, -80, 'c12861')
     test_frozen_currents(0, -70, 'c12861')
     test_frozen_currents(0, -60, 'c12861')
@@ -616,7 +615,7 @@ if __name__ == '__main__':
     test_frozen_currents(0, -80, 'n120')
     test_frozen_currents(0, -70, 'n120')
     test_frozen_currents(0, -60, 'n120')
-    
+
     test_frozen_currents(500, -80, 'n120')
     test_frozen_currents(500, -70, 'n120')
     test_frozen_currents(500, -60, 'n120')
