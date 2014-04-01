@@ -416,9 +416,6 @@ def active_declarations(**kwargs):
     ''' Set active conductances for modified CA1 cell
     '''
 
-    # TODO: Documents methods and code better.
-    # TODO: Do we see the resonance properties we expect?
-
     section_dict = make_section_lists(kwargs['cellname'])
     modify_morphology(section_dict, kwargs['cellname'])
     biophys_passive(section_dict, **kwargs)
@@ -517,7 +514,7 @@ def simulate_synaptic_input(input_idx, holding_potential, use_channels, cellname
 
     timeres = 2**-4
     cut_off = 0
-    tstopms = 500
+    tstopms = 100
     tstartms = -cut_off
     model_path = cellname
 
