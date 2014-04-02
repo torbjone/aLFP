@@ -392,7 +392,6 @@ class IntroFigures():
         [ax1.plot(elec_x[idx], elec_z[idx], marker='$%d$' % idx, color='gray', alpha=0.2)
             for idx in xrange(len(elec_x))]
 
-
         lines = []
         line_names = []
         for conductance_type in self.conductance_types:
@@ -414,4 +413,6 @@ class IntroFigures():
 
 if __name__ == '__main__':
 
-    IntroFigures('hay', 'figure_1').make_figure(do_simulations=False)
+    IntroFigures('hay', 'figure_2').make_figure(do_simulations=True)
+    IntroFigures('n120', 'figure_2').make_figure(do_simulations=True)
+    IntroFigures('c12861', 'figure_2').make_figure(do_simulations=True)
