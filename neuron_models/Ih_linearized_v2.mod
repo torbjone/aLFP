@@ -4,7 +4,7 @@
 NEURON	{
 	SUFFIX Ih_linearized_v2
 	NONSPECIFIC_CURRENT ihcn
-	RANGE gIhbar, V_R, ihcn, wInf, ehcn, phi, wTau
+	RANGE gIhbar, V_R, ihcn, wInf, ehcn, mu, wTau
 }
 
 UNITS	{
@@ -34,7 +34,7 @@ ASSIGNED	{
 	foo
 	dwinf
 	wBeta
-    phi
+    mu
 }
 
 STATE	{ 
@@ -43,7 +43,7 @@ STATE	{
 
 BREAKPOINT	{
 	SOLVE states METHOD cnexp
-	ihcn  = gIhbar*wInf*(v-ehcn) - m*phi
+	ihcn  = gIhbar*wInf*(v-ehcn) - m*mu
 }
 
 DERIVATIVE states	{
@@ -63,5 +63,5 @@ INITIAL{
     wTau 	= 1/(wAlpha + wBeta)
     dwinf 	= - wBeta*wAlpha *wTau * wTau /(V_R + a2) * foo
 	m 	= 0 :mInf : SURE ABOUT THIS ONE? Not as in qa.mod
-    phi = gIhbar * dwinf *(ehcn - V_R)
+    mu = gIhbar * dwinf *(ehcn - V_R)
 }
