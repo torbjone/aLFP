@@ -81,7 +81,7 @@ class IntroFigures():
             self.use_elec_idxs = [33, 2, 78, 61, 22]
             self.ax_dict = {'ylim': [-200, 700], 'xlim': [-250, 250]}
 
-        elif  self.cell_name == 'c12861':
+        elif self.cell_name == 'c12861':
             elec_x, elec_z = np.meshgrid(np.linspace(-150, 150, 7),
                                          np.linspace(-150, 800, 15))
             elec_x = elec_x.flatten()

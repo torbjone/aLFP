@@ -40,3 +40,13 @@ def simplify_axes(axes):
         ax.spines['right'].set_visible(False)
         ax.get_xaxis().tick_bottom()
         ax.get_yaxis().tick_left()
+
+def color_axes(axes, clr):
+    if not type(axes) is list:
+        axes = [axes]
+    for ax in axes:
+        ax.tick_params(axis='x', colors=clr)
+        ax.tick_params(axis='y', colors=clr)
+        for spine in ax.spines.values():
+            spine.set_edgecolor(clr)
+

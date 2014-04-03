@@ -34,6 +34,71 @@ def make_cell_uniform(Vrest=-60):
             if neuron.h.ismembrane("Ih_linearized_v2_frozen"):
                 seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
 
+def _get_longest_distance():
+    nrn.distance()
+    max_dist = 0
+    for sec in nrn.allsec():
+        for seg in sec:
+            max_dist = np.max([max_dist, nrn.distance(seg.x)])
+    return max_dist
+
+def _get_total_area():
+
+    total_area = 0
+    for sec in nrn.allsec():
+        for seg in sec:
+           # Never mind the units, as long as it is consistent
+           total_area += nrn.area(seg.x)
+    return total_area
+
+def _get_linear_increase_factor(increase_factor, max_dist, total_conductance):
+    normalization = 0
+    for sec in neuron.h.allsec():
+        for seg in sec:
+            normalization += nrn.area(seg.x) * (1 + (increase_factor - 1) * nrn.distance(seg.x)/max_dist)
+    return total_conductance / normalization
+
+def _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance):
+    normalization = 0
+    for sec in neuron.h.allsec():
+        for seg in sec:
+            normalization += nrn.area(seg.x) * (decrease_factor - decrease_factor * nrn.distance(seg.x)/max_dist)
+    return total_conductance / normalization
+
+
+def biophys_generic(**kwargs):
+    for sec in neuron.h.allsec():
+        sec.insert("QA")
+        sec.em_QA = kwargs['hold_potential']
+        sec.phi_QA = kwargs['phi']
+        sec.taum_QA = kwargs['taum']
+
+    total_conductance = kwargs['total_conductance']
+    total_area = _get_total_area()
+    max_dist = _get_longest_distance()
+
+    if kwargs['distribution'] == 'uniform':
+        for sec in neuron.h.allsec():
+            for seg in sec:
+                seg.gm_QA = total_conductance / total_area
+    elif kwargs['distribution'] == 'linear_increase':
+        increase_factor = 100
+        conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_conductance)
+        for sec in neuron.h.allsec():
+            for seg in sec:
+                seg.gm_QA = (conductance_factor * (1 + (increase_factor - 1) * nrn.distance(seg.x)
+                                                   / max_dist))
+    elif kwargs['distribution'] == 'linear_decrease':
+        decrease_factor = 100
+        conductance_factor = _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance)
+        nrn.distance()
+        for sec in neuron.h.allsec():
+            for seg in sec:
+                seg.gm_QA = (conductance_factor * (decrease_factor - decrease_factor * nrn.distance(seg.x)
+                                                   / max_dist))
+    else:
+        raise RuntimeError("Unknown distribution...")
+
 def biophys_passive(**kwargs):
     for sec in neuron.h.allsec():
         sec.insert('pas')
@@ -189,9 +254,9 @@ def biophys_active(**kwargs):
         sec.gImbar_Im = 0.0000675
         sec.g_pas = 0.0000589
 
-    nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
-    nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.000000, 0.010000, 685.000000, 885.000000, 0.0187000000)
-    nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.000000, 0.100000, 685.000000, 885.000000, 0.0005550000)
+    nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.087, 0.0002)
+    nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.0, 0.010, 685.0, 885.0, 0.0187)
+    nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.0, 0.10, 685.00, 885.0, 0.000555)
 
     for sec in neuron.h.dend:
         sec.cm = 2
