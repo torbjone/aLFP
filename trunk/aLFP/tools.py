@@ -46,6 +46,23 @@ def return_dipole_stick(imem, ymid):
 def make_white_noise(N):
     return np.random.random(N)
 
+def return_freq_and_psd(tvec, sig):
+    """ Returns the power and freqency of the input signal"""
+    sig = np.array(sig)
+    if len(sig.shape) == 1:
+        sig = np.array([sig])
+    elif len(sig.shape) == 2:
+        pass
+    else:
+        raise RuntimeError("Not compatible with given array shape!")
+    sample_freq = ff.fftfreq(sig.shape[1], d=(tvec[1] - tvec[0])/1000.)
+    pidxs = np.where(sample_freq >= 0)
+    freqs = sample_freq[pidxs]
+    Y = ff.fft(sig, axis=1)[:, pidxs[0]]
+    power = np.abs(Y)/Y.shape[1]
+    return freqs, power
+
+
 def return_psd(sig, neural_sim_params):
 
     sample_freq = ff.fftfreq(len(sig), d=neural_sim_params['timeres']/1000)

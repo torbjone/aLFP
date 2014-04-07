@@ -230,21 +230,22 @@ class IntroFigures():
 
         self.save_neural_sim_data(cell, electrode, input_idx, conductance_type, holding_potential)
 
-    def return_freq_and_psd(self, tvec, sig):
-        """ Returns the power and freqency of the input signal"""
-        sig = np.array(sig)
-        if len(sig.shape) == 1:
-            sig = np.array([sig])
-        elif len(sig.shape) == 2:
-            pass
-        else:
-            raise RuntimeError("Not compatible with given array shape!")
-        sample_freq = ff.fftfreq(sig.shape[1], d=(tvec[1] - tvec[0])/1000.)
-        pidxs = np.where(sample_freq >= 0)
-        freqs = sample_freq[pidxs]
-        Y = ff.fft(sig, axis=1)[:, pidxs[0]]
-        power = np.abs(Y)/Y.shape[1]
-        return freqs, power
+    # Use method in tools instead
+    # def return_freq_and_psd(self, tvec, sig):
+    #     """ Returns the power and freqency of the input signal"""
+    #     sig = np.array(sig)
+    #     if len(sig.shape) == 1:
+    #         sig = np.array([sig])
+    #     elif len(sig.shape) == 2:
+    #         pass
+    #     else:
+    #         raise RuntimeError("Not compatible with given array shape!")
+    #     sample_freq = ff.fftfreq(sig.shape[1], d=(tvec[1] - tvec[0])/1000.)
+    #     pidxs = np.where(sample_freq >= 0)
+    #     freqs = sample_freq[pidxs]
+    #     Y = ff.fft(sig, axis=1)[:, pidxs[0]]
+    #     power = np.abs(Y)/Y.shape[1]
+    #     return freqs, power
 
     def make_WN_input(self, cell, max_freq):
         """ White Noise input ala Linden 2010 is made """
