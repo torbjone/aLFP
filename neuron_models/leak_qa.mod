@@ -2,7 +2,7 @@ TITLE leak + quasi-active current
 : Michiel Remme, 2013
 
 NEURON	{
-	SUFFIX QA
+	SUFFIX QA_old
 	NONSPECIFIC_CURRENT i
 	RANGE gm, em : total membrane conductance and weighted reversal potential (=resting potential)
 	RANGE phi, taum

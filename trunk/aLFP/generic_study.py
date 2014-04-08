@@ -25,11 +25,11 @@ class GenericStudy:
         if not os.path.isdir(self.sim_folder):
             os.mkdir(self.sim_folder)
 
-        self.timeres = 2**-5
+        self.timeres = 2**-4
         self.holding_potentials = [-80, -70, -60]
         self.holding_potential = -80
-        self.phis = [0.5, 0, -2]
-        self.phi_clr = lambda phi: plt.cm.Dark2(int(256. * (phi + 2)/2.5 ))
+        self.mus = [4, 0, -1]
+        self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu + 1)/5))
 
         self.sec_clr_dict = {'soma': '0.3', 'dend': '0.5', 'apic': '0.7', 'axon': '0.1'}
         self._set_cell_specific_properties()
@@ -48,7 +48,7 @@ class GenericStudy:
             self.plot_psd = False
             self._single_neural_sim_function = self._run_single_synaptic_simulation
             self.cut_off = 0
-            self.end_t = 150
+            self.end_t = 30
         else:
             raise RuntimeError("Unrecognized input type.")
 
@@ -67,7 +67,7 @@ class GenericStudy:
             self.cell_plot_idxs = [0, 455, 605]
             self.comp_markers = ['o', 'D', 's']
 
-    def _return_cell(self, holding_potential, conductance_type, phi, distribution, taum):
+    def _return_cell(self, holding_potential, conductance_type, mu, distribution, tau_w):
         import neuron
         from hay_active_declarations import active_declarations as hay_active
         from ca1_sub_declarations import active_declarations as ca1_active
@@ -90,10 +90,11 @@ class GenericStudy:
                 'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
                 'custom_fun': [hay_active],  # will execute this function
                 'custom_fun_args': [{'conductance_type': conductance_type,
-                                     'phi': phi,
+                                     'mu_factor': mu,
+                                     'g_pas': 0.0004,
                                      'distribution': distribution,
-                                     'taum': taum,
-                                     'total_conductance': 0.623843378791,
+                                     'tau_w': tau_w,
+                                     'total_w_conductance': 6.23843378791,
                                      'hold_potential': holding_potential}]
             }
         elif self.cell_name in ['n120', 'c12861']:
@@ -202,22 +203,23 @@ class GenericStudy:
 
 
     def save_neural_sim_single_input_data(self, cell, electrode, input_idx,
-                             phi, distribution, taum):
+                             mu, distribution, taum):
 
         if not os.path.isdir(self.sim_folder):
             os.mkdir(self.sim_folder)
 
         dist_dict = {'dist': np.zeros(cell.totnsegs),
              'sec_clrs': np.zeros(cell.totnsegs, dtype='|S3'),
-             'gm_QA': np.zeros(cell.totnsegs),
-             'em_QA': np.zeros(cell.totnsegs),
+             'g_pas_QA': np.zeros(cell.totnsegs),
+             'V_rest_QA': np.zeros(cell.totnsegs),
              'v': np.zeros(cell.totnsegs),
-             'phi_QA': np.zeros(cell.totnsegs),
-             'taum_QA': np.zeros(cell.totnsegs),
+             'mu_QA': np.zeros(cell.totnsegs),
+             'tau_w_QA': np.zeros(cell.totnsegs),
+             'g_w_QA': np.zeros(cell.totnsegs),
              }
         dist_dict = self._get_distribution(dist_dict, cell)
 
-        sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, phi,
+        sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                     self.holding_potential, distribution, taum)
         np.save(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)), cell.tvec)
         np.save(join(self.sim_folder, 'dist_dict_%s.npy' % sim_name), dist_dict)
@@ -243,28 +245,31 @@ class GenericStudy:
 
     def plot_parameter_distributions(self, fig, input_idx, distribution, taum):
 
-        ax0 = fig.add_subplot(351, title='$g_{m}$', xlabel='$\mu m$', ylim=[0, 0.0001],
+        ax0 = fig.add_subplot(351, xlabel='$\mu m$', ylim=[0, 0.001],
                               xticks=[0, 400, 800, 1200], ylabel='$S/cm^2$')
-        ax1 = fig.add_subplot(356, title='$\phi$',
+        ax1 = fig.add_subplot(356, title='$\mu$',
                               xlabel='$\mu m$', xticks=[0, 400, 800, 1200])
-        ax2 = fig.add_subplot(3, 5, 11, title=r'$\tau_m$', ylim=[0, taum*2],
+        ax2 = fig.add_subplot(3, 5, 11, title=r'$\tau_w$', ylim=[0, taum*2],
                               xlabel='$\mu m$', xticks=[0, 400, 800, 1200])
         mark_subplots([ax0, ax1, ax2], 'abc')
         simplify_axes([ax0, ax1, ax2])
 
-        for phi in self.phis:
-            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, phi,
+        for mu in self.mus:
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                self.holding_potential, distribution, taum)
             dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % sim_name)).item()
-            ax0.scatter(dist_dict['dist'], dist_dict['gm_QA'], c=dist_dict['sec_clrs'],
+            ax0.scatter(dist_dict['dist'], dist_dict['g_w_QA'], c=dist_dict['sec_clrs'],
+                        edgecolor='none', label='g_w')
+            ax0.scatter(dist_dict['dist'], dist_dict['g_pas_QA'], c=dist_dict['sec_clrs'],
+                        edgecolor='none', label='g_pas')
+
+            ax1.scatter(dist_dict['dist'], dist_dict['mu_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none')
-            ax1.scatter(dist_dict['dist'], dist_dict['phi_QA'], c=dist_dict['sec_clrs'],
-                        edgecolor='none')
-            ax2.scatter(dist_dict['dist'], dist_dict['taum_QA'], c=dist_dict['sec_clrs'],
+            ax2.scatter(dist_dict['dist'], dist_dict['tau_w_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none')
         return [ax0, ax1, ax2]
 
-    def _plot_sig_to_axes(self, ax_list, sig, tvec, phi):
+    def _plot_sig_to_axes(self, ax_list, sig, tvec, mu):
         if not len(ax_list) == len(sig):
             raise RuntimeError("Something wrong with number of electrodes!")
 
@@ -275,9 +280,9 @@ class GenericStudy:
             yvec = sig
 
         for idx, ax in enumerate(ax_list):
-            ax.plot(xvec, yvec[idx], color=self.phi_clr(phi), lw=2)
+            ax.plot(xvec, yvec[idx], color=self.mu_clr(mu), lw=2)
 
-    def _plot_signals(self, fig, input_idx, distribution, taum):
+    def _plot_signals(self, fig, input_idx, distribution, tau_w):
         ax_vmem_1 = fig.add_subplot(3, 5, 3)
         ax_vmem_2 = fig.add_subplot(3, 5, 8)
         ax_vmem_3 = fig.add_subplot(3, 5, 13)
@@ -307,18 +312,18 @@ class GenericStudy:
         lines = []
         line_names = []
 
-        for phi in self.phis:
-            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, phi,
-                                               self.holding_potential, distribution, taum)
+        for mu in self.mus:
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                                               self.holding_potential, distribution, tau_w)
             LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
             vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
             imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
 
-            lines.append(plt.plot(0, 0, color=self.phi_clr(phi), lw=2)[0])
-            line_names.append('$\phi = %1.1f$' % phi)
-            self._plot_sig_to_axes([ax_sig_3, ax_sig_2, ax_sig_1], LFP, tvec, phi)
-            self._plot_sig_to_axes([ax_vmem_3, ax_vmem_2, ax_vmem_1], vmem[self.cell_plot_idxs], tvec, phi)
-            self._plot_sig_to_axes([ax_imem_3, ax_imem_2, ax_imem_1], imem[self.cell_plot_idxs], tvec, phi)
+            lines.append(plt.plot(0, 0, color=self.mu_clr(mu), lw=2)[0])
+            line_names.append('$\phi = %1.1f$' % mu)
+            self._plot_sig_to_axes([ax_sig_3, ax_sig_2, ax_sig_1], LFP, tvec, mu)
+            self._plot_sig_to_axes([ax_vmem_3, ax_vmem_2, ax_vmem_1], vmem[self.cell_plot_idxs], tvec, mu)
+            self._plot_sig_to_axes([ax_imem_3, ax_imem_2, ax_imem_1], imem[self.cell_plot_idxs], tvec, mu)
 
         ax_list = [ax_vmem_1, ax_vmem_2, ax_vmem_3, ax_imem_1, ax_imem_2, ax_imem_3,
                    ax_sig_1, ax_sig_2, ax_sig_3]
@@ -328,11 +333,23 @@ class GenericStudy:
             [ax.set_xscale('log') for ax in ax_list]
             [ax.set_yscale('log') for ax in ax_list]
             [ax.set_xlim([0, self.max_freq]) for ax in ax_list]
+
+            for ax in [ax_vmem_1, ax_vmem_2, ax_vmem_3]:
+                max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()[1:]) for l in ax.get_lines()])))
+                ax.set_ylim([10**(max_exponent - 4), 10**max_exponent])
+
+            for ax in [ax_imem_1, ax_imem_2, ax_imem_3]:
+                max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()) for l in ax.get_lines()])))
+                ax.set_ylim([10**(max_exponent - 4), 10**(max_exponent)])
+
+            for ax in [ax_sig_1, ax_sig_2, ax_sig_3]:
+                max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()) for l in ax.get_lines()])))
+                ax.set_ylim([10**(max_exponent - 4), 10**(max_exponent)])
         else:
             [ax.set_xticks(ax.get_xticks()[::2]) for ax in ax_list]
-            [ax.set_yticks(ax.get_yticks()[::3]) for ax in ax_list]
-            [ax.set_ylim([self.holding_potential - 1, self.holding_potential + 10])
-                for ax in [ax_vmem_1, ax_vmem_2, ax_imem_3]]
+            [ax.set_yticks(ax.get_yticks()[::2]) for ax in ax_list]
+            # [ax.set_ylim([self.holding_potential - 1, self.holding_potential + 10])
+            #     for ax in [ax_vmem_1, ax_vmem_2, ax_imem_3]]
 
         color_axes([ax_sig_3, ax_sig_2, ax_sig_1], 'g')
         color_axes([ax_imem_3, ax_imem_2, ax_imem_1, ax_vmem_3, ax_vmem_2, ax_vmem_1], 'b')
@@ -340,18 +357,19 @@ class GenericStudy:
         mark_subplots(ax_list, 'efghijklmn')
         fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower right')
 
-    def plot_summary(self, input_idx, distribution, taum):
+    def plot_summary(self, input_idx, distribution, tau_w):
 
         plt.close('all')
         fig = plt.figure(figsize=[12, 8])
         fig.subplots_adjust(hspace=0.5, wspace=0.7, top=0.9, bottom=0.13,
-                            left=0.07, right=0.95)
+                            left=0.1, right=0.95)
 
         self._draw_setup_to_axis(fig, input_idx, distribution)
-        self.plot_parameter_distributions(fig, input_idx, distribution, taum)
-        self._plot_signals(fig, input_idx, distribution, taum)
+        self.plot_parameter_distributions(fig, input_idx, distribution, tau_w)
+        self._plot_signals(fig, input_idx, distribution, tau_w)
         filename = ('generic_summary_%s_%s_%d_%s_%1.2f'
-                                             % (self.cell_name, self.input_type, input_idx, distribution, taum))
+                                             % (self.cell_name, self.input_type, input_idx,
+                                                distribution, tau_w))
         filename = '%s_psd' % filename if self.plot_psd else filename
         fig.savefig(join(self.figure_folder, '%s.png' % filename))
 
@@ -386,8 +404,8 @@ class GenericStudy:
             'idx': input_idx,
             'e': 0.,                   # reversal potential
             'syntype': 'ExpSyn',       # synapse type
-            'tau': 10.,                # syn. time constant
-            'weight': 0.005,            # syn. weight
+            'tau': 2.,                # syn. time constant
+            'weight': 0.001,            # syn. weight
             'record_current': True,
         }
         synapse = LFPy.Synapse(cell, **synapse_parameters)
@@ -431,7 +449,7 @@ class GenericStudy:
             'e': 0,
             'syntype': 'ExpSynI',      #conductance based exponential synapse
             'tau': .1,                #Time constant, rise           #Time constant, decay
-            'weight': syn_strength,           #Synaptic weight
+            'weight': 0.0001,           #Synaptic weight
             'color': 'r',              #for pl.plot
             'marker': '.',             #for pl.plot
             'record_current': False,    #record synaptic currents
@@ -451,32 +469,33 @@ class GenericStudy:
 
     def _quickplot_setup(self, cell, electrode):
         plt.plot(cell.xmid[self.cell_plot_idxs], cell.zmid[self.cell_plot_idxs], 'bD', zorder=2, ms=5, mec='none')
-        [plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], lw=2, zorder=0, color='gray') for idx in xrange(len(cell.xmid))]
+        [plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], lw=2, zorder=0, color='gray')
+         for idx in xrange(len(cell.xmid))]
         plt.plot(cell.xmid[0], cell.zmid[0], 'o', zorder=0, ms=10, mec='none', color='gray')
         plt.scatter(electrode.x, electrode.z, c='g', edgecolor='none', s=50)
         plt.show()
         sys.exit()
 
-    def _run_single_synaptic_simulation(self, phi, input_idx, distribution, taum):
+    def _run_single_synaptic_simulation(self, mu, input_idx, distribution, tau_w):
         plt.seed(1234)
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         neuron.h('forall delete_section()')
-        cell = self._return_cell(self.holding_potential, 'generic', phi, distribution, taum)
+        cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         # self._quickplot_setup(cell, electrode)
         self._make_syaptic_stimuli(cell, input_idx)
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        self.save_neural_sim_single_input_data(cell, electrode, input_idx, phi, distribution, taum)
+        self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w)
 
-    def _run_single_wn_simulation(self, phi, input_idx, distribution, taum):
+    def _run_single_wn_simulation(self, mu, input_idx, distribution, tau_w):
         plt.seed(1234)
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         neuron.h('forall delete_section()')
-        cell = self._return_cell(self.holding_potential, 'generic', phi, distribution, taum)
+        cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         # self._quickplot_setup(cell, electrode)
         cell, syn, noiseVec = self._make_white_noise_stimuli(cell, input_idx)
         print "Starting simulation ..."
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        self.save_neural_sim_single_input_data(cell, electrode, input_idx, phi, distribution, taum)
+        self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w)
 
     def calculate_total_conductance(self, distribution):
         cell = self._return_cell(self.holding_potential, 'generic', 0, distribution, 1)
@@ -490,21 +509,21 @@ class GenericStudy:
     def run_all_single_simulations(self):
         distributions = ['uniform', 'linear_decrease', 'linear_increase']
         input_idxs = [0, 605, 455]
-        taums = [1, 0.1, 10, 100]
+        tau_ws = [1, 0.1, 10, 100]
         make_summary_plot = True
         for distribution in distributions:
-            for taum in taums:
+            for tau_w in tau_ws:
                 for input_idx in input_idxs:
-                    for phi in self.phis:
-                        self._single_neural_sim_function(phi, input_idx, distribution, taum)
+                    for mu in self.mus:
+                        self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
                     if make_summary_plot:
-                        self.plot_summary(input_idx, distribution, taum)
+                        self.plot_summary(input_idx, distribution, tau_w)
 
 
     def plot_summaries(self):
-        distributions = ['uniform']#, 'linear_decrease', 'linear_increase']
-        taums = [1]#, 0.1, 10, 100]
-        input_idxs = [0]#, 605, 455]
+        distributions = ['uniform', 'linear_decrease', 'linear_increase']
+        taums = [1, 0.1, 10, 100]
+        input_idxs = [0, 605, 455]
         for distribution in distributions:
             for taum in taums:
                 for input_idx in input_idxs:
@@ -516,8 +535,10 @@ if __name__ == '__main__':
     # TODO: Test variable phi limits
     # TODO: More fancy input
 
-    gs = GenericStudy('hay', 'wn')
+    gs = GenericStudy('hay', 'synaptic')
     gs.run_all_single_simulations()
+    # gs.plot_summary(0, 'uniform', 1)
+
     # gs.calculate_total_conductance('linear_decrease')
     # gs.calculate_total_conductance('linear_increase')
     # gs.calculate_total_conductance('uniform')

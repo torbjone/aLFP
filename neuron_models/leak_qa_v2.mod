@@ -1,12 +1,11 @@
 TITLE leak + quasi-active current 
 : Michiel Remme, 2013
+: Modified by Ness 2014
 
 NEURON	{
-	SUFFIX QA_v2
+	SUFFIX QA
 	NONSPECIFIC_CURRENT i
-	RANGE gm, em : total membrane conductance and weighted reversal potential (=resting potential)
-	RANGE phi, taum
-	RANGE i, im, iqa
+	RANGE g_pas, mu, g_w, i, V_r, tau_w
 }
 
 UNITS	{
@@ -16,17 +15,18 @@ UNITS	{
 }
 
 PARAMETER	{
-	gm		= 0.0001    (S/cm2)
-	em      = -60       (mV)
-	phi 	= 0
-    taum    = 1         (ms)
+	g_pas	= 0.0001    (S/cm2)
+	:e_w     = -60       (mV)
+    V_r     = -80 (mV)
+    mu  	= 0
+    tau_w    = 1         (ms)
+    gamma_R
+    g_w     = 0.0001 (S/cm2)
 }
 
 ASSIGNED	{
 	v		(mV)
 	i       (mA/cm2)
-	im      (mA/cm2) : total passive current (includes ohmic component of active current)
-	iqa     (mA/cm2)
 }
 
 STATE	{ 
@@ -34,16 +34,16 @@ STATE	{
 }
 
 INITIAL  {
-	m = v-em
+    :e_leak = V_r - (gamma_R - 1) * e_w
+    gamma_R = (1 + g_w / g_pas)
+    m = 0
 }
 
 BREAKPOINT	{
 	SOLVE states METHOD cnexp
-	im 		= gm*(v-em)
-	iqa 	= gm*phi*m
-	i	 	= im + iqa
+	i = g_pas * (gamma_R * v + m * mu - V_r * gamma_R)
 }
 
 DERIVATIVE states	{
-    m' = (v - em - m)/taum
+    m' = (v - V_r - m)/tau_w
 }

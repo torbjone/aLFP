@@ -70,48 +70,42 @@ def biophys_generic(**kwargs):
 
     for sec in neuron.h.allsec():
         sec.insert("QA")
-        sec.em_QA = kwargs['hold_potential']
-        sec.taum_QA = kwargs['taum']
+        sec.V_r_QA = kwargs['hold_potential']
+        sec.tau_w_QA = kwargs['tau_w']
         sec.Ra = 100
         sec.cm = 1.0
+        sec.g_pas_QA = kwargs['g_pas']
 
-    total_conductance = kwargs['total_conductance']
+    total_w_conductance = kwargs['total_w_conductance']
     total_area = _get_total_area()
     max_dist = _get_longest_distance()
-
-
 
     if kwargs['distribution'] == 'uniform':
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.gm_QA = total_conductance / total_area
-
+                seg.g_w_QA = total_w_conductance / total_area
 
     elif kwargs['distribution'] == 'linear_increase':
         increase_factor = 100
-        conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_conductance)
+        conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_w_conductance)
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.gm_QA = (conductance_factor * (1 + (increase_factor - 1) * nrn.distance(seg.x)
+                seg.g_w_QA = (conductance_factor * (1 + (increase_factor - 1) * nrn.distance(seg.x)
                                                    / max_dist))
     elif kwargs['distribution'] == 'linear_decrease':
         decrease_factor = 100
-        conductance_factor = _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance)
+        conductance_factor = _get_linear_decrease_factor(decrease_factor, max_dist, total_w_conductance)
         nrn.distance()
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.gm_QA = (conductance_factor * (decrease_factor - decrease_factor * nrn.distance(seg.x)
+                seg.g_w_QA = (conductance_factor * (decrease_factor - decrease_factor * nrn.distance(seg.x)
                                                    / max_dist))
     else:
         raise RuntimeError("Unknown distribution...")
 
-    max_gm = 0
     for sec in neuron.h.allsec():
         for seg in sec:
-            max_gm = np.max([seg.gm_QA, max_gm])
-
-    for sec in neuron.h.allsec():
-        sec.phi_QA = sec.gm_QA / max_gm * kwargs['phi']
+            seg.mu_QA = seg.g_w_QA / seg.g_pas_QA * kwargs['mu_factor']
 
 
 def biophys_passive(**kwargs):
