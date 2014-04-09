@@ -34,14 +34,13 @@ STATE	{
 }
 
 INITIAL  {
-    :e_leak = V_r - (gamma_R - 1) * e_w
     gamma_R = (1 + g_w / g_pas)
     m = 0
 }
 
 BREAKPOINT	{
 	SOLVE states METHOD cnexp
-	i = g_pas * (gamma_R * v + m * mu - V_r * gamma_R)
+	i = g_pas * (gamma_R * (v - V_r) + m * mu)
 }
 
 DERIVATIVE states	{

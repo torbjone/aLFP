@@ -28,8 +28,9 @@ class GenericStudy:
         self.timeres = 2**-4
         self.holding_potentials = [-80, -70, -60]
         self.holding_potential = -80
-        self.mus = [4, 0, -1]
-        self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu + 1)/5))
+        self.mus = [2, 0, -0.5]
+        self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu - np.min(self.mus))/
+                                                  (np.max(self.mus) - np.min(self.mus))))
 
         self.sec_clr_dict = {'soma': '0.3', 'dend': '0.5', 'apic': '0.7', 'axon': '0.1'}
         self._set_cell_specific_properties()
@@ -91,7 +92,7 @@ class GenericStudy:
                 'custom_fun': [hay_active],  # will execute this function
                 'custom_fun_args': [{'conductance_type': conductance_type,
                                      'mu_factor': mu,
-                                     'g_pas': 0.0004,
+                                     'g_pas': 0.0002,
                                      'distribution': distribution,
                                      'tau_w': tau_w,
                                      'total_w_conductance': 6.23843378791,
@@ -243,7 +244,7 @@ class GenericStudy:
         np.save(join(self.sim_folder, 'diam_%s.npy' % self.cell_name), cell.diam)
 
 
-    def plot_parameter_distributions(self, fig, input_idx, distribution, taum):
+    def _plot_parameter_distributions(self, fig, input_idx, distribution, taum):
 
         ax0 = fig.add_subplot(351, xlabel='$\mu m$', ylim=[0, 0.001],
                               xticks=[0, 400, 800, 1200], ylabel='$S/cm^2$')
@@ -258,13 +259,19 @@ class GenericStudy:
             sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                self.holding_potential, distribution, taum)
             dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % sim_name)).item()
+            largest_dist_idx = np.argmax(dist_dict['dist'])
             ax0.scatter(dist_dict['dist'], dist_dict['g_w_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none', label='g_w')
+
             ax0.scatter(dist_dict['dist'], dist_dict['g_pas_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none', label='g_pas')
-
+            ax0.text(dist_dict['dist'][largest_dist_idx] + 100,
+                     dist_dict['g_pas_QA'][largest_dist_idx], 'g_pas')
+            ax0.text(dist_dict['dist'][largest_dist_idx] + 100,
+                     dist_dict['g_w_QA'][largest_dist_idx], 'g_w')
             ax1.scatter(dist_dict['dist'], dist_dict['mu_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none')
+
             ax2.scatter(dist_dict['dist'], dist_dict['tau_w_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none')
         return [ax0, ax1, ax2]
@@ -320,7 +327,7 @@ class GenericStudy:
             imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
 
             lines.append(plt.plot(0, 0, color=self.mu_clr(mu), lw=2)[0])
-            line_names.append('$\phi = %1.1f$' % mu)
+            line_names.append('$\mu_{factor} = %1.1f$' % mu)
             self._plot_sig_to_axes([ax_sig_3, ax_sig_2, ax_sig_1], LFP, tvec, mu)
             self._plot_sig_to_axes([ax_vmem_3, ax_vmem_2, ax_vmem_1], vmem[self.cell_plot_idxs], tvec, mu)
             self._plot_sig_to_axes([ax_imem_3, ax_imem_2, ax_imem_1], imem[self.cell_plot_idxs], tvec, mu)
@@ -365,7 +372,7 @@ class GenericStudy:
                             left=0.1, right=0.95)
 
         self._draw_setup_to_axis(fig, input_idx, distribution)
-        self.plot_parameter_distributions(fig, input_idx, distribution, tau_w)
+        self._plot_parameter_distributions(fig, input_idx, distribution, tau_w)
         self._plot_signals(fig, input_idx, distribution, tau_w)
         filename = ('generic_summary_%s_%s_%d_%s_%1.2f'
                                              % (self.cell_name, self.input_type, input_idx,
@@ -535,7 +542,7 @@ if __name__ == '__main__':
     # TODO: Test variable phi limits
     # TODO: More fancy input
 
-    gs = GenericStudy('hay', 'synaptic')
+    gs = GenericStudy('hay', 'wn')
     gs.run_all_single_simulations()
     # gs.plot_summary(0, 'uniform', 1)
 
