@@ -219,9 +219,15 @@ class GenericStudy:
              'g_w_QA': np.zeros(cell.totnsegs),
              }
         dist_dict = self._get_distribution(dist_dict, cell)
+        if type(input_idx) is int:
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                        self.holding_potential, distribution, taum)
+        elif type(input_idx) in [list, np.ndarray]:
+            sim_name = '%s_%s_multiple_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, mu,
+                                                              self.holding_potential, distribution, taum)
+        else:
+            raise RuntimeError("input_idx is not recognized!")
 
-        sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
-                                                    self.holding_potential, distribution, taum)
         np.save(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)), cell.tvec)
         np.save(join(self.sim_folder, 'dist_dict_%s.npy' % sim_name), dist_dict)
         np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), electrode.LFP)
@@ -380,12 +386,10 @@ class GenericStudy:
         filename = '%s_psd' % filename if self.plot_psd else filename
         fig.savefig(join(self.figure_folder, '%s.png' % filename))
 
-    def _draw_setup_to_axis(self, fig, input_idx, distribution):
-        example_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 0,
-                                               self.holding_potential, distribution, 1)
-        dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % example_name)).item()
-        ax = fig.add_subplot(152)
-        mark_subplots(ax, 'd', xpos=0, ypos=1)
+    def _draw_setup_to_axis(self, fig, input_idx, distribution=None, plotpos=152):
+
+        ax = fig.add_subplot(plotpos)
+
         elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
         elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
         xstart = np.load(join(self.sim_folder, 'xstart_%s.npy' % self.cell_name))
@@ -395,11 +399,24 @@ class GenericStudy:
         xmid = np.load(join(self.sim_folder, 'xmid_%s.npy' % self.cell_name))
         zmid = np.load(join(self.sim_folder, 'zmid_%s.npy' % self.cell_name))
 
-        ax.plot(xmid[self.cell_plot_idxs], zmid[self.cell_plot_idxs], 'bD', zorder=2, ms=5, mec='none')
+
         ax.plot(xmid[input_idx], zmid[input_idx], 'y*', zorder=1, ms=15)
+
+        if not distribution is None:
+            mark_subplots(ax, 'd', xpos=0, ypos=1)
+            ax.plot(xmid[self.cell_plot_idxs], zmid[self.cell_plot_idxs], 'bD', zorder=2, ms=5, mec='none')
+            example_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 0,
+                                               self.holding_potential, distribution, 1)
+            dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % example_name)).item()
+            sec_clrs = dist_dict['sec_clrs']
+        else:
+            mark_subplots(ax, 'a', xpos=0, ypos=1)
+            sec_clrs = ['0.7'] * len(xmid)
+
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2,
-                  color=dist_dict['sec_clrs'][idx], zorder=0) for idx in xrange(len(xmid))]
-        ax.plot(xmid[0], zmid[0], 'o', color=dist_dict['sec_clrs'][0], zorder=0, ms=10, mec='none')
+                 color=sec_clrs[idx], zorder=0) for idx in xrange(len(xmid))]
+        ax.plot(xmid[0], zmid[0], 'o', color=sec_clrs[0], zorder=0, ms=10, mec='none')
+
         ax.scatter(elec_x, elec_z, c='g', edgecolor='none', s=50)
 
         ax.axis('off')
@@ -433,7 +450,7 @@ class GenericStudy:
         input_scaling = 0.005
         max_freq = 500
         input_array = input_scaling * self._make_WN_input(cell, max_freq)
-        noiseVec = neuron.h.Vector(input_array)
+        noise_vec = neuron.h.Vector(input_array)
         i = 0
         syn = None
         for sec in cell.allseclist:
@@ -447,8 +464,8 @@ class GenericStudy:
             raise RuntimeError("Wrong stimuli index")
         syn.dur = 1E9
         syn.delay = 0
-        noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
-        return cell, syn, noiseVec
+        noise_vec.play(syn._ref_amp, cell.timeres_NEURON)
+        return cell, syn, noise_vec
 
     def set_input_spiketrain(self, cell, all_spike_trains, cell_input_idxs, spike_train_idxs, synapse_params):
         """ Makes synapses and feeds them predetermined spiketimes """
@@ -526,6 +543,31 @@ class GenericStudy:
                     if make_summary_plot:
                         self.plot_summary(input_idx, distribution, tau_w)
 
+    def _run_multiple_wn_simulation(self, mu, input_idxs, distribution, tau_w):
+        plt.seed(1234)
+        electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
+        neuron.h('forall delete_section()')
+        cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
+        syns = []
+        noise_vecs = []
+        for input_idx in input_idxs:
+            cell, syn, noise_vec = self._make_white_noise_stimuli(cell, input_idx)
+            syns.append(syn)
+            noise_vecs.append(noise_vec)
+
+        print "Starting simulation ..."
+        cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
+        self.save_neural_sim_single_input_data(cell, electrode, input_idxs, mu, distribution, tau_w)
+
+    def run_all_multiple_input_simulations(self):
+        distributions = ['uniform', 'linear_decrease', 'linear_increase']
+        input_idxs = [0, 605, 455]
+        tau_ws = [10, 100, 1, 0.1]
+        for tau_w in tau_ws:
+            for distribution in distributions:
+                for mu in self.mus:
+                    self._run_multiple_wn_simulation(mu, input_idxs, distribution, tau_w)
+            self.plot_multiple_input_EC_signals(tau_w)
 
     def plot_summaries(self):
         distributions = ['uniform', 'linear_decrease', 'linear_increase']
@@ -536,14 +578,102 @@ class GenericStudy:
                 for input_idx in input_idxs:
                     self.plot_summary(input_idx, distribution, taum)
 
+    def _plot_batch_of_EC_signals(self, fig, input_idx, distributions, tau_w):
+
+        num_cols = len(distributions) + 1
+        tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
+
+        lines = []
+        line_names = []
+        ax_dict = {'xlim': [1, 500], 'ylim': [1e-7, 1e-4]}
+        for col_numb, dist in enumerate(distributions):
+
+            ax_1 = fig.add_subplot(3, num_cols, 0 * num_cols + col_numb + 2, title=dist, **ax_dict)
+            ax_2 = fig.add_subplot(3, num_cols, 1 * num_cols + col_numb + 2, **ax_dict)
+            ax_3 = fig.add_subplot(3, num_cols, 2 * num_cols + col_numb + 2, **ax_dict)
+            for mu in self.mus:
+                sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                   self.holding_potential, dist, tau_w)
+                LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+                lines.append(plt.plot(0, 0, color=self.mu_clr(mu), lw=2)[0])
+                line_names.append('$\mu_{factor} = %1.1f$' % mu)
+                self._plot_sig_to_axes([ax_3, ax_2, ax_1], LFP, tvec, mu)
+            for ax in [ax_1, ax_2, ax_3]:
+                ax.set_xscale('log')
+                ax.set_yscale('log')
+                ax.grid(True)
+
+            simplify_axes([ax_1, ax_2, ax_3])
+        mark_subplots(fig.axes)
+        fig.legend(lines[:3], line_names[:3], frameon=False, ncol=3, loc='lower right')
+
+    def _plot_multiple_input_EC_signals(self, fig, input_idxs, distributions, tau_w):
+
+        num_cols = len(distributions) + 1
+        tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
+
+        lines = []
+        line_names = []
+        ax_dict = {'xlim': [1, 500], 'ylim': [1e-8, 1e-5]}
+        for col_numb, dist in enumerate(distributions):
+
+            ax_1 = fig.add_subplot(3, num_cols, 0 * num_cols + col_numb + 2, title=dist, **ax_dict)
+            ax_2 = fig.add_subplot(3, num_cols, 1 * num_cols + col_numb + 2, **ax_dict)
+            ax_3 = fig.add_subplot(3, num_cols, 2 * num_cols + col_numb + 2, **ax_dict)
+            for mu in self.mus:
+                sim_name = '%s_%s_multiple_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, mu,
+                                                                  self.holding_potential, dist, tau_w)
+                LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+                lines.append(plt.plot(0, 0, color=self.mu_clr(mu), lw=2)[0])
+                line_names.append('$\mu_{factor} = %1.1f$' % mu)
+                self._plot_sig_to_axes([ax_3, ax_2, ax_1], LFP, tvec, mu)
+            for ax in [ax_1, ax_2, ax_3]:
+                ax.set_xscale('log')
+                ax.set_yscale('log')
+                ax.grid(True)
+
+            simplify_axes([ax_1, ax_2, ax_3])
+        mark_subplots(fig.axes)
+        fig.legend(lines[:3], line_names[:3], frameon=False, ncol=3, loc='lower right')
+
+
+    def combine_extracellular_traces(self, input_idx):
+        plt.close('all')
+        distributions = ['uniform', 'linear_decrease', 'linear_increase']
+        tau_w = 100
+        fig = plt.figure(figsize=[12, 8])
+        fig.subplots_adjust(hspace=0.5, wspace=0.7, top=0.9, bottom=0.13,
+                            left=0.1, right=0.95)
+
+        self._draw_setup_to_axis(fig, input_idx, plotpos=141)
+        self._plot_batch_of_EC_signals(fig, input_idx, distributions, tau_w)
+        filename = ('extracellular_combined_%s_%s_%d_%1.2f' % (self.cell_name, self.input_type,
+                                                    input_idx, tau_w))
+        fig.savefig(join(self.figure_folder, '%s.png' % filename))
+
+
+    def plot_multiple_input_EC_signals(self, tau_w):
+        plt.close('all')
+        distributions = ['uniform', 'linear_decrease', 'linear_increase']
+        fig = plt.figure(figsize=[12, 8])
+        fig.subplots_adjust(hspace=0.5, wspace=0.7, top=0.9, bottom=0.13,
+                            left=0.1, right=0.95)
+        input_idxs = [0, 455, 605]
+        self._draw_setup_to_axis(fig, input_idxs, plotpos=141)
+        self._plot_multiple_input_EC_signals(fig, input_idxs, distributions, tau_w)
+        filename = ('multiple_input_%s_%s_%1.2f' % (self.cell_name, self.input_type, tau_w))
+        fig.savefig(join(self.figure_folder, '%s.png' % filename))
+
+
 if __name__ == '__main__':
 
-    # TODO: Incorporate variable phi
-    # TODO: Test variable phi limits
-    # TODO: More fancy input
-
     gs = GenericStudy('hay', 'wn')
-    gs.run_all_single_simulations()
+    gs.run_all_multiple_input_simulations()
+    # gs.run_all_single_simulations()
+    # gs.combine_extracellular_traces(0)
+    # gs.combine_extracellular_traces(455)
+    # gs.combine_extracellular_traces(605)
+    # gs.plot_multiple_input_EC_signals()
     # gs.plot_summary(0, 'uniform', 1)
 
     # gs.calculate_total_conductance('linear_decrease')
