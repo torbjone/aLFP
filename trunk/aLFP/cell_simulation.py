@@ -1144,10 +1144,10 @@ def initialize_cell(cell_params, cell_name,
     #find_apical_Ih_distributions(cell, ofolder)
     # Define electrode parameters
     electrode_parameters = {
-        'sigma' : 0.3,      # extracellular conductivity
-        'x' : elec_x,  # electrode requires 1d vector of positions
-        'y' : elec_y,
-        'z' : elec_z
+        'sigma': 0.3,      # extracellular conductivity
+        'x': elec_x,  # electrode requires 1d vector of positions
+        'y': elec_y,
+        'z': elec_z
         }
     dist_list = []
     for elec in xrange(len(elec_x)):

@@ -13,7 +13,7 @@ import aLFP
 
 class GenericStudy:
 
-    def __init__(self, cell_name, input_type):
+    def __init__(self, cell_name, input_type, extended_electrode=False):
 
         self.cell_name = cell_name
         self.input_type = input_type
@@ -33,7 +33,7 @@ class GenericStudy:
                                                   (np.max(self.mus) - np.min(self.mus))))
 
         self.sec_clr_dict = {'soma': '0.3', 'dend': '0.5', 'apic': '0.7', 'axon': '0.1'}
-        self._set_cell_specific_properties()
+        self._set_electrode_specific_properties(extended_electrode)
         self._set_input_specific_properties()
 
     def _set_input_specific_properties(self):
@@ -53,21 +53,41 @@ class GenericStudy:
         else:
             raise RuntimeError("Unrecognized input type.")
 
-    def _set_cell_specific_properties(self):
+    def _set_electrode_specific_properties(self, extended_electrode):
         if self.cell_name == 'hay':
+            zmax = 1000
+            self.cell_plot_idxs = [0, 455, 605]
+        else:
+            zmax = 700
+
+        if extended_electrode:
             self.elec_x = np.ones(3) * 100
             self.elec_y = np.zeros(3)
             self.elec_z = np.linspace(0, 1000, 3)
-            self.electrode_parameters = {
+        else:
+            self.elec_x = np.ones(3) * 100
+            self.elec_y = np.zeros(3)
+            self.elec_z = np.linspace(0, 1000, 3)
+
+        self.electrode_parameters = {
+                'sigma': 0.3,
+                'x': self.elec_x.flatten(),
+                'y': self.elec_y.flatten(),
+                'z': self.elec_z.flatten()
+        }
+
+    def _set_extended_electrode(self):
+        elec_x, elec_z = np.meshgrid(np.array([100, 200, 400, 800, 1600, 3200, 6400]), np.linspace(1000, 0, 3))
+        self.elec_x = elec_x.flatten()
+        self.elec_z = elec_z.flatten()
+        self.elec_y = np.zeros(len(self.elec_z))
+
+        self.electrode_parameters = {
                 'sigma': 0.3,
                 'x': self.elec_x,
                 'y': self.elec_y,
                 'z': self.elec_z
-                }
-            self.elec_markers = ['o', 'D', 's']
-            self.cell_plot_idxs = [0, 455, 605]
-            self.comp_markers = ['o', 'D', 's']
-
+        }
     def _return_cell(self, holding_potential, conductance_type, mu, distribution, tau_w):
         import neuron
         from hay_active_declarations import active_declarations as hay_active
@@ -147,6 +167,83 @@ class GenericStudy:
                             pass
                 idx += 1
         return dist_dict
+
+    def _recalculate_EP_with_new_elec(self, distribution, tau_w, input_idx, mu):
+
+        cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
+        cell.tstartms = 0
+        cell.tstopms = 1
+        cell.simulate(rec_imem=True, rec_vmem=True)
+        sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                   self.holding_potential, distribution, tau_w)
+        cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
+        cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
+        electrode = LFPy.RecExtElectrode(cell, **self.electrode_parameters)
+        electrode.calc_lfp()
+
+        np.save(join(self.sim_folder, 'sig_extended_%s.npy' % sim_name), electrode.LFP)
+
+    def recalculate_EP(self):
+
+        self._set_extended_electrode()
+        for tau_w in [0.1, 1, 10, 100]:
+            for mu in self.mus:
+                for distribution in ['uniform', 'linear_increase', 'linear_decrease']:
+                    for input_idx in self.cell_plot_idxs:
+                        print tau_w, mu, distribution, input_idx
+                        self._recalculate_EP_with_new_elec(distribution, tau_w, input_idx, mu)
+
+
+    def _draw_all_elecs_with_distance(self, fig, input_idx, distribution, tau_w):
+
+        tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
+
+        all_ax = []
+        for elec in xrange(len(self.elec_z)):
+            ax = fig.add_subplot(3, 7, elec + 1, title='%d %d' % (self.elec_x[elec], self.elec_z[elec]),
+                                 xlim=[1, 500], ylim=[1e-10, 1e-5])
+            simplify_axes(ax)
+            all_ax.append(ax)
+
+
+        lines = []
+        line_names = []
+        for mu in self.mus:
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                        self.holding_potential, distribution, tau_w)
+            LFP = np.load(join(self.sim_folder, 'sig_extended_%s.npy' % sim_name))
+            xvec, yvec = aLFP.return_freq_and_psd(tvec, LFP)
+
+            for elec in xrange(len(self.elec_z)):
+                all_ax[elec].loglog(xvec, yvec[elec, :], color=self.mu_clr(mu), lw=2)
+            lines.append(plt.plot(0, 0, color=self.mu_clr(mu), lw=2)[0])
+            line_names.append('$\mu_{factor} = %1.1f$' % mu)
+        [ax.set_xticks(ax.get_xticks()[::2]) for ax in all_ax]
+        [ax.set_yticks(ax.get_yticks()[::2]) for ax in all_ax]
+        fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower right')
+
+
+    def _plot_LFP_with_distance(self, distribution, tau_w, input_idx):
+        plt.close('all')
+        fig = plt.figure(figsize=[20, 8])
+        fig.subplots_adjust(hspace=0.5, wspace=0.7, top=0.9, bottom=0.13,
+                            left=0.1, right=0.95)
+
+        # self._draw_setup_to_axis(fig, input_idx, plotpos=151)
+        self._draw_all_elecs_with_distance(fig, input_idx, distribution, tau_w)
+        filename = ('LFP_with_distance_%s_%s_%d_%1.2f' % (self.cell_name, distribution, input_idx, tau_w))
+        fig.savefig(join(self.figure_folder, '%s.png' % filename))
+
+
+    def LFP_with_distance_study(self):
+        self._set_extended_electrode()
+        for tau_w in [10, 100, 0.1, 1]:
+            for distribution in ['uniform', 'linear_increase', 'linear_decrease']:
+                for input_idx in self.cell_plot_idxs:
+                    print tau_w, distribution, input_idx
+                    self._plot_LFP_with_distance(distribution, tau_w, input_idx)
+
+
 
     def plot_distributions(self, holding_potential):
         cell = self._return_cell(holding_potential, 'Ih_linearized')
@@ -668,7 +765,9 @@ class GenericStudy:
 if __name__ == '__main__':
 
     gs = GenericStudy('hay', 'wn')
-    gs.run_all_multiple_input_simulations()
+    # gs.run_all_multiple_input_simulations()
+    gs.recalculate_EP()
+    gs.LFP_with_distance_study()
     # gs.run_all_single_simulations()
     # gs.combine_extracellular_traces(0)
     # gs.combine_extracellular_traces(455)
