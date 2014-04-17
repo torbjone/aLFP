@@ -10,6 +10,7 @@ import neuron
 nrn = neuron.h
 import LFPy
 import aLFP
+import matplotlib.mlab as mlab
 
 class GenericStudy:
 
@@ -25,27 +26,47 @@ class GenericStudy:
         if not os.path.isdir(self.sim_folder):
             os.mkdir(self.sim_folder)
 
-        self.timeres = 2**-4
+        self.timeres_NEURON = 2**-4
+        self.timeres_python = 2**-1
         self.holding_potentials = [-80, -70, -60]
         self.holding_potential = -80
         self.mus = [2, 0, -0.5]
+        self.divide_into_welch = 16
+
         self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu - np.min(self.mus))/
                                                   (np.max(self.mus) - np.min(self.mus))))
 
         self.sec_clr_dict = {'soma': '0.3', 'dend': '0.5', 'apic': '0.7', 'axon': '0.1'}
         self._set_electrode_specific_properties(extended_electrode)
         self._set_input_specific_properties()
+        self.num_tsteps = round(self.end_t/self.timeres_python + 1)
+        self.welch_dict = {'Fs': 1000.,
+                           'NFFT': int(self.num_tsteps/self.divide_into_welch),
+                           'noverlap': int(self.num_tsteps/self.divide_into_welch/2),
+                           'window': plt.window_hanning,
+                           'detrend': plt.detrend_mean,
+                           'scale_by_freq': False,
+                           }
 
     def _set_input_specific_properties(self):
         if self.input_type == 'wn':
-            print "Single white noise input"
+            print "white noise input"
             self.plot_psd = True
             self._single_neural_sim_function = self._run_single_wn_simulation
             self.cut_off = 0
             self.end_t = 1000
             self.max_freq = 500
+        elif self.input_type == 'real_wn':
+            print "REAL white noise input"
+            self.plot_psd = True
+            self._single_neural_sim_function = self._run_single_wn_simulation
+            self.cut_off = 0
+            self.end_t = 5000
+            self.max_freq = 500
+            self.short_list_elecs = [1, 1 + 8, 1 + 8 * 2]
+
         elif self.input_type == 'synaptic':
-            print "Single synaptic input"
+            print "synaptic input"
             self.plot_psd = False
             self._single_neural_sim_function = self._run_single_synaptic_simulation
             self.cut_off = 0
@@ -55,29 +76,28 @@ class GenericStudy:
 
     def _set_electrode_specific_properties(self, extended_electrode):
         if self.cell_name == 'hay':
-            zmax = 1000
-            self.cell_plot_idxs = [0, 455, 605]
+            self.zmax = 1000
+            self.cell_plot_idxs = [605, 455, 0]
         else:
-            zmax = 700
+            self.zmax = 700
 
         if extended_electrode:
-            self.elec_x = np.ones(3) * 100
-            self.elec_y = np.zeros(3)
-            self.elec_z = np.linspace(0, 1000, 3)
+            self._set_extended_electrode()
         else:
             self.elec_x = np.ones(3) * 100
             self.elec_y = np.zeros(3)
-            self.elec_z = np.linspace(0, 1000, 3)
+            self.elec_z = np.linspace(self.zmax, 0, 3)
 
-        self.electrode_parameters = {
+            self.electrode_parameters = {
                 'sigma': 0.3,
                 'x': self.elec_x.flatten(),
                 'y': self.elec_y.flatten(),
                 'z': self.elec_z.flatten()
-        }
+            }
 
     def _set_extended_electrode(self):
-        elec_x, elec_z = np.meshgrid(np.array([100, 200, 400, 800, 1600, 3200, 6400]), np.linspace(1000, 0, 3))
+        elec_x, elec_z = np.meshgrid(np.array([50, 100, 200, 400, 800, 1600, 3200, 6400]),
+                                     np.linspace(self.zmax, 0, 3))
         self.elec_x = elec_x.flatten()
         self.elec_z = elec_z.flatten()
         self.elec_y = np.zeros(len(self.elec_z))
@@ -104,8 +124,8 @@ class GenericStudy:
                 'passive': False,           # switch on passive mechs
                 'nsegs_method': 'lambda_f',  # method for setting number of segments,
                 'lambda_f': 100,           # segments are isopotential at this frequency
-                'timeres_NEURON': self.timeres,   # dt of LFP and NEURON simulation.
-                'timeres_python': self.timeres,
+                'timeres_NEURON': self.timeres_NEURON,   # dt of LFP and NEURON simulation.
+                'timeres_python': self.timeres_python,
                 'tstartms': -self.cut_off,          # start time, recorders start at t=0
                 'tstopms': self.end_t,
                 'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
@@ -134,8 +154,8 @@ class GenericStudy:
                     'passive': False,           # switch on passive mechs
                     'nsegs_method': 'lambda_f',  # method for setting number of segments,
                     'lambda_f': 100,           # segments are isopotential at this frequency
-                    'timeres_NEURON': self.timeres,   # dt of LFP and NEURON simulation.
-                    'timeres_python': self.timeres,
+                    'timeres_NEURON': self.timeres_NEURON,   # dt of LFP and NEURON simulation.
+                    'timeres_python': self.timeres_python,
                     'tstartms': -self.cut_off,          # start time, recorders start at t=0
                     'tstopms': self.end_t,
                     'custom_fun': [ca1_active],  # will execute this function
@@ -194,54 +214,59 @@ class GenericStudy:
                         self._recalculate_EP_with_new_elec(distribution, tau_w, input_idx, mu)
 
 
-    def _draw_all_elecs_with_distance(self, fig, input_idx, distribution, tau_w):
+    def _draw_all_elecs_with_distance(self, fig, distribution, tau_w):
 
         tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
 
         all_ax = []
         for elec in xrange(len(self.elec_z)):
-            ax = fig.add_subplot(3, 7, elec + 1, title='%d %d' % (self.elec_x[elec], self.elec_z[elec]),
-                                 xlim=[1, 500], ylim=[1e-10, 1e-5])
+            ax = fig.add_subplot(3, 8, elec + 1, title='%d %d' % (self.elec_x[elec], self.elec_z[elec]),
+                                 xlim=[1, 500], ylim=[1e-11, 1e-6])
+            ax.grid(True)
             simplify_axes(ax)
             all_ax.append(ax)
 
-
         lines = []
         line_names = []
+
         for mu in self.mus:
-            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+            sim_name = '%s_%s_multiple_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, mu,
                                                         self.holding_potential, distribution, tau_w)
-            LFP = np.load(join(self.sim_folder, 'sig_extended_%s.npy' % sim_name))
+            LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
             xvec, yvec = aLFP.return_freq_and_psd(tvec, LFP)
 
+
             for elec in xrange(len(self.elec_z)):
-                all_ax[elec].loglog(xvec, yvec[elec, :], color=self.mu_clr(mu), lw=2)
+                sig_psd_welch, freqs_welch = mlab.psd(LFP[elec], **self.welch_dict)
+                # print sig_psd_welch, freqs_welch
+                # all_ax[elec].loglog(xvec, yvec[elec, :], color=self.mu_clr(mu), lw=0.3, alpha=0.1)
+                all_ax[elec].loglog(freqs_welch, np.sqrt(sig_psd_welch), color=self.mu_clr(mu), lw=3, alpha=1)
             lines.append(plt.plot(0, 0, color=self.mu_clr(mu), lw=2)[0])
             line_names.append('$\mu_{factor} = %1.1f$' % mu)
-        [ax.set_xticks(ax.get_xticks()[::2]) for ax in all_ax]
+        # [ax.set_xticks(ax.get_xticks()[::2]) for ax in all_ax]
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in all_ax]
         fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower right')
 
 
-    def _plot_LFP_with_distance(self, distribution, tau_w, input_idx):
+    def _plot_LFP_with_distance(self, distribution, tau_w):
         plt.close('all')
         fig = plt.figure(figsize=[20, 8])
         fig.subplots_adjust(hspace=0.5, wspace=0.7, top=0.9, bottom=0.13,
                             left=0.1, right=0.95)
 
         # self._draw_setup_to_axis(fig, input_idx, plotpos=151)
-        self._draw_all_elecs_with_distance(fig, input_idx, distribution, tau_w)
-        filename = ('LFP_with_distance_%s_%s_%d_%1.2f' % (self.cell_name, distribution, input_idx, tau_w))
-        fig.savefig(join(self.figure_folder, '%s.png' % filename))
+        self._draw_all_elecs_with_distance(fig, distribution, tau_w)
+        filename = ('LFP_with_distance_%s_multiple_%s_%1.2f' % (self.cell_name, distribution, tau_w))
+        fig.savefig(join(self.figure_folder, '%s.png' % filename), dpi=150)
 
 
     def LFP_with_distance_study(self):
         self._set_extended_electrode()
         for tau_w in [10, 100, 0.1, 1]:
             for distribution in ['uniform', 'linear_increase', 'linear_decrease']:
-                for input_idx in self.cell_plot_idxs:
-                    print tau_w, distribution, input_idx
-                    self._plot_LFP_with_distance(distribution, tau_w, input_idx)
+                # for input_idx in self.cell_plot_idxs:
+                print tau_w, distribution
+                self._plot_LFP_with_distance(distribution, tau_w)
 
 
 
@@ -383,14 +408,17 @@ class GenericStudy:
         if not len(ax_list) == len(sig):
             raise RuntimeError("Something wrong with number of electrodes!")
 
-        if self.plot_psd:
-            xvec, yvec = aLFP.return_freq_and_psd(tvec, sig)
-        else:
-            xvec = tvec
-            yvec = sig
-
         for idx, ax in enumerate(ax_list):
-            ax.plot(xvec, yvec[idx], color=self.mu_clr(mu), lw=2)
+            if self.plot_psd:
+                # xvec, yvec = aLFP.return_freq_and_psd(tvec, sig[idx, :])
+                # yvec = yvec[0]
+                yvec, xvec = mlab.psd(sig[idx, :], **self.welch_dict)
+                yvec = np.sqrt(yvec)
+            else:
+                xvec = tvec
+                yvec = sig[idx]
+
+            ax.plot(xvec, yvec, color=self.mu_clr(mu), lw=2)
 
     def _plot_signals(self, fig, input_idx, distribution, tau_w):
         ax_vmem_1 = fig.add_subplot(3, 5, 3)
@@ -419,6 +447,9 @@ class GenericStudy:
 
         tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
 
+        if not len(tvec) == self.num_tsteps:
+            raise RuntimeError("Not the expected number of time steps %d, %d" % (len(tvec), self.num_tsteps))
+
         lines = []
         line_names = []
 
@@ -426,14 +457,16 @@ class GenericStudy:
             sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                self.holding_potential, distribution, tau_w)
             LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+            if hasattr(self, 'short_list_elecs'):
+                LFP = LFP[self.short_list_elecs, :]
             vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
             imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
 
             lines.append(plt.plot(0, 0, color=self.mu_clr(mu), lw=2)[0])
             line_names.append('$\mu_{factor} = %1.1f$' % mu)
-            self._plot_sig_to_axes([ax_sig_3, ax_sig_2, ax_sig_1], LFP, tvec, mu)
-            self._plot_sig_to_axes([ax_vmem_3, ax_vmem_2, ax_vmem_1], vmem[self.cell_plot_idxs], tvec, mu)
-            self._plot_sig_to_axes([ax_imem_3, ax_imem_2, ax_imem_1], imem[self.cell_plot_idxs], tvec, mu)
+            self._plot_sig_to_axes([ax_sig_1, ax_sig_2, ax_sig_3], LFP, tvec, mu)
+            self._plot_sig_to_axes([ax_vmem_1, ax_vmem_2, ax_vmem_3], vmem[self.cell_plot_idxs], tvec, mu)
+            self._plot_sig_to_axes([ax_imem_1, ax_imem_2, ax_imem_3], imem[self.cell_plot_idxs], tvec, mu)
 
         ax_list = [ax_vmem_1, ax_vmem_2, ax_vmem_3, ax_imem_1, ax_imem_2, ax_imem_3,
                    ax_sig_1, ax_sig_2, ax_sig_3]
@@ -442,7 +475,7 @@ class GenericStudy:
             [ax.set_xticks([1, 10, 100]) for ax in ax_list]
             [ax.set_xscale('log') for ax in ax_list]
             [ax.set_yscale('log') for ax in ax_list]
-            [ax.set_xlim([0, self.max_freq]) for ax in ax_list]
+            [ax.set_xlim([1, self.max_freq]) for ax in ax_list]
 
             for ax in [ax_vmem_1, ax_vmem_2, ax_vmem_3]:
                 max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()[1:]) for l in ax.get_lines()])))
@@ -450,11 +483,11 @@ class GenericStudy:
 
             for ax in [ax_imem_1, ax_imem_2, ax_imem_3]:
                 max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()) for l in ax.get_lines()])))
-                ax.set_ylim([10**(max_exponent - 4), 10**(max_exponent)])
+                ax.set_ylim([10**(max_exponent - 4), 10**max_exponent])
 
             for ax in [ax_sig_1, ax_sig_2, ax_sig_3]:
                 max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()) for l in ax.get_lines()])))
-                ax.set_ylim([10**(max_exponent - 4), 10**(max_exponent)])
+                ax.set_ylim([10**(max_exponent - 4), 10**max_exponent])
         else:
             [ax.set_xticks(ax.get_xticks()[::2]) for ax in ax_list]
             [ax.set_yticks(ax.get_yticks()[::2]) for ax in ax_list]
@@ -477,9 +510,8 @@ class GenericStudy:
         self._draw_setup_to_axis(fig, input_idx, distribution)
         self._plot_parameter_distributions(fig, input_idx, distribution, tau_w)
         self._plot_signals(fig, input_idx, distribution, tau_w)
-        filename = ('generic_summary_%s_%s_%d_%s_%1.2f'
-                                             % (self.cell_name, self.input_type, input_idx,
-                                                distribution, tau_w))
+        filename = ('generic_summary_%s_%s_%d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx,
+                                                           distribution, tau_w))
         filename = '%s_psd' % filename if self.plot_psd else filename
         fig.savefig(join(self.figure_folder, '%s.png' % filename))
 
@@ -514,7 +546,10 @@ class GenericStudy:
                  color=sec_clrs[idx], zorder=0) for idx in xrange(len(xmid))]
         ax.plot(xmid[0], zmid[0], 'o', color=sec_clrs[0], zorder=0, ms=10, mec='none')
 
-        ax.scatter(elec_x, elec_z, c='g', edgecolor='none', s=50)
+        if hasattr(self, 'short_list_elecs'):
+            ax.scatter(elec_x[self.short_list_elecs], elec_z[self.short_list_elecs], c='g', edgecolor='none', s=50)
+        else:
+            ax.scatter(elec_x[self.short_list_elecs], elec_z[self.short_list_elecs], c='g', edgecolor='none', s=50)
 
         ax.axis('off')
 
@@ -544,9 +579,18 @@ class GenericStudy:
         return I
 
     def _make_white_noise_stimuli(self, cell, input_idx):
-        input_scaling = 0.005
-        max_freq = 500
-        input_array = input_scaling * self._make_WN_input(cell, max_freq)
+
+        if self.input_type == 'wn':
+            input_scaling = 0.005
+            max_freq = 500
+            input_array = input_scaling * self._make_WN_input(cell, max_freq)
+        elif self.input_type == 'real_wn':
+            tot_ntsteps = round((cell.tstopms - cell.tstartms)/\
+                          cell.timeres_NEURON + 1)
+            input_scaling = .1
+            input_array = input_scaling * (np.random.random(tot_ntsteps) - 0.5)
+        else:
+            raise RuntimeError("Unrecognized input_type!")
         noise_vec = neuron.h.Vector(input_array)
         i = 0
         syn = None
@@ -664,7 +708,7 @@ class GenericStudy:
             for distribution in distributions:
                 for mu in self.mus:
                     self._run_multiple_wn_simulation(mu, input_idxs, distribution, tau_w)
-            self.plot_multiple_input_EC_signals(tau_w)
+            # self.plot_multiple_input_EC_signals(tau_w)
 
     def plot_summaries(self):
         distributions = ['uniform', 'linear_decrease', 'linear_increase']
@@ -750,6 +794,7 @@ class GenericStudy:
 
 
     def plot_multiple_input_EC_signals(self, tau_w):
+        print "Plotting tau_w: ", tau_w
         plt.close('all')
         distributions = ['uniform', 'linear_decrease', 'linear_increase']
         fig = plt.figure(figsize=[12, 8])
@@ -764,11 +809,11 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'wn')
+    gs = GenericStudy('hay', 'real_wn', extended_electrode=True)
     # gs.run_all_multiple_input_simulations()
-    gs.recalculate_EP()
-    gs.LFP_with_distance_study()
-    # gs.run_all_single_simulations()
+    # gs.recalculate_EP()
+    # gs.LFP_with_distance_study()
+    gs.run_all_single_simulations()
     # gs.combine_extracellular_traces(0)
     # gs.combine_extracellular_traces(455)
     # gs.combine_extracellular_traces(605)
