@@ -55,7 +55,8 @@ def return_freq_and_psd(tvec, sig):
         pass
     else:
         raise RuntimeError("Not compatible with given array shape!")
-    sample_freq = ff.fftfreq(sig.shape[1], d=(tvec[1] - tvec[0])/1000.)
+    timestep = (tvec[1] - tvec[0])/1000. if type(tvec) in [list, np.ndarray] else tvec
+    sample_freq = ff.fftfreq(sig.shape[1], d=timestep)
     pidxs = np.where(sample_freq >= 0)
     freqs = sample_freq[pidxs]
     Y = ff.fft(sig, axis=1)[:, pidxs[0]]

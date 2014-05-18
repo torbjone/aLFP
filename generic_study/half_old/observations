@@ -1,9 +1,0 @@
-From white noise input with tau_w = 10, we see:
-    - Somatic input and linear increase: All passive (almost no filtering)
-    - Somatic input and linear decrease: Regenerative 10 times larger
-      than restorative in EC at apic.
-    - Somatic input and uniform: In the middle of the ones described above
-    - Middle input: Much less differences on EC for all cases.
-    - Apic input: Signal travels best for linear decrease,
-      but has least effect on EC. Shape on EC from uniform and linear increase
-      are rather similar.
