@@ -10,7 +10,6 @@ import neuron
 nrn = neuron.h
 import LFPy
 import aLFP
-import matplotlib.mlab as mlab
 
 class GenericStudy:
 
@@ -231,7 +230,6 @@ class GenericStudy:
         np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zmid)
         np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, self.conductance)), cell.diam)
 
-
     def _get_distribution(self, dist_dict, cell):
         nrn.distance()
         idx = 0
@@ -295,7 +293,6 @@ class GenericStudy:
         elec_idxs = np.arange(len(self.elec_x)).reshape(num_elec_rows, num_elec_cols)
         row, col = np.array(np.where(elec_idxs == elec_number))[:, 0]
         return row, col
-
 
     def _return_elec_dist_idx(self, elec_number):
         """ Return the subplot number for the distance study
@@ -422,8 +419,8 @@ class GenericStudy:
         lines = []
         line_names = []
         freq_line_styles = ['-', '--', ':']
-        sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx,
-                                            self.holding_potential)
+        sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, self.input_type, input_idx,
+                                        self.holding_potential, self.conductance)
         LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
         freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
         freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP)
@@ -460,7 +457,6 @@ class GenericStudy:
         for ax in freq_ax_norm:
             ax.set_ylim([1e-4, 2e0])
         fig.legend(lines, line_names, frameon=False, ncol=2, loc='lower right')
-
 
     def _draw_membrane_signals_to_axes_distance_study(self, fig, distribution, tau_w, input_idx, weight):
 
@@ -542,7 +538,8 @@ class GenericStudy:
         # [ax.set_ylabel('$\mu V$', color='g') for ax in [ax_sig_3, ax_sig_2, ax_sig_1]]
         [ax.set_ylabel('$mV$', color='b') for ax in [ax_vmem_3, ax_vmem_2, ax_vmem_1]]
 
-        sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
+        sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, self.input_type, input_idx, self.holding_potential,
+                                        self.conductance)
         vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
         imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
 
@@ -718,35 +715,6 @@ class GenericStudy:
 
         fig.legend(lines, line_names, frameon=False, ncol=2, loc='lower right')
 
-
-    def _draw_all_elecs_q_value_active(self, fig, input_idx):
-
-        num_elec_cols = len(set(self.elec_x))
-        num_elec_rows = len(set(self.elec_z))
-
-        ax = fig.add_axes([0.3, 0.1, 0.65, 0.8])
-
-        dc = np.zeros((num_elec_rows, num_elec_cols))
-        max_value = np.zeros((num_elec_rows, num_elec_cols))
-        freq_at_max = np.zeros((num_elec_rows, num_elec_cols))
-
-        sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
-
-        LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
-        freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
-
-        for elec in xrange(len(self.elec_z)):
-            row, col = self._return_elec_row_col(elec)
-            print elec, row, col
-            dc[row, col] = LFP_psd[elec, 1]
-            max_value[row, col] = np.max(LFP_psd[elec, 1:])
-            freq_at_max[row, col] = freqs[np.argmax(LFP_psd[elec, 1:])]
-        q = max_value / dc
-        img = ax.pcolormesh(q[::-1, :], vmin=1, vmax=10)
-        ax.set_xticklabels(self.distances)
-        plt.colorbar(img)
-
-
     def _plot_LFP_with_distance(self, distribution, tau_w, input_idx, weight=None):
         plt.close('all')
         fig = plt.figure(figsize=[24, 12])
@@ -771,10 +739,9 @@ class GenericStudy:
         self._draw_all_elecs_with_distance_active(fig, input_idx)
         self._draw_membrane_signals_to_axes_distance_study_active(fig, input_idx)
 
-        filename = ('LFP_with_distance_%s_%d_active' % (self.cell_name, input_idx))
+        filename = ('LFP_with_distance_%s_%d_%+d_%s' % (self.cell_name, input_idx,
+                                                        self.holding_potential, self.conductance))
         fig.savefig(join(self.figure_folder, '%s.png' % filename), dpi=150)
-
-
 
     def _plot_q_value(self, distribution, input_idx, weight=None):
         plt.close('all')
@@ -1158,6 +1125,18 @@ class GenericStudy:
         # self._quickplot_setup(cell, electrode)
         cell, syn, noiseVec = self._make_white_noise_stimuli(cell, input_idx)
         print "Starting simulation ..."
+        # dist = []
+        # gh = []
+        # nrn.distance()
+        # for sec in cell.allseclist:
+        #     for seg in sec:
+        #         dist.append(nrn.distance(seg.x))
+        #         gh.append(seg.g_w_QA)
+        #
+        # plt.plot(dist, gh, 'o')
+        # plt.show()
+        # np.save(join(self.root_folder, 'linear_increase.npy'), [dist, gh])
+
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
         # plt.close('all')
         # [plt.plot(cell.vmem[idx,:]) for idx in xrange(cell.vmem.shape[0])]
@@ -1343,6 +1322,117 @@ class GenericStudy:
     def plot_original_distance_study(self, input_idx):
         self._plot_LFP_with_distance_active(input_idx)
 
+    def _draw_membrane_signals_to_axes_q_value_colorplot(self, fig, input_idx, distribution, tau_w):
+
+        ax_imem = fig.add_subplot(161)
+        ax_vmem = fig.add_subplot(162)
+
+        vmin = 1.
+        vmax = 10.
+        q_clr = lambda q: plt.cm.jet(int(256. * (q - vmin) / (vmax - vmin)))
+
+        elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
+        elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
+        xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
+        xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zend = np.load(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)))
+        xmid = np.load(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
+        if self.conductance is 'active':
+            sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
+        else:
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 2.0,
+                                                        self.holding_potential, distribution, tau_w)
+
+        vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
+        imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
+        freqs, vmem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., vmem[:, :])
+        freqs, imem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., imem[:, :])
+        dc_vmem = vmem_psd[:, 1]
+        dc_imem = imem_psd[:, 1]
+        max_value_vmem = np.max(vmem_psd[:, 1:], axis=1)
+        max_value_imem = np.max(imem_psd[:, 1:], axis=1)
+        q_vmem = max_value_vmem / dc_vmem
+        q_imem = max_value_imem / dc_imem
+
+        ax_imem.plot(xmid[input_idx], zmid[input_idx], 'y*', zorder=1, ms=15)
+        ax_vmem.plot(xmid[input_idx], zmid[input_idx], 'y*', zorder=1, ms=15)
+
+        mark_subplots([ax_imem, ax_vmem], 'ab', xpos=0, ypos=1)
+
+        [ax_imem.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=q_clr(q_imem[idx]), zorder=0)
+        for idx in xrange(len(xmid))]
+
+        [ax_vmem.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=q_clr(q_vmem[idx]), zorder=0)
+         for idx in xrange(len(xmid))]
+
+        # ax.plot(xmid[0], zmid[0], 'o', color=sec_clrs[0], zorder=0, ms=10, mec='none')
+        # ax.plot(xmid[self.cell_plot_idxs], zmid[self.cell_plot_idxs], 'bD', zorder=2, ms=5, mec='none')
+        # ax.plot(xmid[self.cell_plot_idxs], zmid[self.cell_plot_idxs], 'D', color='m', zorder=0, ms=10, mec='none')
+
+        ax_imem.scatter(elec_x[self.short_list_elecs], elec_z[self.short_list_elecs], c='g', edgecolor='none', s=50)
+        ax_vmem.scatter(elec_x[self.short_list_elecs], elec_z[self.short_list_elecs], c='g', edgecolor='none', s=50)
+
+        ax_imem.axis('off')
+        ax_vmem.axis('off')
+
+
+    def _draw_elecs_q_value_colorplot(self, fig, input_idx, distribution, tau_w):
+
+        num_elec_cols = len(set(self.elec_x))
+        num_elec_rows = len(set(self.elec_z))
+
+        ax = fig.add_axes([0.3, 0.1, 0.65, 0.8])
+
+        dc = np.zeros((num_elec_rows, num_elec_cols))
+        max_value = np.zeros((num_elec_rows, num_elec_cols))
+        freq_at_max = np.zeros((num_elec_rows, num_elec_cols))
+
+        if self.conductance is 'active':
+            sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
+        else:
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 2.0,
+                                                        self.holding_potential, distribution, tau_w)
+        LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+        freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+
+        for elec in xrange(len(self.elec_z)):
+            row, col = self._return_elec_row_col(elec)
+            dc[row, col] = LFP_psd[elec, 1]
+            max_value[row, col] = np.max(LFP_psd[elec, 1:])
+            freq_at_max[row, col] = freqs[np.argmax(LFP_psd[elec, 1:])]
+        q = max_value / dc
+        img = ax.pcolormesh(q[::-1, :], vmin=1, vmax=3.5)
+        ax.set_xticklabels(self.distances)
+        plt.colorbar(img)
+
+    def _q_value_study_colorplot(self, input_idx, distribution=None, tau_w=None):
+        plt.close('all')
+        fig = plt.figure(figsize=[24, 12])
+
+        fig.subplots_adjust(hspace=0.5, wspace=0.5, top=0.9, bottom=0.13, left=0.04, right=0.98)
+        # self._draw_setup_to_axis(fig, input_idx, plotpos=(1, 12, 3))
+        self._draw_membrane_signals_to_axes_q_value_colorplot(fig, input_idx, distribution, tau_w)
+        self._draw_elecs_q_value_colorplot(fig, input_idx, distribution, tau_w)
+        if self.conductance is 'active':
+            filename = ('color_q_value_%s_%d_%s' % (self.cell_name, input_idx, self.conductance))
+        else:
+            filename = ('color_q_value_%s_%d_%s_%s_%1.2f' %
+                        (self.cell_name, input_idx, self.conductance, distribution, tau_w))
+        fig.savefig(join(self.figure_folder, '%s.png' % filename), dpi=150)
+
+    def active_q_values_colorplot(self):
+        for input_idx in [0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:
+            self._q_value_study_colorplot(input_idx)
+
+    def generic_q_values_colorplot(self):
+        for distribution in ['linear_increase', 'linear_decrease', 'uniform']:
+            for input_idx in self.cell_plot_idxs:
+                for tau_w in [10, 1.0, 0.1, 100]:
+                    print distribution, input_idx, tau_w
+                    self._q_value_study_colorplot(input_idx, distribution, tau_w)
+
     def test_original_hay(self, input_idx):
         import neuron
         from hay_active_declarations import active_declarations as hay_active
@@ -1368,7 +1458,7 @@ class GenericStudy:
             'tstopms': self.end_t,
             'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
             'custom_fun': [hay_active],  # will execute this function
-            'custom_fun_args': [{'conductance_type': 'active',
+            'custom_fun_args': [{'conductance_type': self.conductance,
                                  'hold_potential': self.holding_potential}]
         }
         cell = LFPy.Cell(**cell_params)
@@ -1376,23 +1466,23 @@ class GenericStudy:
         cell, syn, noiseVec = self._make_white_noise_stimuli(cell, input_idx)
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
 
-        sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
+        sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, self.input_type, input_idx,
+                                        self.holding_potential, self.conductance)
         # np.save(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)), cell.tvec)
         np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), electrode.LFP)
         np.save(join(self.sim_folder, 'vmem_%s.npy' % sim_name), cell.vmem)
         np.save(join(self.sim_folder, 'imem_%s.npy' % sim_name), cell.imem)
 
-        np.save(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, 'active')), cell.xstart)
-        np.save(join(self.sim_folder, 'ystart_%s_%s.npy' % (self.cell_name, 'active')), cell.ystart)
-        np.save(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, 'active')), cell.zstart)
-        np.save(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, 'active')), cell.xend)
-        np.save(join(self.sim_folder, 'yend_%s_%s.npy' % (self.cell_name, 'active')), cell.yend)
-        np.save(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, 'active')), cell.zend)
-        np.save(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, 'active')), cell.xmid)
-        np.save(join(self.sim_folder, 'ymid_%s_%s.npy' % (self.cell_name, 'active')), cell.ymid)
-        np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, 'active')), cell.zmid)
-        np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, 'active')), cell.diam)
-
+        np.save(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xstart)
+        np.save(join(self.sim_folder, 'ystart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ystart)
+        np.save(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zstart)
+        np.save(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xend)
+        np.save(join(self.sim_folder, 'yend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.yend)
+        np.save(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zend)
+        np.save(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xmid)
+        np.save(join(self.sim_folder, 'ymid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ymid)
+        np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zmid)
+        np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, self.conductance)), cell.diam)
 
     def test_original_hu(self, input_idx):
         import neuron
@@ -1450,40 +1540,115 @@ class GenericStudy:
         np.save(join(self.sim_folder, 'elec_y_%s.npy' % self.cell_name), electrode.y)
         np.save(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name), electrode.z)
 
+    def test_original_hay_simple_ratio(self, input_idx):
+        """ Will compare stady state input to resonant frequencies to compare to other results
+        """
+        import neuron
+        from hay_active_declarations import active_declarations as hay_active
+        import LFPy
+        plt.seed(1234)
 
-    def _active_q_value_study(self, input_idx):
-        plt.close('all')
-        fig = plt.figure(figsize=[24, 12])
+        neuron.h('forall delete_section()')
 
-        fig.subplots_adjust(hspace=0.5, wspace=0.5, top=0.9, bottom=0.13, left=0.04, right=0.98)
-        self._draw_all_elecs_q_value_active(fig, input_idx)
-        # self._draw_membrane_signals_to_axes_q_value(fig, distribution, input_idx, weight)
-        self._draw_setup_to_axis(fig, input_idx, plotpos=(1, 12, 3))
+        neuron_models = join(self.root_folder, 'neuron_models')
+        neuron.load_mechanisms(join(neuron_models))
 
-        filename = ('q_value_%s_%d_active' % (self.cell_name, input_idx))
-        fig.savefig(join(self.figure_folder, '%s.png' % filename), dpi=150)
+        input_amp = 0.01
+
+        neuron.load_mechanisms(join(neuron_models, 'hay', 'mod'))
+        cell_params = {
+            'morphology': join(neuron_models, 'hay', 'lfpy_version', 'morphologies', 'cell1.hoc'),
+            'v_init': self.holding_potential,
+            'passive': False,
+            'nsegs_method': 'lambda_f',
+            'lambda_f': 100,
+            'timeres_NEURON': self.timeres_NEURON,
+            'timeres_python': self.timeres_python,
+            'tstartms': -6000,          # start time, recorders start at t=0
+            'tstopms': 1000,
+            'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
+            'custom_fun': [hay_active],  # will execute this function
+            'custom_fun_args': [{'conductance_type': self.conductance,
+                                 'hold_potential': self.holding_potential}]
+        }
+        steady_stim_params = {
+            'idx': input_idx,
+            'record_current': True,
+            'pptype': 'IClamp',
+            'amp': input_amp,
+            'dur': 1e9,
+            'delay': 10,
+        }
+        sin_stim_params = {
+            'idx': input_idx,
+            'record_current': True,
+            'dur': 10000.,
+            'delay': 10,
+            'freq': 10.,
+            'phase': 0,
+            'pkamp': input_amp,
+            'pptype': 'SinIClamp',
+        }
+
+        cell = LFPy.Cell(**cell_params)
+        stim = LFPy.StimIntElectrode(cell, **steady_stim_params)
+        electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
+        cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
+        plt.subplot(211)
+        # plt.plot(cell.tvec, cell.vmem[input_idx, :])
+        plt.plot(cell.tvec, cell.vmem[0, :] - cell.vmem[0, 0])
+        steady_input_imp = np.max(cell.vmem[0, :]) / input_amp
+
+        cell = LFPy.Cell(**cell_params)
+        stim = LFPy.StimIntElectrode(cell, **sin_stim_params)
+        electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
+        cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
+        plt.subplot(212)
+        # plt.plot(cell.tvec, cell.vmem[input_idx, :])
+        plt.plot(cell.tvec, cell.vmem[0, :] - cell.vmem[0, 0])
+        sin_input_imp = (np.max(cell.vmem[0, :]) - np.average(cell.vmem[0, :]))/ input_amp
+
+        print steady_input_imp, sin_input_imp, sin_input_imp / steady_input_imp
+        plt.show()
+
+        sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, 'stationary', input_idx,
+                                        self.holding_potential, self.conductance)
+
+        # np.save(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)), cell.tvec)
+        # np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), electrode.LFP)
+        # np.save(join(self.sim_folder, 'vmem_%s.npy' % sim_name), cell.vmem)
+        # np.save(join(self.sim_folder, 'imem_%s.npy' % sim_name), cell.imem)
+        # np.save(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xstart)
+        # np.save(join(self.sim_folder, 'ystart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ystart)
+        # np.save(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zstart)
+        # np.save(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xend)
+        # np.save(join(self.sim_folder, 'yend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.yend)
+        # np.save(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zend)
+        # np.save(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xmid)
+        # np.save(join(self.sim_folder, 'ymid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ymid)
+        # np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zmid)
+        # np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, self.conductance)), cell.diam)
 
 
-    def active_q_values(self):
-        for input_idx in [0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:
-            self._active_q_value_study(input_idx)
 
 if __name__ == '__main__':
 
     gs = GenericStudy('hay', 'wn', conductance='active', extended_electrode=True)
 
+    gs.test_original_hay_simple_ratio(827)
     # gs.run_all_multiple_input_simulations()
     # gs.recalculate_EP()
     # gs.LFP_with_distance_study()
     # gs.q_value_study()
-    gs.active_q_values()
+    # gs.active_q_values_colorplot()
+    # gs.generic_q_values_colorplot()
     # gs.run_all_single_simulations()
     # gs.plot_original_distance_study(750)
-    # for idx in [0]:#, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
-    #     print idx
-    #     gs = GenericStudy('hay', 'wn', conductance='active', extended_electrode=True)
-    #     gs.test_original_hay(idx)
-        # gs.plot_original_distance_study(idx)
+    # for idx in [827]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
+    #    print idx
+    #    gs = GenericStudy('hay', 'wn', conductance='active', extended_electrode=True)
+    #    gs.test_original_hay(idx)
+    #    gs.plot_original_distance_study(idx)
     #     try:
     #         gs = GenericStudy('c12861', 'wn', extended_electrode=True)
     #         gs.test_original_hu(idx)

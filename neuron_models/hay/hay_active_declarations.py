@@ -35,7 +35,8 @@ def make_cell_uniform(Vrest=-60):
                 seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
 
 def _get_longest_distance():
-    nrn.distance()
+
+    nrn.distance(0, 0.5)
     max_dist = 0
     for sec in nrn.allsec():
         for seg in sec:
@@ -88,14 +89,16 @@ def biophys_generic(**kwargs):
     elif kwargs['distribution'] == 'linear_increase':
         increase_factor = 100
         conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_w_conductance)
+
+        nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.g_w_QA = (conductance_factor * (1 + (increase_factor - 1) * nrn.distance(seg.x)
-                                                   / max_dist))
+                seg.g_w_QA = conductance_factor * (1 + (increase_factor - 1) * nrn.distance(seg.x) / max_dist)
+
     elif kwargs['distribution'] == 'linear_decrease':
         decrease_factor = 100
         conductance_factor = _get_linear_decrease_factor(decrease_factor, max_dist, total_w_conductance)
-        nrn.distance()
+        nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
             for seg in sec:
                 seg.g_w_QA = (conductance_factor * (decrease_factor - decrease_factor * nrn.distance(seg.x)
@@ -276,15 +279,8 @@ def biophys_active(**kwargs):
     for sec in neuron.h.axon:
         sec.g_pas = 0.0000325
 
-    #for sec in neuron.h.allsec():
-    #    if neuron.h.ismembrane('k_ion'):
-    #        sec.ek = Ek
-
-    #neuron.h.celsius = celsius
-
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
-
     print("active ion-channels inserted.")
 
 
