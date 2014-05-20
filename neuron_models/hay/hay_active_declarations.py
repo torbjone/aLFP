@@ -25,6 +25,8 @@ def make_cell_uniform(Vrest=-60):
                 seg.e_pas = seg.e_pas + seg.ica/seg.g_pas
             if neuron.h.ismembrane("Ih"):
                 seg.e_pas += seg.ihcn_Ih/seg.g_pas
+            if neuron.h.ismembrane("Ih_z"):
+                seg.e_pas += seg.ih_Ih_z/seg.g_pas
             if neuron.h.ismembrane("Ih_frozen"):
                 seg.e_pas += seg.ihcn_Ih_frozen/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_mod"):
@@ -66,6 +68,21 @@ def _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance):
             normalization += nrn.area(seg.x) * (decrease_factor - decrease_factor * nrn.distance(seg.x)/max_dist)
     return total_conductance / normalization
 
+
+def biophys_zuchkova(**kwargs):
+    nrn.distance(0, 0.5)
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.e_pas = kwargs['hold_potential']
+        sec.Ra = 200
+        sec.cm = 1.0
+        sec.g_pas = 0.09e-3
+        sec.insert("Ih_z")
+        for seg in sec:
+            seg.gIhbar_Ih_z = 26.71e-6 * np.exp(0.0041*nrn.distance(seg.x))
+
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
 
 def biophys_generic(**kwargs):
 

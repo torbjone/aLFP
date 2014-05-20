@@ -79,7 +79,7 @@ class GenericStudy:
             raise RuntimeError("Unrecognized input type.")
 
     def _set_electrode_specific_properties(self, extended_electrode):
-        if self.cell_name == 'hay':
+        if self.cell_name in ['hay', 'zuchkova']:
             self.zmax = 1000
             if self.conductance is 'active':
                 self.cell_plot_idxs = [805, 611, 0]
@@ -876,6 +876,8 @@ class GenericStudy:
             else:
                 xvec = tvec
                 yvec = sig[idx]
+            if idx == 2:
+                print yvec[1], np.max(yvec[1:]), np.max(yvec[1:]) / yvec[1], xvec[np.argmax(yvec[1:])]
             ax.plot(xvec, yvec, color='k', lw=2)
             # ax.plot(xvec_w, yvec_w, color='k', lw=2)
 
@@ -1484,6 +1486,69 @@ class GenericStudy:
         np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zmid)
         np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, self.conductance)), cell.diam)
 
+
+    def test_original_zuchkova(self, input_idx):
+        import neuron
+        from hay_active_declarations import active_declarations as hay_active
+        import LFPy
+        plt.seed(1234)
+
+        electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
+        neuron.h('forall delete_section()')
+
+        neuron_models = join(self.root_folder, 'neuron_models')
+        neuron.load_mechanisms(join(neuron_models))
+
+        neuron.load_mechanisms(join(neuron_models, 'hay', 'mod'))
+        cell_params = {
+            'morphology': join(neuron_models, 'hay', 'lfpy_version', 'morphologies', 'cell1.hoc'),
+            'v_init': self.holding_potential,
+            'passive': False,           # switch on passive mechs
+            'nsegs_method': 'lambda_f',  # method for setting number of segments,
+            'lambda_f': 100,           # segments are isopotential at this frequency
+            'timeres_NEURON': self.timeres_NEURON,   # dt of LFP and NEURON simulation.
+            'timeres_python': self.timeres_python,
+            'tstartms': -self.cut_off,          # start time, recorders start at t=0
+            'tstopms': self.end_t,
+            'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
+            'custom_fun': [hay_active],  # will execute this function
+            'custom_fun_args': [{'conductance_type': 'zuchkova',
+                                 'hold_potential': self.holding_potential}]
+        }
+        cell = LFPy.Cell(**cell_params)
+        # self._quickplot_setup(cell, electrode, input_idx)
+        cell, syn, noiseVec = self._make_white_noise_stimuli(cell, input_idx)
+
+        comp = 0
+        nrn.distance()
+        for sec in cell.allseclist:
+            for seg in sec:
+                print nrn.distance(seg.x), sec.name(), comp
+                comp += 1
+
+        cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
+
+        sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, self.input_type, input_idx,
+                                        self.holding_potential, self.conductance)
+        np.save(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)), cell.tvec)
+        np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), electrode.LFP)
+        np.save(join(self.sim_folder, 'vmem_%s.npy' % sim_name), cell.vmem)
+        np.save(join(self.sim_folder, 'imem_%s.npy' % sim_name), cell.imem)
+
+        np.save(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xstart)
+        np.save(join(self.sim_folder, 'ystart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ystart)
+        np.save(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zstart)
+        np.save(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xend)
+        np.save(join(self.sim_folder, 'yend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.yend)
+        np.save(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zend)
+        np.save(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xmid)
+        np.save(join(self.sim_folder, 'ymid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ymid)
+        np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zmid)
+        np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, self.conductance)), cell.diam)
+        np.save(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name), electrode.x)
+        np.save(join(self.sim_folder, 'elec_y_%s.npy' % self.cell_name), electrode.y)
+        np.save(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name), electrode.z)
+
     def test_original_hu(self, input_idx):
         import neuron
         from ca1_sub_declarations import active_declarations as ca1_active
@@ -1553,7 +1618,8 @@ class GenericStudy:
         neuron_models = join(self.root_folder, 'neuron_models')
         neuron.load_mechanisms(join(neuron_models))
 
-        input_amp = 0.01
+        input_amp = 0.02
+        input_freq = 15.
 
         neuron.load_mechanisms(join(neuron_models, 'hay', 'mod'))
         cell_params = {
@@ -1584,35 +1650,43 @@ class GenericStudy:
             'record_current': True,
             'dur': 10000.,
             'delay': 10,
-            'freq': 10.,
+            'freq': input_freq,
             'phase': 0,
             'pkamp': input_amp,
             'pptype': 'SinIClamp',
         }
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        fig.subplots_adjust(left=0.2)
 
         cell = LFPy.Cell(**cell_params)
         stim = LFPy.StimIntElectrode(cell, **steady_stim_params)
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        plt.subplot(211)
         # plt.plot(cell.tvec, cell.vmem[input_idx, :])
         plt.plot(cell.tvec, cell.vmem[0, :] - cell.vmem[0, 0])
-        steady_input_imp = np.max(cell.vmem[0, :]) / input_amp
+        steady_input_imp = (cell.vmem[0, -1] - cell.vmem[0, 0]) / input_amp
 
         cell = LFPy.Cell(**cell_params)
         stim = LFPy.StimIntElectrode(cell, **sin_stim_params)
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        plt.subplot(212)
         # plt.plot(cell.tvec, cell.vmem[input_idx, :])
         plt.plot(cell.tvec, cell.vmem[0, :] - cell.vmem[0, 0])
-        sin_input_imp = (np.max(cell.vmem[0, :]) - np.average(cell.vmem[0, :]))/ input_amp
+        sin_input_imp = (np.max(cell.vmem[0, cell.vmem.shape[1]/2:]) - cell.vmem[0, 0]) / input_amp
 
-        print steady_input_imp, sin_input_imp, sin_input_imp / steady_input_imp
-        plt.show()
+        q_value = sin_input_imp / steady_input_imp
 
-        sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, 'stationary', input_idx,
-                                        self.holding_potential, self.conductance)
+        print steady_input_imp, sin_input_imp, q_value
+        plt.xlabel('Time')
+        plt.ylabel('Voltage deflection in soma')
+        plt.title('Input in distal apical dendrite at %d mV. Q-value %1.2f' %
+                  (self.holding_potential, q_value))
+        plt.savefig(join(self.root_folder, 'Vm_deflection_control_%dmV_%dHz.png' %
+                                           (self.holding_potential, input_freq)))
+
+        # sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, 'stationary', input_idx,
+        #                                 self.holding_potential, self.conductance)
 
         # np.save(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)), cell.tvec)
         # np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), electrode.LFP)
@@ -1633,17 +1707,17 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'wn', conductance='active', extended_electrode=True)
+    gs = GenericStudy('zuchkova', 'wn', conductance='active', extended_electrode=True)
 
-    gs.test_original_hay_simple_ratio(827)
+    # gs.test_original_zuchkova(633)
+    gs.plot_original_distance_study(633)
+    # gs.test_original_hay_simple_ratio(827)
     # gs.run_all_multiple_input_simulations()
-    # gs.recalculate_EP()
     # gs.LFP_with_distance_study()
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
     # gs.generic_q_values_colorplot()
     # gs.run_all_single_simulations()
-    # gs.plot_original_distance_study(750)
     # for idx in [827]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
     #    print idx
     #    gs = GenericStudy('hay', 'wn', conductance='active', extended_electrode=True)
