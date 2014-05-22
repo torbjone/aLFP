@@ -9,7 +9,7 @@ import scipy.fftpack as ff
 
 class IntroFigures():
     np.random.seed(1234)
-    conductance_clr = {'active': 'r', 'active_frozen': 'k', 'Ih_linearized': 'g', 'passive': 'b',
+    conductance_clr = {'active': 'r', 'active_frozen': 'b', 'Ih_linearized': 'g', 'passive': 'k',
                        'Ih_linearized_frozen': 'c'}
     def __init__(self, cell_name, figure_name):
         self.cell_name = cell_name
@@ -25,7 +25,7 @@ class IntroFigures():
 
         if self.figure_name == 'figure_1':
             self.start_t = 0
-            self.end_t = 80
+            self.end_t = 30
             self.cut_off = 0
             self.sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_synapse')
             self.stimuli_function = self._make_syaptic_stimuli
@@ -34,8 +34,8 @@ class IntroFigures():
                                'xticklabels': [],
                                'yticks': [],
                                'yticklabels': [],
-                               'ylim': [0, 0.01],
-                               'xlim': [0, 80]}
+                               'ylim': [0, 0.005],
+                               'xlim': [0, 30]}
         elif self.figure_name == 'figure_2':
             self.start_t = 0
             self.end_t = 1000
@@ -61,11 +61,11 @@ class IntroFigures():
             elec_z = elec_z.flatten()
             elec_y = np.zeros(len(elec_x))
             self.plot_positions = np.array([elec_x, elec_y, elec_z]).T
-            self.conductance_types = ['active',  'active_frozen', 'passive']
+            self.conductance_types = ['active',  'active_frozen', 'passive', 'Ih_linearized']
             self.soma_idx = 0
             self.apic_idx = 852
-            self.use_elec_idxs = [8, 36, 25, 74, 86]
-            self.ax_dict = {'ylim': [-300, 1300], 'xlim': [-300, 300]}
+            self.use_elec_idxs = [8, 36, 26, 67, 85]
+            self.ax_dict = {'ylim': [-300, 1300], 'xlim': [-400, 400]}
 
         elif self.cell_name == 'n120':
 
@@ -230,23 +230,6 @@ class IntroFigures():
 
         self.save_neural_sim_data(cell, electrode, input_idx, conductance_type, holding_potential)
 
-    # Use method in tools instead
-    # def return_freq_and_psd(self, tvec, sig):
-    #     """ Returns the power and freqency of the input signal"""
-    #     sig = np.array(sig)
-    #     if len(sig.shape) == 1:
-    #         sig = np.array([sig])
-    #     elif len(sig.shape) == 2:
-    #         pass
-    #     else:
-    #         raise RuntimeError("Not compatible with given array shape!")
-    #     sample_freq = ff.fftfreq(sig.shape[1], d=(tvec[1] - tvec[0])/1000.)
-    #     pidxs = np.where(sample_freq >= 0)
-    #     freqs = sample_freq[pidxs]
-    #     Y = ff.fft(sig, axis=1)[:, pidxs[0]]
-    #     power = np.abs(Y)/Y.shape[1]
-    #     return freqs, power
-
     def make_WN_input(self, cell, max_freq):
         """ White Noise input ala Linden 2010 is made """
         tot_ntsteps = round((cell.tstopms - cell.tstartms)/\
@@ -286,7 +269,7 @@ class IntroFigures():
             'idx': input_idx,
             'e': 0.,                   # reversal potential
             'syntype': 'ExpSyn',       # synapse type
-            'tau': 10.,                # syn. time constant
+            'tau': 2.,                # syn. time constant
             'weight': 0.001,            # syn. weight
             'record_current': True,
         }
@@ -403,17 +386,21 @@ class IntroFigures():
         bar_ax = fig.add_axes(self.return_ax_coors(fig, ax3, (-500, -300)), **self.ec_ax_dict)
         bar_ax.axis('off')
         bar_ax.plot([0, 0], bar_ax.axis()[2:], lw=3, color='k')
+        bar_ax.plot(bar_ax.axis()[:2], [0, 0], lw=3, color='k')
 
-        bar_ax.text(10, bar_ax.axis()[2] + (bar_ax.axis()[3] - bar_ax.axis()[2])/2, '%1.2f $\mu V$'
-                                        % (bar_ax.axis()[3] - bar_ax.axis()[2]), verticalalignment='center')
+        bar_ax.text(2, bar_ax.axis()[2] + (bar_ax.axis()[3] - bar_ax.axis()[2])/2, '%1.2f $\mu V$'
+                                        % (bar_ax.axis()[3] - bar_ax.axis()[2]), verticalalignment='bottom')
+
+        bar_ax.text(12, bar_ax.axis()[2], '%d $ms$' % (bar_ax.axis()[1] - bar_ax.axis()[0]),
+                    verticalalignment='top')
 
         mark_subplots(ax_list, xpos=0.12, ypos=0.9)
         [ax.axis('off') for ax in ax_list]
-        fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=3)
+        fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
         fig.savefig(join(self.figure_folder, '%s_%s.png' % (self.figure_name, self.cell_name)), dpi=200)
 
 if __name__ == '__main__':
 
-    IntroFigures('hay', 'figure_2').make_figure(do_simulations=True)
-    IntroFigures('n120', 'figure_2').make_figure(do_simulations=True)
-    IntroFigures('c12861', 'figure_2').make_figure(do_simulations=True)
+    IntroFigures('hay', 'figure_1').make_figure(do_simulations=False)
+    # IntroFigures('n120', 'figure_2').make_figure(do_simulations=True)
+    # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=True)

@@ -17,13 +17,13 @@ plt.rcParams.update({
     'figure.subplot.left': 0.1,
 })
 
-def mark_subplots(axes, letters='abcdefghijklmnopqrstuvwxyz', xpos=-0.12, ypos=1.15):
+def mark_subplots(axes, letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ', xpos=-0.12, ypos=1.15):
 
     if not type(axes) is list:
         axes = [axes]
 
     for idx, ax in enumerate(axes):
-        ax.text(xpos, ypos, letters[idx],
+        ax.text(xpos, ypos, letters[idx].capitalize(),
                 horizontalalignment='center',
                 verticalalignment='center',
                 fontweight='demibold',

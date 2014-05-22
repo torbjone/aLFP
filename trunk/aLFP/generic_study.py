@@ -1330,7 +1330,7 @@ class GenericStudy:
         ax_vmem = fig.add_subplot(162)
 
         vmin = 1.
-        vmax = 10.
+        vmax = 3.5
         q_clr = lambda q: plt.cm.jet(int(256. * (q - vmin) / (vmax - vmin)))
 
         elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
@@ -1429,7 +1429,7 @@ class GenericStudy:
             self._q_value_study_colorplot(input_idx)
 
     def generic_q_values_colorplot(self):
-        for distribution in ['linear_increase', 'linear_decrease', 'uniform']:
+        for distribution in ['linear_decrease', 'uniform', 'linear_increase']:
             for input_idx in self.cell_plot_idxs:
                 for tau_w in [10, 1.0, 0.1, 100]:
                     print distribution, input_idx, tau_w
@@ -1707,16 +1707,16 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('zuchkova', 'wn', conductance='active', extended_electrode=True)
+    gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
 
     # gs.test_original_zuchkova(633)
-    gs.plot_original_distance_study(633)
+    # gs.plot_original_distance_study(633)
     # gs.test_original_hay_simple_ratio(827)
     # gs.run_all_multiple_input_simulations()
     # gs.LFP_with_distance_study()
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
-    # gs.generic_q_values_colorplot()
+    gs.generic_q_values_colorplot()
     # gs.run_all_single_simulations()
     # for idx in [827]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
     #    print idx
