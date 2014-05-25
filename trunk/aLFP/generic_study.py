@@ -26,7 +26,7 @@ class GenericStudy:
             os.mkdir(self.sim_folder)
         # self.holding_potentials = [-80, -70, -60]
         self.plot_frequencies = [2, 10, 100]
-        self.holding_potential = -80
+        self.holding_potential = -60
         self.mus = [2, 0, -0.5]
         self.divide_into_welch = 4
         self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu - np.min(self.mus))/
@@ -82,6 +82,8 @@ class GenericStudy:
         if self.cell_name in ['hay', 'zuchkova']:
             self.zmax = 1000
             if self.conductance is 'active':
+                self.cell_plot_idxs = [805, 611, 0]
+            elif self.conductance is 'Ih_linearized':
                 self.cell_plot_idxs = [805, 611, 0]
             else:
                 self.cell_plot_idxs = [605, 455, 0]
@@ -1326,8 +1328,8 @@ class GenericStudy:
 
     def _draw_membrane_signals_to_axes_q_value_colorplot(self, fig, input_idx, distribution, tau_w):
 
-        ax_imem = fig.add_subplot(161)
-        ax_vmem = fig.add_subplot(162)
+        ax_imem = fig.add_subplot(161, title='Transmembrane current')
+        ax_vmem = fig.add_subplot(162, title='Membrane potential')
 
         vmin = 1.
         vmax = 3.5
@@ -1361,7 +1363,7 @@ class GenericStudy:
         ax_imem.plot(xmid[input_idx], zmid[input_idx], 'y*', zorder=1, ms=15)
         ax_vmem.plot(xmid[input_idx], zmid[input_idx], 'y*', zorder=1, ms=15)
 
-        mark_subplots([ax_imem, ax_vmem], 'ab', xpos=0, ypos=1)
+        # mark_subplots([ax_imem, ax_vmem], 'ab', xpos=0, ypos=1)
 
         [ax_imem.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=q_clr(q_imem[idx]), zorder=0)
         for idx in xrange(len(xmid))]
@@ -1385,7 +1387,7 @@ class GenericStudy:
         num_elec_cols = len(set(self.elec_x))
         num_elec_rows = len(set(self.elec_z))
 
-        ax = fig.add_axes([0.3, 0.1, 0.65, 0.8])
+        ax = fig.add_axes([0.35, 0.1, 0.6, 0.8])
 
         dc = np.zeros((num_elec_rows, num_elec_cols))
         max_value = np.zeros((num_elec_rows, num_elec_cols))
@@ -1619,7 +1621,7 @@ class GenericStudy:
         neuron.load_mechanisms(join(neuron_models))
 
         input_amp = 0.02
-        input_freq = 15.
+        input_freq = 10.
 
         neuron.load_mechanisms(join(neuron_models, 'hay', 'mod'))
         cell_params = {
@@ -1682,8 +1684,8 @@ class GenericStudy:
         plt.ylabel('Voltage deflection in soma')
         plt.title('Input in distal apical dendrite at %d mV. Q-value %1.2f' %
                   (self.holding_potential, q_value))
-        plt.savefig(join(self.root_folder, 'Vm_deflection_control_%dmV_%dHz.png' %
-                                           (self.holding_potential, input_freq)))
+        plt.savefig(join(self.root_folder, 'Vm_deflection_control_%dmV_%dHz_%s.png' %
+                                           (self.holding_potential, input_freq, self.conductance)))
 
         # sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, 'stationary', input_idx,
         #                                 self.holding_potential, self.conductance)
@@ -1707,22 +1709,24 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
+    gs = GenericStudy('hay', 'wn', conductance='Ih_linearized', extended_electrode=True)
 
     # gs.test_original_zuchkova(633)
-    # gs.plot_original_distance_study(633)
+    # gs.plot_original_distance_study(827)
     # gs.test_original_hay_simple_ratio(827)
     # gs.run_all_multiple_input_simulations()
     # gs.LFP_with_distance_study()
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
-    gs.generic_q_values_colorplot()
+    # gs.generic_q_values_colorplot()
     # gs.run_all_single_simulations()
-    # for idx in [827]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
-    #    print idx
-    #    gs = GenericStudy('hay', 'wn', conductance='active', extended_electrode=True)
-    #    gs.test_original_hay(idx)
-    #    gs.plot_original_distance_study(idx)
+    # gs.test_original_hay_simple_ratio(827)
+
+    for idx in [827]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
+       print idx
+       gs = GenericStudy('hay', 'wn', conductance='Ih_linearized', extended_electrode=True)
+       gs.test_original_hay(idx)
+       gs.plot_original_distance_study(idx)
     #     try:
     #         gs = GenericStudy('c12861', 'wn', extended_electrode=True)
     #         gs.test_original_hu(idx)

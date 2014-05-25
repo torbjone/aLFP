@@ -6,6 +6,7 @@ import numpy as np
 from os.path import join
 from plotting_convention import *
 import scipy.fftpack as ff
+import aLFP
 
 class IntroFigures():
     np.random.seed(1234)
@@ -36,6 +37,7 @@ class IntroFigures():
                                'yticklabels': [],
                                'ylim': [0, 0.005],
                                'xlim': [0, 30]}
+            self.clip_on = False
         elif self.figure_name == 'figure_2':
             self.start_t = 0
             self.end_t = 1000
@@ -49,6 +51,7 @@ class IntroFigures():
                                'yticklabels': [], 'xscale': 'log', 'yscale': 'log',
                                'ylim': [1e-5, 1e-3],
                                'xlim': [1, 500]}
+            self.clip_on = True
 
         else:
             raise RuntimeError("Unrecognized figure name: %s" % self.figure_name)
@@ -296,15 +299,24 @@ class IntroFigures():
 
         ec_plot_dict = {'color': self.conductance_clr[conductance_type],
                         'lw': 1,
-                        'clip_on': False}
+                        'clip_on': self.clip_on}
         ax_ = fig.add_axes(self.return_ax_coors(fig, ax, (elec_x_pos, elec_z_pos)), **self.ec_ax_dict)
 
         ax_.minorticks_off()
         simplify_axes(ax_)
         ax_.patch.set_alpha(0.0)
         ax_.plot(x_vec, signal[idx, :], **ec_plot_dict)
+        if self.figure_name == 'figure_2':
+            ax_.grid(True)
 
-    def return_ax_coors(self, fig, mother_ax, pos, ax_w=0.1, ax_h=0.03):
+    def return_ax_coors(self, fig, mother_ax, pos):
+        if self.figure_name == 'figure_1':
+            ax_w = 0.1
+            ax_h = 0.03
+        else:
+            ax_w = 0.06
+            ax_h = 0.045
+
         xstart, ystart = fig.transFigure.inverted().transform(mother_ax.transData.transform(pos))
         return [xstart, ystart, ax_w, ax_h]
 
@@ -318,7 +330,7 @@ class IntroFigures():
         if self.figure_name == 'figure_1':
             x_vec, y_vec = tvec, LFP
         elif self.figure_name == 'figure_2':
-            x_vec, y_vec = self.return_freq_and_psd(tvec, LFP)
+            x_vec, y_vec = aLFP.return_freq_and_psd(tvec, LFP)
         else:
             raise RuntimeError("Unknown figure name: %s" % self.figure_name)
 
@@ -383,24 +395,26 @@ class IntroFigures():
             lines.append(l)
             line_names.append(conductance_type)
 
-        bar_ax = fig.add_axes(self.return_ax_coors(fig, ax3, (-500, -300)), **self.ec_ax_dict)
-        bar_ax.axis('off')
-        bar_ax.plot([0, 0], bar_ax.axis()[2:], lw=3, color='k')
-        bar_ax.plot(bar_ax.axis()[:2], [0, 0], lw=3, color='k')
+        if self.figure_name is 'figure_1':
+            bar_ax = fig.add_axes(self.return_ax_coors(fig, ax3, (-500, -300)), **self.ec_ax_dict)
+            bar_ax.axis('off')
+            bar_ax.plot([0, 0], bar_ax.axis()[2:], lw=3, color='k')
+            bar_ax.plot(bar_ax.axis()[:2], [0, 0], lw=3, color='k')
 
-        bar_ax.text(2, bar_ax.axis()[2] + (bar_ax.axis()[3] - bar_ax.axis()[2])/2, '%1.2f $\mu V$'
-                                        % (bar_ax.axis()[3] - bar_ax.axis()[2]), verticalalignment='bottom')
+            bar_ax.text(2, bar_ax.axis()[2] + (bar_ax.axis()[3] - bar_ax.axis()[2])/2, '%1.2f $\mu V$'
+                                            % (bar_ax.axis()[3] - bar_ax.axis()[2]), verticalalignment='bottom')
 
-        bar_ax.text(12, bar_ax.axis()[2], '%d $ms$' % (bar_ax.axis()[1] - bar_ax.axis()[0]),
-                    verticalalignment='top')
+            bar_ax.text(12, bar_ax.axis()[2], '%d $ms$' % (bar_ax.axis()[1] - bar_ax.axis()[0]),
+                        verticalalignment='top')
 
         mark_subplots(ax_list, xpos=0.12, ypos=0.9)
         [ax.axis('off') for ax in ax_list]
+
         fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
         fig.savefig(join(self.figure_folder, '%s_%s.png' % (self.figure_name, self.cell_name)), dpi=200)
 
 if __name__ == '__main__':
 
-    IntroFigures('hay', 'figure_1').make_figure(do_simulations=False)
+    IntroFigures('hay', 'figure_2').make_figure(do_simulations=False)
     # IntroFigures('n120', 'figure_2').make_figure(do_simulations=True)
     # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=True)
