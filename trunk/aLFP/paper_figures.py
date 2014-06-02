@@ -41,7 +41,7 @@ class IntroFigures():
         elif self.figure_name == 'figure_2':
             self.start_t = 0
             self.end_t = 1000
-            self.cut_off = 6000
+            self.cut_off = 1000
             self.sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_white_noise')
             self.stimuli_function = self._make_white_noise_stimuli
             self.ec_ax_dict = {'frameon': True,
@@ -415,6 +415,6 @@ class IntroFigures():
 
 if __name__ == '__main__':
 
-    IntroFigures('hay', 'figure_2').make_figure(do_simulations=False)
-    # IntroFigures('n120', 'figure_2').make_figure(do_simulations=True)
-    # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=True)
+    IntroFigures('hay', 'figure_1').make_figure(do_simulations=False)
+    # IntroFigures('n120', 'figure_2').make_figure(do_simulations=False)
+    # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=False)
