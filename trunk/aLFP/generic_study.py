@@ -10,7 +10,7 @@ import neuron
 nrn = neuron.h
 import LFPy
 import aLFP
-
+from matplotlib import mlab
 class GenericStudy:
 
     def __init__(self, cell_name, input_type, conductance='generic', extended_electrode=False):
@@ -28,7 +28,6 @@ class GenericStudy:
         self.plot_frequencies = [2, 10, 100]
         self.holding_potential = -80
         self.mus = [2, 0, -0.5]
-        self.divide_into_welch = 4
         self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu - np.min(self.mus))/
                                                   (np.max(self.mus) - np.min(self.mus))))
 
@@ -36,12 +35,13 @@ class GenericStudy:
         self._set_electrode_specific_properties(extended_electrode)
         self._set_input_specific_properties()
         self.num_tsteps = round(self.end_t/self.timeres_python + 1)
+        self.divide_into_welch = 4.
         self.welch_dict = {'Fs': 1000 / self.timeres_python,
                            'NFFT': int(self.num_tsteps/self.divide_into_welch),
-                           'noverlap': int(self.num_tsteps/self.divide_into_welch/2),
+                           'noverlap': int(self.num_tsteps/self.divide_into_welch/2.),
                            'window': plt.window_hanning,
                            'detrend': plt.detrend_mean,
-                           'scale_by_freq': False,
+                           'scale_by_freq': True,
                            }
 
     def _set_input_specific_properties(self):
@@ -50,7 +50,7 @@ class GenericStudy:
             self.plot_psd = True
             self._single_neural_sim_function = self._run_single_wn_simulation
             self.timeres_NEURON = 2**-4
-            self.timeres_python = 2**-4
+            self.timeres_python = 2**-2
             self.cut_off = 0
             self.end_t = 1000
             self.max_freq = 500
@@ -59,9 +59,9 @@ class GenericStudy:
             print "REAL white noise input"
             self.plot_psd = True
             self.timeres_NEURON = 2**-4
-            self.timeres_python = 2**-1
+            self.timeres_python = 2**-4
             self._single_neural_sim_function = self._run_single_wn_simulation
-            self.cut_off = 3000
+            self.cut_off = 0
             self.end_t = 5000
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
@@ -351,18 +351,25 @@ class GenericStudy:
                                                             tau_w)
             # LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.use_elec_idxs, :]
             LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
-            freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP)
+            # freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP)
             freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
 
             for elec in xrange(len(self.elec_z)):
                 row, col = self._return_elec_row_col(elec)
                 dist_idx = self._return_elec_dist_idx(elec)
-                # sig_psd_welch, freqs_welch = mlab.psd(LFP[elec], **self.welch_dict)
-                idxs = [np.argmin(np.abs(freqs - freq)) for freq in self.plot_frequencies]
-                freq_with_dist[row, dist_idx, :] = LFP_psd[elec,    idxs]
+                sig_psd_welch, freqs_welch = mlab.psd(LFP[elec], **self.welch_dict)
+                # print mu, len(freqs_welch), len(freqs_welch), LFP.shape, tvec.shape, tvec[-1]
+                idxs = [np.argmin(np.abs(freqs_welch - freq)) for freq in self.plot_frequencies]
+                freq_with_dist[row, dist_idx, :] = np.sqrt(sig_psd_welch[idxs])
                 # print sig_psd_welch, freqs_welch
-                all_elec_ax[elec].loglog(freqs, LFP_psd[elec, :], color=self.mu_clr(mu), lw=2, alpha=1)
-                # all_elec_ax[elec].loglog(freqs_welch, np.sqrt(sig_psd_welch), color=self.mu_clr(mu), lw=2, alpha=1)
+                # all_elec_ax[elec].loglog(freqs, LFP_psd[elec, :], color=self.mu_clr(mu), lw=1, alpha=0.1)
+                all_elec_ax[elec].loglog(freqs_welch, np.sqrt(sig_psd_welch), color=self.mu_clr(mu), lw=2)
+
+                # fi = plt.figure()
+                # ax_ = fi.add_subplot(111, xlim=[1, 1000])
+                # ax_.loglog(freqs, LFP_psd[elec, :], color=self.mu_clr(mu), lw=2)
+                # ax_.loglog(freqs_welch, np.sqrt(sig_psd_welch), color=self.mu_clr(mu), lw=1)
+                # plt.show()
 
             for row in xrange(num_elec_rows):
                 for freq_idx, freq in enumerate(self.plot_frequencies):
@@ -381,7 +388,7 @@ class GenericStudy:
         # [ax.set_xticks(ax.get_xticks()[::2]) for ax in all_elec_ax]
         # [ax.set_yticks(ax.get_yticks()[::2]) for ax in all_elec_ax]
         for ax in all_elec_ax + freq_ax:
-            ax.set_ylim([1e-11, 1e-5])
+            ax.set_ylim([1e-12, 1e-6])
         for ax in freq_ax_norm:
             ax.set_ylim([1e-4, 2e0])
         fig.legend(lines, line_names, frameon=False, ncol=2, loc='lower right')
@@ -856,15 +863,22 @@ class GenericStudy:
 
         for idx, ax in enumerate(ax_list):
             if self.plot_psd:
-                xvec, yvec = aLFP.return_freq_and_psd(tvec, sig[idx, :])
-                yvec = yvec[0]
-                # yvec_w, xvec_w = mlab.psd(sig[idx, :], **self.welch_dict)
-                # yvec_w = np.sqrt(yvec_w)
+                # xvec, yvec = aLFP.return_freq_and_psd(tvec, sig[idx, :])
+                # yvec = yvec[0]
+                yvec_w, xvec_w = mlab.psd(sig[idx, :], **self.welch_dict)
+                yvec_w = np.sqrt(yvec_w)
             else:
                 xvec = tvec
                 yvec = sig[idx]
-            ax.plot(xvec, yvec, color=self.mu_clr(mu), lw=2)
-            # ax.plot(xvec_w, yvec_w, color=self.mu_clr(mu), lw=1, alpha=0.5)
+            # ax.plot(xvec, yvec, color=self.mu_clr(mu), lw=1, alpha=0.1)
+            ax.plot(xvec_w, yvec_w, color=self.mu_clr(mu), lw=2, alpha=1)
+
+            # print len(xvec), len(xvec_w)
+            # fi = plt.figure()
+            # ax_ = fi.add_subplot(111, xlim=[1, 1000])
+            # ax_.loglog(xvec, yvec, color=self.mu_clr(mu), lw=2)
+            # ax_.loglog(xvec_w, yvec_w, color=self.mu_clr(mu), lw=1)
+            # plt.show()
 
     def _plot_sig_to_axes_active(self, ax_list, sig, tvec):
         if not len(ax_list) == len(sig):
@@ -1285,8 +1299,8 @@ class GenericStudy:
 
     def run_all_single_simulations(self):
         distributions = ['linear_increase', 'linear_decrease', 'uniform']
-        input_idxs = [605, 0, 455]
-        tau_ws = [0.1, 10, 1, 100]
+        input_idxs = [605, 0]
+        tau_ws = [10, 1, 100]
         make_summary_plot = True
         tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
         i = 1
@@ -1299,19 +1313,19 @@ class GenericStudy:
                         i += 1
                     if make_summary_plot:
                         self._plot_LFP_with_distance(distribution, tau_w, input_idx)
-                        self.plot_summary(input_idx, distribution, tau_w)
-                self._plot_q_value(distribution, input_idx)
+                        # self.plot_summary(input_idx, distribution, tau_w)
+                # self._plot_q_value(distribution, input_idx)
 
     def LFP_with_distance_study(self):
         self._set_extended_electrode()
-        weights = np.linspace(0, 1, 5)
-        for tau_w in [0.1, 1, 10, 100]:
+        # weights = np.linspace(0, 1, 5)
+        for tau_w in [10, 0.1, 1, 100]:
             for distribution in ['linear_increase', 'uniform', 'linear_decrease']:
-                for weight in weights:
-                # for input_idx in self.cell_plot_idxs:
-                #     print tau_w, distribution, input_idx
-                # self._plot_LFP_with_distance(distribution, tau_w, input_idx)
-                    self._plot_LFP_with_distance(distribution, tau_w, self.cell_plot_idxs[::2], weight)
+                # for weight in weights:
+                for input_idx in self.cell_plot_idxs:
+                    print tau_w, distribution, input_idx
+                    self._plot_LFP_with_distance(distribution, tau_w, input_idx)
+                    # self._plot_LFP_with_distance(distribution, tau_w, self.cell_plot_idxs[::2], weight)
 
     def q_value_study(self):
         self._set_extended_electrode()
@@ -1351,8 +1365,11 @@ class GenericStudy:
 
         vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
         imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
-        freqs, vmem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., vmem[:, :])
-        freqs, imem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., imem[:, :])
+        # freqs, vmem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., vmem[:, :])
+        # freqs, imem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., imem[:, :])
+        freqs, vmem_psd = aLFP.return_freq_and_psd_welch(vmem[:, :], self.welch_dict)
+        freqs, imem_psd = aLFP.return_freq_and_psd_welch(imem[:, :], self.welch_dict)
+
         dc_vmem = vmem_psd[:, 1]
         dc_imem = imem_psd[:, 1]
         max_value_vmem = np.max(vmem_psd[:, 1:], axis=1)
@@ -1415,7 +1432,8 @@ class GenericStudy:
             LFP = electrode.LFP
         else:
             LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
-        freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+        # freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+        freqs, LFP_psd = aLFP.return_freq_and_psd_welch(LFP, self.welch_dict)
         np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
 
         num_elec_cols = len(set(elec_x))
@@ -1460,9 +1478,9 @@ class GenericStudy:
             self._q_value_study_colorplot(input_idx)
 
     def generic_q_values_colorplot(self):
-        for distribution in ['linear_decrease', 'uniform', 'linear_increase']:
-            for input_idx in self.cell_plot_idxs:
-                for tau_w in [10, 1.0, 0.1, 100]:
+        for distribution in ['linear_increase', 'linear_decrease', 'uniform']:
+            for input_idx in [0, 605]:
+                for tau_w in [10, 1.0, 100]:
                     print distribution, input_idx, tau_w
                     self._q_value_study_colorplot(input_idx, distribution, tau_w)
 
@@ -1516,7 +1534,6 @@ class GenericStudy:
         np.save(join(self.sim_folder, 'ymid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ymid)
         np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zmid)
         np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, self.conductance)), cell.diam)
-
 
     def test_original_zuchkova(self, input_idx):
         import neuron
@@ -1738,17 +1755,14 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
+    gs = GenericStudy('hay', 'real_wn', conductance='generic', extended_electrode=True)
 
-    # gs.test_original_zuchkova(633)
-    # gs.plot_original_distance_study(827)
-    # gs.test_original_hay_simple_ratio(827)
     # gs.run_all_multiple_input_simulations()
     # gs.LFP_with_distance_study()
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
+    gs.run_all_single_simulations()
     gs.generic_q_values_colorplot()
-    # gs.run_all_single_simulations()
     # gs.test_original_hay_simple_ratio(827)
 
     # for idx in [827]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
@@ -1768,15 +1782,3 @@ if __name__ == '__main__':
     #         gs.plot_original_distance_study(idx)
     #     except:
     #         print 'n120', idx
-    # gs.plot_original_distance_study(665)
-    # gs.combine_extracellular_traces(0)
-    # gs.combine_extracellular_traces(455)
-    # gs.combine_extracellular_traces(605)
-    # gs.plot_multiple_input_EC_signals()
-    # gs.plot_summary(605, 'linear_increase', 10)
-
-    # gs.calculate_total_conductance('linear_decrease')
-    # gs.calculate_total_conductance('linear_increase')
-    # gs.calculate_total_conductance('uniform')
-    # gs.plot_distributions(-80)
-    # gs.plot_summaries()

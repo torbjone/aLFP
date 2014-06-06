@@ -47,9 +47,9 @@ class IntroFigures():
             self.ec_ax_dict = {'frameon': True,
                                'xticks': [1e0, 1e1, 1e2],
                                'xticklabels': [],
-                               'yticks': [1e-4, 1e-3, 1e-2, 1e-1],
+                               'yticks': [1e-6, 1e-5, 1e-4, 1e-3],
                                'yticklabels': [], 'xscale': 'log', 'yscale': 'log',
-                               'ylim': [1e-5, 1e-3],
+                               'ylim': [1e-6, 1e-3],
                                'xlim': [1, 500]}
             self.clip_on = True
 
@@ -64,7 +64,7 @@ class IntroFigures():
             elec_z = elec_z.flatten()
             elec_y = np.zeros(len(elec_x))
             self.plot_positions = np.array([elec_x, elec_y, elec_z]).T
-            self.conductance_types = ['active',  'active_frozen', 'passive', 'Ih_linearized']
+            self.conductance_types = ['active', 'passive']
             self.soma_idx = 0
             self.apic_idx = 852
             self.use_elec_idxs = [8, 36, 26, 67, 85]
@@ -78,7 +78,7 @@ class IntroFigures():
             elec_z = elec_z.flatten()
             elec_y = np.zeros(len(elec_x))
             self.plot_positions = np.array([elec_x, elec_y, elec_z]).T
-            self.conductance_types = ['active', 'active_frozen', 'passive']
+            self.conductance_types = ['active', 'passive']
             self.soma_idx = 0
             self.apic_idx = 685
             self.use_elec_idxs = [33, 2, 78, 61, 22]
@@ -91,7 +91,7 @@ class IntroFigures():
             elec_z = elec_z.flatten()
             elec_y = np.zeros(len(elec_x))
             self.plot_positions = np.array([elec_x, elec_y, elec_z]).T
-            self.conductance_types = ['active', 'active_frozen', 'passive']
+            self.conductance_types = ['active', 'passive']
             self.soma_idx = 0
             self.apic_idx = 1128
             self.use_elec_idxs = [26, 2, 77, 68, 28]#[19, 8, 23, 71, 52]
@@ -314,7 +314,7 @@ class IntroFigures():
             ax_w = 0.1
             ax_h = 0.03
         else:
-            ax_w = 0.06
+            ax_w = 0.1
             ax_h = 0.045
 
         xstart, ystart = fig.transFigure.inverted().transform(mother_ax.transData.transform(pos))
@@ -355,28 +355,28 @@ class IntroFigures():
         tvec = tvec[start_idx:end_idx]
 
         plt.close('all')
-        fig = plt.figure(figsize=[10, 7])
-        fig.subplots_adjust(hspace=0.2, top=0.95, bottom=0.1, left=0.05, right=0.95)
-        ax1 = plt.subplot(231, **self.ax_dict)
-        ax2 = plt.subplot(232, **self.ax_dict)
-        ax3 = plt.subplot(233, **self.ax_dict)
-        ax4 = plt.subplot(234, **self.ax_dict)
-        ax5 = plt.subplot(235, **self.ax_dict)
-        ax6 = plt.subplot(236, **self.ax_dict)
+        fig = plt.figure(figsize=[5, 7])
+        fig.subplots_adjust(hspace=0.2, wspace=0.2, top=0.95, bottom=0.1, left=0.05, right=0.95)
+        ax1 = plt.subplot(221, **self.ax_dict)
+        ax2 = plt.subplot(222, **self.ax_dict)
+        ax3 = plt.subplot(223, **self.ax_dict)
+        ax4 = plt.subplot(224, **self.ax_dict)
+        # ax5 = plt.subplot(235, **self.ax_dict)
+        # ax6 = plt.subplot(236, **self.ax_dict)
 
-        ax_list = [ax1, ax2, ax3, ax4, ax5, ax6]
+        ax_list = [ax1, ax2, ax3, ax4]#, ax5, ax6]
 
         # ax1.plot([300, 300], [-500, -500 - scale_factor_length], 'k', lw=3)
         # ax1.text(310, -500 - scale_factor_length/2, '0.1 $\mu$V',
         #          verticalalignment='center',
         #          horizontalalignment='left')
-        [self._draw_morph_to_axis(ax, self.soma_idx) for ax in [ax1, ax2, ax3]]
-        [self._draw_morph_to_axis(ax, self.apic_idx) for ax in [ax4, ax5, ax6]]
+        [self._draw_morph_to_axis(ax, self.soma_idx) for ax in [ax1, ax2]]#, ax3]]
+        [self._draw_morph_to_axis(ax, self.apic_idx) for ax in [ax3, ax4]]#ax5, ax6]]
 
         # ax1.text(190, -300, '200 $\mu$m', verticalalignment='center', horizontalalignment='right')
         ax_numb = 0
         for input_idx in [self.soma_idx, self.apic_idx]:
-            for holding_potential in self.holding_potentials:
+            for holding_potential in self.holding_potentials[::2]:
                 for conductance_type in self.conductance_types:
                     name = 'Soma' if input_idx == 0 else 'Apic'
                     ax_list[ax_numb].text(0, self.ax_dict['ylim'][1], '%s %d mV' % (name, holding_potential),
@@ -385,8 +385,8 @@ class IntroFigures():
                                          ax_list[ax_numb], fig, elec_x, elec_z, tvec)
                 ax_numb += 1
 
-        [ax1.plot(elec_x[idx], elec_z[idx], marker='$%d$' % idx, color='gray', alpha=0.2)
-            for idx in xrange(len(elec_x))]
+        # [ax1.plot(elec_x[idx], elec_z[idx], marker='$%d$' % idx, color='gray', alpha=0.2)
+        #     for idx in xrange(len(elec_x))]
 
         lines = []
         line_names = []
@@ -396,7 +396,7 @@ class IntroFigures():
             line_names.append(conductance_type)
 
         if self.figure_name is 'figure_1':
-            bar_ax = fig.add_axes(self.return_ax_coors(fig, ax3, (-500, -300)), **self.ec_ax_dict)
+            bar_ax = fig.add_axes(self.return_ax_coors(fig, ax4, (-500, -300)), **self.ec_ax_dict)
             bar_ax.axis('off')
             bar_ax.plot([0, 0], bar_ax.axis()[2:], lw=3, color='k')
             bar_ax.plot(bar_ax.axis()[:2], [0, 0], lw=3, color='k')
@@ -415,6 +415,6 @@ class IntroFigures():
 
 if __name__ == '__main__':
 
-    IntroFigures('hay', 'figure_1').make_figure(do_simulations=False)
-    # IntroFigures('n120', 'figure_2').make_figure(do_simulations=False)
-    # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=False)
+    # IntroFigures('hay', 'figure_2').make_figure(do_simulations=False)
+    IntroFigures('n120', 'figure_2').make_figure(do_simulations=False)
+    IntroFigures('c12861', 'figure_2').make_figure(do_simulations=False)
