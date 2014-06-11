@@ -11,6 +11,8 @@ nrn = neuron.h
 import LFPy
 import aLFP
 from matplotlib import mlab
+from matplotlib.colors import LogNorm
+from scipy import stats
 class GenericStudy:
 
     def __init__(self, cell_name, input_type, conductance='generic', extended_electrode=False):
@@ -1401,13 +1403,19 @@ class GenericStudy:
 
     def _draw_elecs_q_value_colorplot(self, fig, input_idx, distribution, tau_w):
 
-        ax = fig.add_axes([0.35, 0.1, 0.6, 0.8])
+        amp_ax = fig.add_subplot(221, title='Max amplitude')
+        dc_ax = fig.add_subplot(222)
+        freq_ax = fig.add_subplot(223)#axes([0.01, 0.1, 0.4, 0.8])
+        q_ax = fig.add_subplot(224)#axes([0.45, 0.1, 0.4, 0.8])
+
+        input_name_dict = {605: 'Apical', 0: 'Somatic', 455: 'Middle'}
+        fig.suptitle("Input: %s, Distribution: %s, tau: %1.2f" %(input_name_dict[input_idx], distribution, tau_w))
         if self.conductance is 'active':
             sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
         else:
             sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 2.0,
                                                         self.holding_potential, distribution, tau_w)
-        distances = np.linspace(10, 4000, 39)#np.array([50, 100, 200, 400, 1600, 6400])
+        distances = np.linspace(10, 4000, 39)
         heights = np.linspace(1200, -200, 29)
         elec_x, elec_z = np.meshgrid(distances, heights)
         elec_x = elec_x.flatten()
@@ -1420,7 +1428,9 @@ class GenericStudy:
                 'y': elec_y,
                 'z': elec_z
         }
+        # LFP_psd = np.load(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name))
         if 1:
+            print "Recalculating extracellular potential"
             cell = self._return_cell(self.holding_potential, 'generic', 2.0, distribution, tau_w)
             cell.tstartms = 0
             cell.tstopms = 1
@@ -1433,8 +1443,11 @@ class GenericStudy:
         else:
             LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
         # freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+        print "PSD calculations"
         freqs, LFP_psd = aLFP.return_freq_and_psd_welch(LFP, self.welch_dict)
         np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
+        np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
+        upper_idx_limit = np.argmin(np.abs(freqs - 500))
 
         num_elec_cols = len(set(elec_x))
         num_elec_rows = len(set(elec_z))
@@ -1443,46 +1456,59 @@ class GenericStudy:
         freq_at_max = np.zeros((num_elec_rows, num_elec_cols))
 
         for elec in xrange(len(elec_z)):
-
             num_elec_cols = len(set(elec_x))
             num_elec_rows = len(set(elec_z))
             elec_idxs = np.arange(len(elec_x)).reshape(num_elec_rows, num_elec_cols)
             row, col = np.array(np.where(elec_idxs == elec))[:, 0]
 
             dc[row, col] = LFP_psd[elec, 1]
-            max_value[row, col] = np.max(LFP_psd[elec, 1:])
-            freq_at_max[row, col] = freqs[np.argmax(LFP_psd[elec, 1:])]
+            max_value[row, col] = np.max(LFP_psd[elec, 1:upper_idx_limit])
+            freq_at_max[row, col] = freqs[np.argmax(LFP_psd[elec, 1:upper_idx_limit])]
+        freq_ax.set_title('Max frequency (Mode: %1.1f Hz)' % stats.mode(freq_at_max, axis=None)[0][0])
+
+        dc_ax.set_title('Amplitude at %1.2f Hz' % freqs[1])
+        q_ax.set_title('q-value amp(max freq) / amp(%1.2f)' % freqs[1])
         q = max_value / dc
-        img = ax.imshow(q[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        vmin=1, vmax=3.5, aspect=2)
-        # ax.set_xticklabels(distances)
-        # ax.set_yticklabels(heights[::-1])
-        plt.colorbar(img)
+        img_freq = freq_ax.imshow(freq_at_max, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        vmin=1, vmax=500., aspect=2, norm=LogNorm())
+        img_q = q_ax.imshow(q[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        vmin=1, vmax=7., aspect=2)
+        img_amp = amp_ax.imshow(max_value[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=2, norm=LogNorm(), vmin=1e-10, vmax=1e-5)
+        img_dc = dc_ax.imshow(dc[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=2, norm=LogNorm(), vmin=1e-10, vmax=1e-5)
+
+        plt.colorbar(img_q, ax=q_ax)
+        plt.colorbar(img_freq, ax=freq_ax)
+        plt.colorbar(img_amp, ax=amp_ax)
+        plt.colorbar(img_dc, ax=dc_ax)
+
 
     def _q_value_study_colorplot(self, input_idx, distribution=None, tau_w=None):
         plt.close('all')
-        fig = plt.figure(figsize=[24, 12])
+        fig = plt.figure(figsize=[12, 12])
 
         fig.subplots_adjust(hspace=0.5, wspace=0.5, top=0.9, bottom=0.13, left=0.04, right=0.98)
-        self._draw_membrane_signals_to_axes_q_value_colorplot(fig, input_idx, distribution, tau_w)
+        # self._draw_membrane_signals_to_axes_q_value_colorplot(fig, input_idx, distribution, tau_w)
         self._draw_elecs_q_value_colorplot(fig, input_idx, distribution, tau_w)
         if self.conductance is 'active':
             filename = ('color_q_value_%s_%d_%s' % (self.cell_name, input_idx, self.conductance))
         else:
             filename = ('color_q_value_%s_%d_%s_%s_%1.2f' %
                         (self.cell_name, input_idx, self.conductance, distribution, tau_w))
-        fig.savefig(join(self.figure_folder, '%s.png' % filename), dpi=150)
+        fig.savefig(join(self.figure_folder, '%s_freq.png' % filename), dpi=150)
 
     def active_q_values_colorplot(self):
         for input_idx in [0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:
             self._q_value_study_colorplot(input_idx)
 
     def generic_q_values_colorplot(self):
-        for distribution in ['linear_increase', 'linear_decrease', 'uniform']:
-            for input_idx in [0, 605]:
-                for tau_w in [10, 1.0, 100]:
+        for tau_w in [10, 1.0, 100]:
+            for distribution in ['linear_increase', 'linear_decrease', 'uniform']:
+                for input_idx in [605, 0]:
                     print distribution, input_idx, tau_w
                     self._q_value_study_colorplot(input_idx, distribution, tau_w)
+
 
     def test_original_hay(self, input_idx):
         import neuron
@@ -1761,7 +1787,7 @@ if __name__ == '__main__':
     # gs.LFP_with_distance_study()
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
-    gs.run_all_single_simulations()
+    # gs.run_all_single_simulations()
     gs.generic_q_values_colorplot()
     # gs.test_original_hay_simple_ratio(827)
 

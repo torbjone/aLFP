@@ -486,11 +486,74 @@ def test_steady_state():
     plt.plot(cell.tvec, cell.somav)
     plt.show()
 
+def return_frozen_gh(holding_potential):
+    timeres = 2**-4
+    cut_off = 0
+    tstopms = 150
+    tstartms = -cut_off
+    model_path = join('lfpy_version')
+    neuron.load_mechanisms('mod')
+    neuron.load_mechanisms('..')
+    cell_params = {
+        'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init': holding_potential,             # initial crossmembrane potential
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': 1,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+        'custom_code': [join(model_path, 'custom_codes.hoc')],
+        'custom_fun': [active_declarations],  # will execute this function
+        'custom_fun_args': [{'conductance_type': 'active_frozen',
+                             'hold_potential': holding_potential}],
+    }
+
+    cell = LFPy.Cell(**cell_params)
+    # make_syaptic_stimuli(cell, input_idx)
+    # cell.simulate(rec_vmem=True, rec_imem=True)
+
+    gIh = np.zeros(cell.totnsegs)
+    gpas = np.zeros(cell.totnsegs)
+    dist = np.zeros(cell.totnsegs)
+    nrn.distance()
+    comp = 0
+    for sec in cell.allseclist:
+        for seg in sec:
+            gIh[comp] = seg.gIh_Ih_frozen if hasattr(seg, "ihcn_Ih_frozen") else 0
+            gpas[comp] = seg.g_pas
+            dist[comp] = nrn.distance(seg.x)
+            comp += 1
+
+    return dist, gIh, gpas
+
+
+def plot_frozen_gh():
+    dist, gIh_80, gpas = return_frozen_gh(-80)
+    dist, gIh_70, gpas = return_frozen_gh(-70)
+    dist, gIh_60, gpas = return_frozen_gh(-60)
+
+
+    plt.plot(dist, gIh_80, 'bo', label='Frozen Ih at -80 mV')
+    plt.plot(dist, gIh_70, 'go', label='Frozen Ih at -70 mV')
+    plt.plot(dist, gIh_60, 'ro', label='Frozen Ih at -60 mV')
+    plt.plot(dist, gpas, 'ko', label='g_pas')
+
+    plt.legend(loc=2)
+    plt.ylabel('Conductance [S/cm^2]')
+    plt.xlabel('Distance from soma [$\mu m$]')
+    plt.savefig('frozen_Ih_conductance.png')
+
 if __name__ == '__main__':
 
-    test_frozen_currents(0, -80)
-    test_frozen_currents(0, -70)
-    test_frozen_currents(0, -60)
-    test_frozen_currents(750, -60)
-    test_frozen_currents(750, -70)
-    test_frozen_currents(750, -80)
+    plot_frozen_gh()
+    # test_frozen_currents(0, -80)
+    # test_frozen_currents(0, -70)
+    # test_frozen_currents(0, -60)
+    # test_frozen_currents(750, -60)
+    # test_frozen_currents(750, -70)
+    # test_frozen_currents(750, -80)
