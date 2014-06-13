@@ -37,9 +37,19 @@ class PaperFigures():
         zstart = [-150, -150, 0, 1000, 1000, -50]
         zend = [0, 0, 1000, 1100, 1100, -50]
         lineprops = {'lw': 5, 'color': 'gray', 'solid_capstyle': 'round'}
+        synapse_clr = 'g'
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], **lineprops) for idx in xrange(len(xstart))]
-        input_coor = [0, 0] if input_pos is 'soma' else [-50, 1050]
-        ax.plot(input_coor[0], input_coor[1], 'y*', ms=10)
+        if input_pos is 'soma':
+            synapse_coor = [-100, 0]
+            axon_start = [-175, 50]
+            marker = (3, 0, 45)
+        else:
+            synapse_coor = [-100, 1010]
+            axon_start = [-200, 900]
+            marker = (3, 0, 15)
+
+        ax.plot([axon_start[0], synapse_coor[0]], [axon_start[1], synapse_coor[1]], lw=5, c=synapse_clr)
+        ax.plot(synapse_coor[0], synapse_coor[1], c=synapse_clr, mec=synapse_clr, ms=15, marker=marker)
         ax.axis('equal')
 
     @staticmethod
@@ -667,10 +677,12 @@ class Figure5(PaperFigures):
         self.elec_apic_idx = 1
         self.elec_soma_idx = 13
         self.soma_idx = 0
+        self.tau_w = 10
+        self.numrows = 6
+        self.numcols = 4
         self.apic_idx = 605
         self.mus = [-0.5, 0, 2]
         self.mu_name_dict = {-0.5: 'Regenerative', 0: 'Passive', 2: 'Restorative'}
-        self.make_figure()
         self.input_type = 'wn'
         self.input_idxs = [self.apic_idx, self.soma_idx]
         self.elec_idxs = [self.elec_apic_idx, self.elec_soma_idx]
@@ -678,6 +690,8 @@ class Figure5(PaperFigures):
         self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu - np.min(self.mus))/
                                                   (np.max(self.mus) - np.min(self.mus))))
         self._initialize_figure()
+        self._draw_channels_distribution()
+        self.make_figure()
         self._finitialize_figure()
 
     def _initialize_figure(self):
@@ -686,9 +700,9 @@ class Figure5(PaperFigures):
 
         plt.close('all')
         self.fig = plt.figure(figsize=[10, 10])
-        self.fig.subplots_adjust(hspace=0.5, wspace=0.35, bottom=0.2)
-        self.ax_morph_apic = self.fig.add_subplot(241)
-        self.ax_morph_soma = self.fig.add_subplot(245)
+        self.fig.subplots_adjust(hspace=0.6, wspace=0.45, bottom=0.1, left=0)
+        self.ax_morph_apic = self.fig.add_axes([0.05, 0.5, 0.1, 0.25])
+        self.ax_morph_soma = self.fig.add_axes([0.05, 0.075, 0.1, 0.25])
         self.ax_morph_apic.axis('off')
         self.ax_morph_soma.axis('off')
         self._draw_simplified_morph_to_axis(self.ax_morph_apic, 'apic')
@@ -697,8 +711,36 @@ class Figure5(PaperFigures):
                               elec_z[[self.elec_apic_idx, self.elec_soma_idx]])
         self.ax_morph_soma.scatter(elec_x[[self.elec_apic_idx, self.elec_soma_idx]],
                               elec_z[[self.elec_apic_idx, self.elec_soma_idx]])
-
         self._make_ax_dict()
+
+        arrow_dict = {'width': 20, 'lw': 1, 'clip_on': False, 'color': '0.3', 'zorder': 0}
+        arrow_dx = 200
+        arrow_dz = 50
+
+        self.ax_morph_apic.arrow(elec_x[self.elec_apic_idx] + 80, elec_z[self.elec_apic_idx] + 10,
+                                 arrow_dx, arrow_dz, **arrow_dict)
+        self.ax_morph_apic.arrow(elec_x[self.elec_soma_idx] + 80, elec_z[self.elec_soma_idx] + 10,
+                                 arrow_dx, -arrow_dz, **arrow_dict)
+        self.ax_morph_soma.arrow(elec_x[self.elec_apic_idx] + 80, elec_z[self.elec_apic_idx] + 10,
+                                 arrow_dx, arrow_dz, **arrow_dict)
+        self.ax_morph_soma.arrow(elec_x[self.elec_soma_idx] + 80, elec_z[self.elec_soma_idx] + 10,
+                                 arrow_dx, -arrow_dz, **arrow_dict)
+
+    def _draw_channels_distribution(self):
+        for dist_num, distribution in enumerate(self.distributions):
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, 0, 0,
+                                                        self.holding_potential, distribution, self.tau_w)
+            dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % sim_name)).item()
+            ax = self.fig.add_subplot(self.numrows, self.numcols, dist_num + 2,
+                                      title=distribution.replace('_', ' ').capitalize(),
+                                      xticks=[], yticks=[], ylim=[0, 0.0007])
+            simplify_axes(ax)
+            argsort = np.argsort(dist_dict['dist'])
+            dist = dist_dict['dist'][argsort]
+            g = dist_dict['g_w_QA'][argsort]
+            x = [dist[0], dist[-1]]
+            y = [g[0], g[-1]]
+            ax.plot(x, y, lw=2)
 
     def _finitialize_figure(self):
 
@@ -709,50 +751,41 @@ class Figure5(PaperFigures):
             lines.append(l)
             line_names.append(self.mu_name_dict[mu])
         self.fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
+        self.fig.text(0.01, 0.9, '  Channel\ndistributions:')
+        self.fig.text(0.02, 0.65, 'Apical input', rotation='vertical', va='center')
+        self.fig.text(0.02, 0.2, 'Somatic input', rotation='vertical', va='center')
+        simplify_axes(self.ax_dict.values())
         self.fig.savefig(join(self.figure_folder, '%s_%s.png' % (self.figure_name, self.cell_name)), dpi=150)
 
     def _make_ax_dict(self):
         self.ax_dict = {}
-        numrows = 5
-        numcols = 4
+
+        ax_props = {'xlim': [1, 500], 'ylim': [1e-6, 1e-3]}
         for input_num, input_idx in enumerate(self.input_idxs):
             for elec_num, elec in enumerate(self.elec_idxs):
                 for dist_num, distribution in enumerate(self.distributions):
-                    row = input_num * 2 + 1 + elec_num
+                    row = input_num * 3 + elec_num + 1
                     col = 2 + dist_num
-                    plot_num = row * numcols + col
-
-                    ax = self.fig.add_subplot(numrows, numcols, plot_num, title='%d %d %s' % (input_idx, elec, distribution))
-                    # self.ax_dict[input_idx, distribution] = ax
-
+                    plot_num = row * self.numcols + col
+                    ax = self.fig.add_subplot(self.numrows, self.numcols, plot_num, **ax_props)
+                    # ax.set_title('%d %d %s' % (input_idx, elec, distribution))
+                    ax.grid(True)
+                    self.ax_dict[input_idx, elec, distribution] = ax
 
 
     def make_figure(self):
+        for [input_idx, elec, distribution], ax in self.ax_dict.items():
+            for mu in self.mus:
+                self._plot_sigs(input_idx, ax, distribution, mu, elec)
 
+    def _plot_sigs(self, input_idx, ax, distribution, mu, elec):
+        sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                    self.holding_potential, distribution, self.tau_w)
+        LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+        tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
+        freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP[elec, :])
+        ax.loglog(freqs, LFP_psd[0], c=self.mu_clr(mu), lw=2)
 
-        pass
-
-        # for input_idx in self.input_idxs:
-        #     for distribution in self.distributions:
-
-
-        # for mu in self.mus:
-        #     self._plot_sigs(0, mu, )
-        # simplify_axes(fig.axes)
-
-
-
-    def _plot_sigs(self, input_idx, mu, axes):
-
-        LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s_%d_%1.2f_%+d.npy' % (self.cell_name, input_idx,
-                                                                                mu, self.holding_potential)))
-        tvec = np.load(join(self.sim_folder, 'elec_x_%s_%s.npy' % (self.cell_name, self.input_type)))
-
-        freqs, LFP_psd_soma = aLFP.return_freq_and_psd(tvec, LFP[self.elec_soma_idx, :])
-        freqs, LFP_psd_apic = aLFP.return_freq_and_psd(tvec, LFP[self.elec_apic_idx, :])
-
-        axes[0].loglog(freqs, LFP_psd_apic[0], c=self.mu_clr(mu))
-        axes[1].loglog(freqs, LFP_psd_soma[0], c=self.mu_clr(mu))
 
 if __name__ == '__main__':
 
