@@ -30,6 +30,18 @@ class PaperFigures():
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1, color='0.5', zorder=0, alpha=1)
          for idx in xrange(len(xmid))]
 
+    def _draw_simplified_morph_to_axis(self, ax, input_pos='apic'):
+
+        xstart = [-150, 150, 0, 0, 0, -45]
+        xend = [0, 0, 0, -100, 100, 45]
+        zstart = [-150, -150, 0, 1000, 1000, -50]
+        zend = [0, 0, 1000, 1100, 1100, -50]
+        lineprops = {'lw': 5, 'color': 'gray', 'solid_capstyle': 'round'}
+        [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], **lineprops) for idx in xrange(len(xstart))]
+        input_coor = [0, 0] if input_pos is 'soma' else [-50, 1050]
+        ax.plot(input_coor[0], input_coor[1], 'y*', ms=10)
+        ax.axis('equal')
+
     @staticmethod
     def _find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z):
         return np.argmin(np.sum(np.array([(elec_x - pos[0])**2, (elec_y - pos[1])**2, (elec_z - pos[2])**2]), axis=0))
@@ -79,10 +91,9 @@ class IntroFigures():
                                'xticklabels': [],
                                'yticks': [1e-6, 1e-5, 1e-4, 1e-3],
                                'yticklabels': [], 'xscale': 'log', 'yscale': 'log',
-                               'ylim': [1e-6, 1e-3],
+                               'ylim': [1e-5, 1e-3],
                                'xlim': [1, 500]}
             self.clip_on = True
-
         else:
             raise RuntimeError("Unrecognized figure name: %s" % self.figure_name)
 
@@ -344,8 +355,8 @@ class IntroFigures():
             ax_w = 0.1
             ax_h = 0.03
         else:
-            ax_w = 0.1
-            ax_h = 0.045
+            ax_w = 0.12
+            ax_h = 0.06
 
         xstart, ystart = fig.transFigure.inverted().transform(mother_ax.transData.transform(pos))
         return [xstart, ystart, ax_w, ax_h]
@@ -355,7 +366,7 @@ class IntroFigures():
         LFP = 1e3*np.load(join(self.sim_folder, 'sig_%s_%d_%s_%+d.npy' % (self.cell_name, input_idx, conductance_type,
                                                                        holding_potential)))[:, start_idx:end_idx]
 
-        ax.scatter(elec_x[self.use_elec_idxs], elec_z[self.use_elec_idxs], c='k', s=3)
+        ax.scatter(elec_x[self.use_elec_idxs], elec_z[self.use_elec_idxs], c='k', s=10)
 
         if self.figure_name == 'figure_1':
             x_vec, y_vec = tvec, LFP
@@ -386,37 +397,35 @@ class IntroFigures():
 
         plt.close('all')
         fig = plt.figure(figsize=[5, 7])
-        fig.subplots_adjust(hspace=0.2, wspace=0.2, top=0.95, bottom=0.1, left=0.05, right=0.95)
+        fig.subplots_adjust(hspace=0.15, wspace=0.15, top=0.9, bottom=0.1, left=0.07, right=0.95)
+
         ax1 = plt.subplot(221, **self.ax_dict)
         ax2 = plt.subplot(222, **self.ax_dict)
         ax3 = plt.subplot(223, **self.ax_dict)
         ax4 = plt.subplot(224, **self.ax_dict)
-        # ax5 = plt.subplot(235, **self.ax_dict)
-        # ax6 = plt.subplot(236, **self.ax_dict)
 
-        ax_list = [ax1, ax2, ax3, ax4]#, ax5, ax6]
+        ax_list = [ax1, ax2, ax3, ax4]
 
-        # ax1.plot([300, 300], [-500, -500 - scale_factor_length], 'k', lw=3)
-        # ax1.text(310, -500 - scale_factor_length/2, '0.1 $\mu$V',
-        #          verticalalignment='center',
-        #          horizontalalignment='left')
-        [self._draw_morph_to_axis(ax, self.soma_idx) for ax in [ax1, ax2]]#, ax3]]
-        [self._draw_morph_to_axis(ax, self.apic_idx) for ax in [ax3, ax4]]#ax5, ax6]]
+        [self._draw_morph_to_axis(ax, self.apic_idx) for ax in [ax1, ax2]]
+        [self._draw_morph_to_axis(ax, self.soma_idx) for ax in [ax3, ax4]]
 
         # ax1.text(190, -300, '200 $\mu$m', verticalalignment='center', horizontalalignment='right')
+
+        fig.text(0.01, 0.75, 'Apical input', rotation='vertical', va='center', size=20)
+        fig.text(0.01, 0.25, 'Somatic input', rotation='vertical', va='center', size=20)
+        fig.text(0.25, .95, '-80 mV', rotation='horizontal', ha='center', size=20)
+        fig.text(0.75, .95, '-60 mV', rotation='horizontal', ha='center', size=20)
+
         ax_numb = 0
-        for input_idx in [self.soma_idx, self.apic_idx]:
+        for input_idx in [self.apic_idx, self.soma_idx]:
             for holding_potential in self.holding_potentials[::2]:
                 for conductance_type in self.conductance_types:
-                    name = 'Soma' if input_idx == 0 else 'Apic'
-                    ax_list[ax_numb].text(0, self.ax_dict['ylim'][1], '%s %d mV' % (name, holding_potential),
-                                          horizontalalignment='center')
+                    # name = 'Soma' if input_idx == 0 else 'Apic'
+                    # ax_list[ax_numb].text(0, self.ax_dict['ylim'][1], '%s %d mV' % (name, holding_potential),
+                    #                       horizontalalignment='center')
                     self._plot_one_signal(input_idx, conductance_type, holding_potential, start_idx, end_idx,
                                          ax_list[ax_numb], fig, elec_x, elec_z, tvec)
                 ax_numb += 1
-
-        # [ax1.plot(elec_x[idx], elec_z[idx], marker='$%d$' % idx, color='gray', alpha=0.2)
-        #     for idx in xrange(len(elec_x))]
 
         lines = []
         line_names = []
@@ -458,13 +467,16 @@ class Figure3(PaperFigures):
                                  'passive': 'Passive',
                                  'Ih_linearized_frozen': 'Passive rescaled to Ih'}
         self.holding_potentials = [-80, -60]
-        self.elec_apic_idx = 89
-        self.elec_soma_idx = 19
+        self.elec_apic_idx = 88
+        self.elec_soma_idx = 18
         self.soma_idx = 0
         self.apic_idx = 852
-        self.make_figures()
+        # self.make_figure(0, -60)
+        # self.make_figure(852, -60)
+        # self.make_figure(0, -80)
+        self.make_figure(852, -80)
 
-    def make_figures(self):
+    def make_figure(self, input_idx, holding_potential):
 
         tvec = np.load(join(self.sim_folder, 'tvec_%s.npy' % self.cell_name))
         elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
@@ -473,57 +485,41 @@ class Figure3(PaperFigures):
         ax_dict = {'xlim': [1, 500],
                    }
 
-        for input_idx in [self.soma_idx, self.apic_idx]:
-            for holding_potential in self.holding_potentials:
-                plt.close('all')
-                fig = plt.figure(figsize=[10, 5])
-                fig.subplots_adjust(hspace=0.5, wspace=0.35, bottom=0.2)
-                ax_morph = plt.subplot(143)
-                ax_morph.axis('off')
-                self._draw_morph_to_axis(ax_morph, input_idx)
-                ax_morph.scatter(elec_x[self.elec_apic_idx], elec_z[self.elec_apic_idx])
-                ax_morph.scatter(elec_x[self.elec_soma_idx], elec_z[self.elec_soma_idx])
-                vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-4, 1e1], title='$V_m$', **ax_dict)
-                vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-4, 1e1], title='$V_m$', **ax_dict)
-                im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-8, 1e-2], title='$I_m$', **ax_dict)
-                im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-8, 1e-2], title='$I_m$', **ax_dict)
-                ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-6, 1e-3], title='$\Phi$', **ax_dict)
-                ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-6, 1e-3], title='$\Phi$', **ax_dict)
-                sig_ax_list = [vm_ax_s, vm_ax_a, im_ax_s, im_ax_a, ec_ax_s, ec_ax_a]
-                [ax.grid(True) for ax in sig_ax_list]
-                mark_subplots([vm_ax_a, im_ax_a, vm_ax_s, im_ax_s])
-                mark_subplots([ec_ax_a, ec_ax_s], 'FG')
-                mark_subplots(ax_morph, 'E', xpos=0, ypos=1)
+        print input_idx, holding_potential
+        plt.close('all')
+        fig = plt.figure(figsize=[10, 5])
+        fig.subplots_adjust(hspace=0.5, wspace=0.35, bottom=0.2)
+        ax_morph = plt.subplot(143)
+        ax_morph.axis('off')
+        self._draw_morph_to_axis(ax_morph, input_idx)
+        ax_morph.scatter(elec_x[self.elec_apic_idx], elec_z[self.elec_apic_idx])
+        ax_morph.scatter(elec_x[self.elec_soma_idx], elec_z[self.elec_soma_idx])
+        vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-3, 1e-0], title='$V_m$', **ax_dict)
+        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-4, 1e-1], title='$V_m$', **ax_dict)
+        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-4, 1e-2], title='$I_m$', **ax_dict)
+        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-7, 1e-5], title='$I_m$', **ax_dict)
+        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-4, 1e-2], title='$\Phi$', **ax_dict)
+        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-5, 1e-3], title='$\Phi$', **ax_dict)
+        sig_ax_list = [vm_ax_s, vm_ax_a, im_ax_s, im_ax_a, ec_ax_s, ec_ax_a]
+        [ax.grid(True) for ax in sig_ax_list]
+        mark_subplots([vm_ax_a, im_ax_a, vm_ax_s, im_ax_s])
+        mark_subplots([ec_ax_a, ec_ax_s], 'FG')
+        mark_subplots(ax_morph, 'E', xpos=0, ypos=1)
 
-                for conductance_type in self.conductance_types:
-                    self._plot_sigs(input_idx, conductance_type, holding_potential,
-                                    sig_ax_list, tvec)
-                simplify_axes(fig.axes)
+        for conductance_type in self.conductance_types:
+            self._plot_sigs(input_idx, conductance_type, holding_potential,
+                            sig_ax_list, tvec)
+        simplify_axes(fig.axes)
 
-                lines = []
-                line_names = []
-                for conductance_type in self.conductance_types:
-                    l, = plt.plot(0, 0, color=self.conductance_clr[conductance_type], lw=2)
-                    lines.append(l)
-                    line_names.append(self.conductance_dict[conductance_type])
-                fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
-                fig.savefig(join(self.figure_folder, '%s_%s_%d_%d.png' % (self.figure_name, self.cell_name,
-                                                                          holding_potential, input_idx)), dpi=150)
-
-    # def _plot_one_signal(self, input_idx, conductance_type, holding_potential,
-    #                     ax, fig, elec_x, elec_z, tvec):
-    #     LFP = 1e3*np.load(join(self.sim_folder, 'sig_%s_%d_%s_%+d.npy' % (self.cell_name, input_idx, conductance_type,
-    #                                                                    holding_potential)))
-    #     ax.scatter(elec_x[self.use_elec_idxs], elec_z[self.use_elec_idxs], c='k', s=3)
-    #     for idx in self.use_elec_idxs:
-    #         freqs, psd = aLFP.return_freq_and_psd(tvec, LFP[idx,:])
-    #         ec_plot_dict = {'color': self.conductance_clr[conductance_type],
-    #             'lw': 1,
-    #             'clip_on': self.clip_on}
-    #         ax_ = fig.add_axes([], **self.ec_ax_dict)
-    #         simplify_axes(ax_)
-    #         ax_.plot(freqs, psd[idx, :], **ec_plot_dict)
-    #         ax_.grid(True)
+        lines = []
+        line_names = []
+        for conductance_type in self.conductance_types:
+            l, = plt.plot(0, 0, color=self.conductance_clr[conductance_type], lw=2)
+            lines.append(l)
+            line_names.append(self.conductance_dict[conductance_type])
+        fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
+        fig.savefig(join(self.figure_folder, '%s_%s_%d_%d.png' % (self.figure_name, self.cell_name,
+                                                                  holding_potential, input_idx)), dpi=150)
 
     def _plot_sigs(self, input_idx, conductance_type, holding_potential, axes, tvec):
         vmem = np.load(join(self.sim_folder, 'vmem_%s_%d_%s_%+d.npy' % (self.cell_name, input_idx, conductance_type,
@@ -548,9 +544,221 @@ class Figure3(PaperFigures):
         axes[4].loglog(freqs, LFP_psd_soma[0], c=self.conductance_clr[conductance_type])
         axes[5].loglog(freqs, LFP_psd_apic[0], c=self.conductance_clr[conductance_type])
 
+
+class Figure4(PaperFigures):
+
+    def __init__(self):
+        PaperFigures.__init__(self)
+        self.cell_name = 'c12861'
+        self.figure_name = 'figure_4'
+        self.sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_white_noise')
+        self.timeres = 2**-4
+        self.conductance_dict = {'active': 'Active',
+                                 'Ih_linearized': 'Linearized Ih',
+                                 'passive': 'Passive',
+                                 'Ih_linearized_frozen': 'Passive rescaled to Ih'}
+        self.holding_potentials = [-80, -60]
+        self.elec_apic_idx = 88
+        self.elec_soma_idx = 18
+        if self.cell_name == 'n120':
+
+            self.conductance_types = ['active', 'passive']
+            self.soma_idx = 0
+            self.apic_idx = 685
+            self.use_elec_idxs = [33, 2, 78, 61, 22]
+            self.elec_apic_idx = 65
+            self.elec_soma_idx = 18
+            self.ax_dict = {'ylim': [-200, 700], 'xlim': [-250, 250]}
+
+        elif self.cell_name == 'c12861':
+            self.conductance_types = ['active', 'passive']
+            self.soma_idx = 0
+            self.apic_idx = 1128
+            self.use_elec_idxs = [26, 2, 77, 68, 28]#[19, 8, 23, 71, 52]
+            self.elec_apic_idx = 75
+            self.elec_soma_idx = 18
+            self.ax_dict = {'ylim': [-200, 750], 'xlim': [-300, 300]}
+        # self.make_figure(0, -60)
+        # self.make_figure(self.apic_idx, -60)
+        # self.make_figure(0, -80)
+        # self.make_figure(self.apic_idx, -60)
+        # self.make_figure(self.apic_idx, -80)
+        self.make_figure(self.soma_idx, -70)
+        # self.make_figure(self.soma_idx, -80)
+
+    def make_figure(self, input_idx, holding_potential):
+
+        tvec = np.load(join(self.sim_folder, 'tvec_%s.npy' % self.cell_name))
+        elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
+        elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
+
+        ax_dict = {'xlim': [1, 500],
+                   }
+
+        print input_idx, holding_potential
+        plt.close('all')
+        fig = plt.figure(figsize=[10, 5])
+        fig.subplots_adjust(hspace=0.5, wspace=0.35, bottom=0.2)
+        ax_morph = plt.subplot(143)
+        ax_morph.axis('off')
+        self._draw_morph_to_axis(ax_morph, input_idx)
+        ax_morph.scatter(elec_x[self.elec_apic_idx], elec_z[self.elec_apic_idx])
+        ax_morph.scatter(elec_x[self.elec_soma_idx], elec_z[self.elec_soma_idx])
+        vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-3, 1e-1], title='$V_m$', **ax_dict)
+        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-2, 1e-0], title='$V_m$', **ax_dict)
+        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-7, 1e-5], title='$I_m$', **ax_dict)
+        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-4, 1e-2], title='$I_m$', **ax_dict)
+        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-4, 1e-2], title='$\Phi$', **ax_dict)
+        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-4, 1e-2], title='$\Phi$', **ax_dict)
+        sig_ax_list = [vm_ax_s, vm_ax_a, im_ax_s, im_ax_a, ec_ax_s, ec_ax_a]
+        [ax.grid(True) for ax in sig_ax_list]
+        mark_subplots([vm_ax_a, im_ax_a, vm_ax_s, im_ax_s])
+        mark_subplots([ec_ax_a, ec_ax_s], 'FG')
+        mark_subplots(ax_morph, 'E', xpos=0, ypos=1)
+
+        for conductance_type in self.conductance_types:
+            self._plot_sigs(input_idx, conductance_type, holding_potential,
+                            sig_ax_list, tvec)
+        simplify_axes(fig.axes)
+
+        lines = []
+        line_names = []
+        for conductance_type in self.conductance_types:
+            l, = plt.plot(0, 0, color=self.conductance_clr[conductance_type], lw=2)
+            lines.append(l)
+            line_names.append(self.conductance_dict[conductance_type])
+        fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
+        fig.savefig(join(self.figure_folder, '%s_%s_%d_%d.png' % (self.figure_name, self.cell_name,
+                                                                  holding_potential, input_idx)), dpi=150)
+
+    def _plot_sigs(self, input_idx, conductance_type, holding_potential, axes, tvec):
+        vmem = np.load(join(self.sim_folder, 'vmem_%s_%d_%s_%+d.npy' % (self.cell_name, input_idx, conductance_type,
+                                                                          holding_potential)))
+        imem = np.load(join(self.sim_folder, 'imem_%s_%d_%s_%+d.npy' % (self.cell_name, input_idx, conductance_type,
+                                                                          holding_potential)))
+        LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s_%d_%s_%+d.npy' % (self.cell_name, input_idx, conductance_type,
+                                                                          holding_potential)))
+        freqs, vmem_psd_soma = aLFP.return_freq_and_psd(tvec, vmem[self.soma_idx, :])
+        freqs, vmem_psd_apic = aLFP.return_freq_and_psd(tvec, vmem[self.apic_idx, :])
+        freqs, imem_psd_soma = aLFP.return_freq_and_psd(tvec, imem[self.soma_idx, :])
+        freqs, imem_psd_apic = aLFP.return_freq_and_psd(tvec, imem[self.apic_idx, :])
+        freqs, LFP_psd_soma = aLFP.return_freq_and_psd(tvec, LFP[self.elec_soma_idx, :])
+        freqs, LFP_psd_apic = aLFP.return_freq_and_psd(tvec, LFP[self.elec_apic_idx, :])
+
+        axes[0].loglog(freqs, vmem_psd_soma[0], c=self.conductance_clr[conductance_type])
+        axes[1].loglog(freqs, vmem_psd_apic[0], c=self.conductance_clr[conductance_type])
+        axes[2].loglog(freqs, imem_psd_soma[0], c=self.conductance_clr[conductance_type])
+        axes[3].loglog(freqs, imem_psd_apic[0], c=self.conductance_clr[conductance_type])
+        axes[2].loglog(freqs, imem_psd_soma[0], c=self.conductance_clr[conductance_type])
+        axes[3].loglog(freqs, imem_psd_apic[0], c=self.conductance_clr[conductance_type])
+        axes[4].loglog(freqs, LFP_psd_soma[0], c=self.conductance_clr[conductance_type])
+        axes[5].loglog(freqs, LFP_psd_apic[0], c=self.conductance_clr[conductance_type])
+
+
+class Figure5(PaperFigures):
+
+    def __init__(self):
+        PaperFigures.__init__(self)
+        self.cell_name = 'hay'
+        self.figure_name = 'figure_5'
+        self.sim_folder = join(self.root_folder, 'paper_simulations', 'generic_study')
+        self.timeres = 2**-4
+        self.holding_potential = -80
+        self.elec_apic_idx = 1
+        self.elec_soma_idx = 13
+        self.soma_idx = 0
+        self.apic_idx = 605
+        self.mus = [-0.5, 0, 2]
+        self.mu_name_dict = {-0.5: 'Regenerative', 0: 'Passive', 2: 'Restorative'}
+        self.make_figure()
+        self.input_type = 'wn'
+        self.input_idxs = [self.apic_idx, self.soma_idx]
+        self.elec_idxs = [self.elec_apic_idx, self.elec_soma_idx]
+        self.distributions = ['uniform', 'linear_increase', 'linear_decrease']
+        self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu - np.min(self.mus))/
+                                                  (np.max(self.mus) - np.min(self.mus))))
+        self._initialize_figure()
+        self._finitialize_figure()
+
+    def _initialize_figure(self):
+        elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
+        elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
+
+        plt.close('all')
+        self.fig = plt.figure(figsize=[10, 10])
+        self.fig.subplots_adjust(hspace=0.5, wspace=0.35, bottom=0.2)
+        self.ax_morph_apic = self.fig.add_subplot(241)
+        self.ax_morph_soma = self.fig.add_subplot(245)
+        self.ax_morph_apic.axis('off')
+        self.ax_morph_soma.axis('off')
+        self._draw_simplified_morph_to_axis(self.ax_morph_apic, 'apic')
+        self._draw_simplified_morph_to_axis(self.ax_morph_soma, 'soma')
+        self.ax_morph_apic.scatter(elec_x[[self.elec_apic_idx, self.elec_soma_idx]],
+                              elec_z[[self.elec_apic_idx, self.elec_soma_idx]])
+        self.ax_morph_soma.scatter(elec_x[[self.elec_apic_idx, self.elec_soma_idx]],
+                              elec_z[[self.elec_apic_idx, self.elec_soma_idx]])
+
+        self._make_ax_dict()
+
+    def _finitialize_figure(self):
+
+        lines = []
+        line_names = []
+        for mu in self.mus:
+            l, = plt.plot(0, 0, color=self.mu_clr(mu), lw=2)
+            lines.append(l)
+            line_names.append(self.mu_name_dict[mu])
+        self.fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
+        self.fig.savefig(join(self.figure_folder, '%s_%s.png' % (self.figure_name, self.cell_name)), dpi=150)
+
+    def _make_ax_dict(self):
+        self.ax_dict = {}
+        numrows = 5
+        numcols = 4
+        for input_num, input_idx in enumerate(self.input_idxs):
+            for elec_num, elec in enumerate(self.elec_idxs):
+                for dist_num, distribution in enumerate(self.distributions):
+                    row = input_num * 2 + 1 + elec_num
+                    col = 2 + dist_num
+                    plot_num = row * numcols + col
+
+                    ax = self.fig.add_subplot(numrows, numcols, plot_num, title='%d %d %s' % (input_idx, elec, distribution))
+                    # self.ax_dict[input_idx, distribution] = ax
+
+
+
+    def make_figure(self):
+
+
+        pass
+
+        # for input_idx in self.input_idxs:
+        #     for distribution in self.distributions:
+
+
+        # for mu in self.mus:
+        #     self._plot_sigs(0, mu, )
+        # simplify_axes(fig.axes)
+
+
+
+    def _plot_sigs(self, input_idx, mu, axes):
+
+        LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s_%d_%1.2f_%+d.npy' % (self.cell_name, input_idx,
+                                                                                mu, self.holding_potential)))
+        tvec = np.load(join(self.sim_folder, 'elec_x_%s_%s.npy' % (self.cell_name, self.input_type)))
+
+        freqs, LFP_psd_soma = aLFP.return_freq_and_psd(tvec, LFP[self.elec_soma_idx, :])
+        freqs, LFP_psd_apic = aLFP.return_freq_and_psd(tvec, LFP[self.elec_apic_idx, :])
+
+        axes[0].loglog(freqs, LFP_psd_apic[0], c=self.mu_clr(mu))
+        axes[1].loglog(freqs, LFP_psd_soma[0], c=self.mu_clr(mu))
+
 if __name__ == '__main__':
 
     # IntroFigures('hay', 'figure_2').make_figure(do_simulations=False)
-    Figure3()
+    # Figure3()
+    # Figure4()
+    Figure5()
     # IntroFigures('n120', 'figure_2').make_figure(do_simulations=False)
     # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=False)
