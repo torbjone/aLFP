@@ -268,7 +268,7 @@ def modify_morphology(section_dict, cellname):
 
     for key, sec_list in section_dict.items():
         for sec in sec_list:
-            sec.nseg = 10
+            sec.nseg = 11
 
     for sec in section_dict['basal']:
         for i in xrange(int(nrn.n3d())):
@@ -600,22 +600,22 @@ def test_morphology(hold_potential, cellname):
 
 
 if __name__ == '__main__':
-    # aLFP.explore_morphology(join('n120', 'n120.hoc'))
-    #test_morphology(-80, 'n120')
+    # aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
+    test_morphology(-60, 'c12861')
     # test_steady_state(0, -80, 'c12861')
 
-    test_frozen_currents(0, -80, 'c12861')
-    test_frozen_currents(0, -70, 'c12861')
-    test_frozen_currents(0, -60, 'c12861')
-
-    test_frozen_currents(500, -80, 'c12861')
-    test_frozen_currents(500, -70, 'c12861')
-    test_frozen_currents(500, -60, 'c12861')
-
-    test_frozen_currents(0, -80, 'n120')
-    test_frozen_currents(0, -70, 'n120')
-    test_frozen_currents(0, -60, 'n120')
-
-    test_frozen_currents(500, -80, 'n120')
-    test_frozen_currents(500, -70, 'n120')
-    test_frozen_currents(500, -60, 'n120')
+    # test_frozen_currents(0, -80, 'c12861')
+    # test_frozen_currents(0, -70, 'c12861')
+    # test_frozen_currents(0, -60, 'c12861')
+    #
+    # test_frozen_currents(500, -80, 'c12861')
+    # test_frozen_currents(500, -70, 'c12861')
+    # test_frozen_currents(500, -60, 'c12861')
+    #
+    # test_frozen_currents(0, -80, 'n120')
+    # test_frozen_currents(0, -70, 'n120')
+    # test_frozen_currents(0, -60, 'n120')
+    #
+    # test_frozen_currents(500, -80, 'n120')
+    # test_frozen_currents(500, -70, 'n120')
+    # test_frozen_currents(500, -60, 'n120')

@@ -370,7 +370,6 @@ def biophys_active_frozen(**kwargs):
 
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
-
     print("Frozen active ion-channels inserted.")
 
 
@@ -387,7 +386,6 @@ def make_syaptic_stimuli(cell, input_idx):
     synapse = LFPy.Synapse(cell, **synapse_parameters)
     synapse.set_spike_times(np.array([5.]))
     return cell, synapse
-
 
 def active_declarations(**kwargs):
     ''' set active conductances for Hay model 2011 '''

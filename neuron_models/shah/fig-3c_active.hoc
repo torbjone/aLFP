@@ -8,12 +8,12 @@ Rm = 28000
 Cm    = 1
 RaAll= 150
 RaAx = 50
-Vrest = -65
+Vrest = -70
 
 gna =  .045
 AXONM = 3
 gkdr = 0.06
-celsius = 35.0  
+celsius = 35.0
 ka =  0.04
 ghd=0.00005
 gkm=0.04
@@ -24,22 +24,23 @@ forsec "axon" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAx cm=Cm}
 forsec "soma" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
 forsec "dendrite"{insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
 forsec "user5" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
+forsec "apical_dendrite" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
 access soma
 distance()
 forsec "axon" {   
 		insert km gbar_km=gkm
-                insert nax gbar_nax=gna*AXONM	
-                insert kdr gkdrbar_kdr=gkdr*AXONM
-                insert kap gkabar_kap = ka
+        insert nax gbar_nax=gna*AXONM
+        insert kdr gkdrbar_kdr=gkdr*AXONM
+        insert kap gkabar_kap = ka
 }
 
 forsec "soma" {  
 		insert km gbar_km=gkm
 		insert hd ghdbar_hd=ghd	
-                insert na3 gbar_na3=gna
-                insert kdr gkdrbar_kdr=gkdr
-                insert kap gkabar_kap = ka
-                insert cat  gcatbar_cat=gcat
+        insert na3 gbar_na3=gna
+        insert kdr gkdrbar_kdr=gkdr
+        insert kap gkabar_kap = ka
+        insert cat gcatbar_cat=gcat
 		insert cacum tau_cacum=100 depth_cacum=diam/2
 		insert KahpM95 gbar_KahpM95 = gahp 
 }
@@ -74,12 +75,12 @@ forsec "apical_dendrite" {
 
 forsec "user5" {
 		insert hd ghdbar_hd=ghd	
-                insert na3 gbar_na3=gna
-                insert kdr gkdrbar_kdr=gkdr
+        insert na3 gbar_na3=gna
+        insert kdr gkdrbar_kdr=gkdr
 		insert kap gkabar_kap=0
 		insert kad gkabar_kad=0
 		insert cacum tau_cacum=100 depth_cacum=diam/2
-                insert cat  gcatbar_cat=gcat
+        insert cat  gcatbar_cat=gcat
 		insert KahpM95 gbar_KahpM95 = gahp 
 
 		for (x,0) { xdist = distance(x)

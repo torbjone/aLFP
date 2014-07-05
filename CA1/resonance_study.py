@@ -86,7 +86,6 @@ def WN_plot():
                 print vrest, input_idx, syn_strength
                 aLFP.plot_WN_CA1(folder, elec_x, elec_y, elec_z, input_idx, vrest, syn_strength)
 
-
 def WN_sim():
     conductance_list = ['active_-60',
                         'passive_-80', 'passive_-65', 'passive_-62', 'passive_-60',

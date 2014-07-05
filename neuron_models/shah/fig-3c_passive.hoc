@@ -9,7 +9,7 @@ Cm    = 1
 RaAll= 150
 RaAx = 50
 
-Vrest = -65
+Vrest = -70
 gna =  .045
 AXONM = 3
 gkdr = 0.06
