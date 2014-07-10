@@ -150,10 +150,10 @@ class GenericStudy:
                 'custom_fun': [hay_active],  # will execute this function
                 'custom_fun_args': [{'conductance_type': conductance_type,
                                      'mu_factor': mu,
-                                     'g_pas': 0.0002,
+                                     'g_pas': 0.0002 / 5,
                                      'distribution': distribution,
                                      'tau_w': tau_w,
-                                     'total_w_conductance': 6.23843378791,
+                                     'total_w_conductance': 6.23843378791 / 5,
                                      'hold_potential': holding_potential}]
             }
         elif self.cell_name in ['n120', 'c12861']:
@@ -884,7 +884,8 @@ class GenericStudy:
             # ax.plot(xvec, yvec, color=self.mu_clr(mu), lw=1, alpha=0.1)
 
             max_freq = np.argmax(yvec_w[1:])
-            ax.loglog(xvec_w, yvec_w, color=self.mu_clr(mu), lw=2)
+
+            ax.plot(xvec_w, yvec_w, color=self.mu_clr(mu), lw=2)
             # if mu == 2.0:
             #     ax.set_xlabel('Max f: %1.1f Hz' % xvec_w[max_freq])
             # ax.plot(xvec_w[max_freq], yvec_w[max_freq], 'o', c='r', lw=1, alpha=1)
@@ -896,6 +897,9 @@ class GenericStudy:
             # ax_.loglog(xvec, yvec, color=self.mu_clr(mu), lw=2)
             # ax_.loglog(xvec_w, yvec_w, color=self.mu_clr(mu), lw=1)
             # plt.show()
+            if self.plot_psd:
+                ax.set_yscale('log')
+                ax.set_xscale('log')
 
     def _plot_sig_to_axes_active(self, ax_list, sig, tvec):
         if not len(ax_list) == len(sig):
@@ -1329,7 +1333,7 @@ class GenericStudy:
     def run_all_single_simulations(self):
         distributions = ['linear_increase', 'linear_decrease', 'uniform']
         input_idxs = [605, 0]
-        tau_ws = [10, 1, 100]
+        tau_ws = [30]
         make_summary_plot = True
         tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
         i = 1
@@ -1342,7 +1346,7 @@ class GenericStudy:
                         i += 1
                     if make_summary_plot:
                         self._plot_LFP_with_distance(distribution, tau_w, input_idx)
-                        # self.plot_summary(input_idx, distribution, tau_w)
+                        self.plot_summary(input_idx, distribution, tau_w)
                 # self._plot_q_value(distribution, input_idx)
 
     def LFP_with_distance_study(self):
@@ -1906,11 +1910,11 @@ if __name__ == '__main__':
 
     # gs.all_resonance_plots()
     # gs.run_all_multiple_input_simulations()
-    gs.LFP_with_distance_study()
+    # gs.LFP_with_distance_study()
     # gs.generic_q_values_colorplot()
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
-    # gs.run_all_single_simulations()
+    gs.run_all_single_simulations()
     # gs.test_original_hay_simple_ratio(827)
 
     #for idx in [0, 915]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):

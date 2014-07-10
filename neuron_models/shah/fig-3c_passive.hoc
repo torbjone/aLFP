@@ -4,14 +4,14 @@ rel=0.5
 
 numbasal=70
 
-Rm = 28000
-Cm    = 1
-RaAll= 150
-RaAx = 50
+Rm = 28000.
+Cm    = 1.
+RaAll= 150.
+RaAx = 50.
 
-Vrest = -70
+Vrest = -60
 gna =  .045
-AXONM = 3
+AXONM = 3.
 gkdr = 0.06
 celsius = 35.0  
 ka =  0.04

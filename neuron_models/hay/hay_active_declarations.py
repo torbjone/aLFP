@@ -65,7 +65,8 @@ def _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance):
     normalization = 0
     for sec in neuron.h.allsec():
         for seg in sec:
-            normalization += nrn.area(seg.x) * (decrease_factor - decrease_factor * nrn.distance(seg.x)/max_dist)
+            normalization += nrn.area(seg.x) * (decrease_factor - (decrease_factor - 1) *
+                                                nrn.distance(seg.x)/max_dist)
     return total_conductance / normalization
 
 
@@ -118,8 +119,8 @@ def biophys_generic(**kwargs):
         nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.g_w_QA = (conductance_factor * (decrease_factor - decrease_factor * nrn.distance(seg.x)
-                                                   / max_dist))
+                seg.g_w_QA = (conductance_factor * (decrease_factor - (decrease_factor - 1) *
+                                                    nrn.distance(seg.x) / max_dist))
     else:
         raise RuntimeError("Unknown distribution...")
 

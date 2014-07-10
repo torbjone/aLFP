@@ -105,7 +105,7 @@ def biophys_active(**kwargs):
         sec.insert("KahpM95")
         sec.gbar_KahpM95 = gahp
 
-    nrn.distance(0, 0.5)
+    nrn.distance()
     for sec in nrn.allsec():
         if not sec.name().startswith('user5'):
             continue
@@ -136,7 +136,7 @@ def biophys_active(**kwargs):
             else:
                 seg.gkabar_kap = ka*(1. + xdist / 100.)
 
-    nrn.distance(0, 0.5)
+    nrn.distance()
     for sec in nrn.allsec():
         if not sec.name().startswith('apical_dendrite'):
             continue
@@ -160,7 +160,6 @@ def biophys_active(**kwargs):
         sec.gcatbar_cat = gcat
         for seg in sec:
             xdist = nrn.distance(seg.x)
-            print sec.name(), seg.x, xdist
             seg.ghdbar_hd = ghd*(1. + 3. * xdist/100.)
             if xdist > 100:
                 seg.gkabar_kad = ka*(1. + xdist/100.)
@@ -205,6 +204,41 @@ def make_uniform(Vrest):
                 seg.e_pas += seg.ica/seg.g_pas
             if nrn.ismembrane("hd"):
                 seg.e_pas += seg.i_hd/seg.g_pas
+
+def make_WN_input(cell, max_freq):
+    """ White Noise input ala Linden 2010 is made """
+    tot_ntsteps = round((cell.tstopms - cell.tstartms)/\
+                  cell.timeres_NEURON + 1)
+    I = np.zeros(tot_ntsteps)
+    tvec = np.arange(tot_ntsteps) * cell.timeres_NEURON
+    for freq in xrange(1, max_freq + 1):
+        I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
+    return I
+
+def make_white_noise_stimuli(cell, input_idx):
+    input_scaling = 0.001
+    max_freq = 500
+    plt.seed(1234)
+
+    input_array = input_scaling * make_WN_input(cell, max_freq)
+    noiseVec = neuron.h.Vector(input_array)
+    i = 0
+    syn = None
+    for sec in cell.allseclist:
+        for seg in sec:
+            if i == input_idx:
+                print "Input i" \
+                      "nserted in ", sec.name()
+                syn = neuron.h.ISyn(seg.x, sec=sec)
+            i += 1
+    if syn is None:
+        raise RuntimeError("Wrong stimuli index")
+    syn.dur = 1E9
+    syn.delay = cell.tstartms
+    noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
+    return cell, syn, noiseVec
+
+
 
 def make_syaptic_stimuli(cell, input_idx):
     # Define synapse parameters
@@ -290,10 +324,10 @@ def test_original_synaptic_input():
     timeres_NEURON = 2**-3
     timeres_python = 2**-3
     cut_off = 0
-    tstopms = 100
-    input_idx = 10
-    holding_potential = -70
-
+    tstopms = 1000
+    input_idx = 0
+    holding_potential = -60
+    neuron.load_mechanisms('..')
     cell_params = {
         'morphology': join(model_path, 'geo9068802.hoc'),
         'v_init': holding_potential,             # initial crossmembrane potential
@@ -311,7 +345,8 @@ def test_original_synaptic_input():
                  }
     cell = LFPy.Cell(**cell_params)
 
-    make_syaptic_stimuli(cell, input_idx)
+    # make_syaptic_stimuli(cell, input_idx)
+    cell, syn, vec = make_white_noise_stimuli(cell, input_idx)
     # for sec in cell.allseclist:
     #     for seg in sec:
     #         print sec.name(), seg.g_pas
@@ -322,24 +357,24 @@ def test_original_synaptic_input():
     plt.scatter(cell.xmid, cell.zmid, edgecolor='none')
     plt.plot(cell.xmid[input_idx], cell.zmid[input_idx], 'y*', ms=20)
 
-    plt.subplot(222, title='Soma', ylim=[-71, -69])
+    plt.subplot(222, title='Soma')
     plt.plot(cell.tvec, cell.vmem[0, :],
              label='%d %d mV' % (input_idx, holding_potential))
 
-    plt.subplot(224, title='Input idx %d' % input_idx, ylim=[-71, -66])
+    plt.subplot(224, title='Input idx %d' % input_idx)
     plt.plot(cell.tvec, cell.vmem[input_idx, :],
              label='%d %d mV' % (input_idx, holding_potential))
-    plt.savefig(join(model_path, 'syn_%d_original.png' % input_idx))
+    plt.savefig(join(model_path, 'wn_%d_original.png' % input_idx))
 
 def test_python_synaptic_input():
     model_path = '.'
     timeres_NEURON = 2**-3
     timeres_python = 2**-3
     cut_off = 0
-    tstopms = 100
-    input_idx = 10
-    holding_potential = -70
-
+    tstopms = 1000
+    input_idx = 0
+    holding_potential = -60
+    neuron.load_mechanisms('..')
     cell_params = {
         'morphology': join(model_path, 'geo9068802.hoc'),
         'v_init': holding_potential,             # initial crossmembrane potential
@@ -359,7 +394,8 @@ def test_python_synaptic_input():
                  }
     cell = LFPy.Cell(**cell_params)
 
-    make_syaptic_stimuli(cell, input_idx)
+    # make_syaptic_stimuli(cell, input_idx)
+    cell, syn, vec = make_white_noise_stimuli(cell, input_idx)
     # for sec in cell.allseclist:
     #     for seg in sec:
     #         print sec.name(), seg.g_pas
@@ -369,14 +405,12 @@ def test_python_synaptic_input():
     plt.scatter(cell.xmid, cell.zmid, edgecolor='none')
     plt.plot(cell.xmid[input_idx], cell.zmid[input_idx], 'y*', ms=20)
 
-    plt.subplot(222, title='Soma', ylim=[-71, -69])
+    plt.subplot(222, title='Soma')
     plt.plot(cell.tvec, cell.vmem[0, :], label='%d %d mV' % (input_idx, holding_potential))
 
-    plt.subplot(224, title='Input idx %d' % input_idx, ylim=[-71, -66])
+    plt.subplot(224, title='Input idx %d' % input_idx)
     plt.plot(cell.tvec, cell.vmem[input_idx, :], label='%d %d mV' % (input_idx, holding_potential))
-    plt.savefig(join(model_path, 'syn_%d_python.png' % input_idx))
-
-
+    plt.savefig(join(model_path, 'wn_%d_python.png' % input_idx))
 
 if __name__ == '__main__':
     test_original_synaptic_input()
