@@ -22,7 +22,7 @@ PARAMETER {
 NEURON {
 	SUFFIX INaP_BK
     USEION na WRITE ina
-    RANGE gnabar
+    RANGE gnabar, taun
 }
 
 STATE {

@@ -10,7 +10,7 @@ import neuron
 nrn = neuron.h
 import LFPy
 
-def make_cell_uniform(Vrest=-60):
+def make_cell_uniform(Vrest=-80):
     neuron.h.t = 0
     neuron.h.finitialize(Vrest)
     neuron.h.fcurrent()
@@ -103,11 +103,9 @@ def biophys_generic(**kwargs):
         for sec in neuron.h.allsec():
             for seg in sec:
                 seg.g_w_QA = total_w_conductance / total_area
-
     elif kwargs['distribution'] == 'linear_increase':
         increase_factor = 100
         conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_w_conductance)
-
         nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
             for seg in sec:
@@ -123,18 +121,24 @@ def biophys_generic(**kwargs):
                                                     nrn.distance(seg.x) / max_dist))
     else:
         raise RuntimeError("Unknown distribution...")
-
+    cond_check = 0
     for sec in neuron.h.allsec():
         for seg in sec:
+            cond_check += seg.g_w_QA * nrn.area(seg.x)
             seg.mu_QA = seg.g_w_QA / seg.g_pas_QA * kwargs['mu_factor']
 
+    if np.abs(cond_check - total_w_conductance) < 1e-6:
+        print "Works", cond_check, total_w_conductance, cond_check - total_w_conductance
+    else:
+        raise RuntimeError("Total conductance not as expected")
 
 def biophys_passive(**kwargs):
+    Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
     for sec in neuron.h.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
-        sec.e_pas = -90
+        sec.e_pas = Vrest
 
     for sec in neuron.h.soma:
         sec.g_pas = 0.0000338

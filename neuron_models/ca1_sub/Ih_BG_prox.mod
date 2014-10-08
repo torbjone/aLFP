@@ -22,7 +22,7 @@ PARAMETER {
 NEURON {
 	SUFFIX Ih_BK_prox
     NONSPECIFIC_CURRENT ih
-    RANGE ghbar
+    RANGE ghbar, taun
 }
 
 STATE {

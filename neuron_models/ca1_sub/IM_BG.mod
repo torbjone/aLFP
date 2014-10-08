@@ -22,7 +22,7 @@ PARAMETER {
 NEURON {
 	SUFFIX Im_BK
     USEION k WRITE ik
-    RANGE gkbar
+    RANGE gkbar, taun
 }
 
 STATE {

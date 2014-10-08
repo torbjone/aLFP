@@ -930,10 +930,10 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
     #              'zpos': 0,
     #              }        
     electrode_parameters = {
-        'sigma' : 0.3,      # extracellular conductivity
-        'x' : elec_x,  # electrode requires 1d vector of positions
-        'y' : elec_y,
-        'z' : elec_z
+        'sigma': 0.3,      # extracellular conductivity
+        'x': elec_x,  # electrode requires 1d vector of positions
+        'y': elec_y,
+        'z': elec_z
         }
     
     if np.abs(correlation) > 1e-6:
