@@ -8,6 +8,8 @@ from plotting_convention import *
 import scipy.fftpack as ff
 import aLFP
 from matplotlib.collections import LineCollection
+import neuron
+import LFPy
 
 class NeuralSimulations():
 
@@ -24,7 +26,7 @@ class NeuralSimulations():
         if self.stimuli is 'white_noise':
             self.stimuli_function = self._make_white_noise_stimuli
         elif self.stimuli is 'synaptic':
-            self.stimuli_function = self._make_syaptic_stimuli
+            self.stimuli_function = self._make_synaptic_stimuli
         elif self.stimuli is 'single_sinusoid':
             self.stimuli_function = self._make_sinusoidal_stimuli
         else:
@@ -37,43 +39,26 @@ class NeuralSimulations():
         sim_name = '%s_%d_%s_%+d' % (self.cell_name, input_idx, conductance_type, holding_potential)
 
         np.save(join(self.sim_folder, 'tvec_%s.npy' % self.cell_name), cell.tvec)
-        # np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), electrode.LFP)
         LFP = np.dot(electrode.electrodecoeff, cell.imem)
-
-        v_max = np.max(cell.vmem[:, len(cell.tvec)/2:], axis=1)
-        v_min = np.min(cell.vmem[:, len(cell.tvec)/2:], axis=1)
-        s_max = np.max(LFP[:, len(cell.tvec)/2:], axis=1)
-        s_min = np.min(LFP[:, len(cell.tvec)/2:], axis=1)
-        i_max = np.max(cell.imem[:, len(cell.tvec)/2:], axis=1)
-        i_min = np.min(cell.imem[:, len(cell.tvec)/2:], axis=1)
-
         np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), LFP)
         np.save(join(self.sim_folder, 'vmem_%s.npy' % sim_name), cell.vmem)
         np.save(join(self.sim_folder, 'imem_%s.npy' % sim_name), cell.imem)
 
-        np.save(join(self.sim_folder, 'v_max_%s_%dHz.npy' % (sim_name, self.frequency)), v_max)
-        np.save(join(self.sim_folder, 'v_min_%s_%dHz.npy' % (sim_name, self.frequency)), v_min)
+        if not self.frequency is None:
+            v_max = np.max(cell.vmem[:, len(cell.tvec)/2:], axis=1)
+            v_min = np.min(cell.vmem[:, len(cell.tvec)/2:], axis=1)
+            s_max = np.max(LFP[:, len(cell.tvec)/2:], axis=1)
+            s_min = np.min(LFP[:, len(cell.tvec)/2:], axis=1)
+            i_max = np.max(cell.imem[:, len(cell.tvec)/2:], axis=1)
+            i_min = np.min(cell.imem[:, len(cell.tvec)/2:], axis=1)
+            np.save(join(self.sim_folder, 'v_max_%s_%dHz.npy' % (sim_name, self.frequency)), v_max)
+            np.save(join(self.sim_folder, 'v_min_%s_%dHz.npy' % (sim_name, self.frequency)), v_min)
 
-        np.save(join(self.sim_folder, 's_max_%s_%dHz.npy' % (sim_name, self.frequency)), s_max)
-        np.save(join(self.sim_folder, 's_min_%s_%dHz.npy' % (sim_name, self.frequency)), s_min)
+            np.save(join(self.sim_folder, 's_max_%s_%dHz.npy' % (sim_name, self.frequency)), s_max)
+            np.save(join(self.sim_folder, 's_min_%s_%dHz.npy' % (sim_name, self.frequency)), s_min)
 
-        np.save(join(self.sim_folder, 'i_max_%s_%dHz.npy' % (sim_name, self.frequency)), i_max)
-        np.save(join(self.sim_folder, 'i_min_%s_%dHz.npy' % (sim_name, self.frequency)), i_min)
-
-        # plt.plot(cell.tvec, cell.vmem[0, :])
-        # plt.plot(np.ones(len(cell.tvec)) * v_max[0])
-        # plt.plot(np.ones(len(cell.tvec)) * v_min[0])
-        # plt.show()
-        #
-        # plt.plot(cell.tvec, cell.imem[0, :])
-        # plt.plot(np.ones(len(cell.tvec)) * i_max[0])
-        # plt.plot(np.ones(len(cell.tvec)) * i_min[0])
-        # plt.show()
-        #
-        # plt.plot(cell.tvec, LFP[0, :])
-        # plt.plot(np.ones(len(cell.tvec)) * s_max[0])
-        # plt.plot(np.ones(len(cell.tvec)) * s_min[0])
-        # plt.show()
+            np.save(join(self.sim_folder, 'i_max_%s_%dHz.npy' % (sim_name, self.frequency)), i_max)
+            np.save(join(self.sim_folder, 'i_min_%s_%dHz.npy' % (sim_name, self.frequency)), i_min)
 
         np.save(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name), electrode.x)
         np.save(join(self.sim_folder, 'elec_y_%s.npy' % self.cell_name), electrode.y)
@@ -262,7 +247,6 @@ class NeuralSimulations():
 
     def _make_sinusoidal_stimuli(self, cell, input_idx):
         input_scaling = 0.001
-        import neuron
 
         plt.seed(1234)
         tot_ntsteps = round((cell.tstopms - cell.tstartms)/\
@@ -286,8 +270,8 @@ class NeuralSimulations():
         noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
         return cell, syn, noiseVec
 
-    def _make_syaptic_stimuli(self, cell, input_idx):
-        import LFPy
+    def _make_synaptic_stimuli(self, cell, input_idx):
+
         # Define synapse parameters
         synapse_parameters = {
             'idx': input_idx,
@@ -300,6 +284,62 @@ class NeuralSimulations():
         synapse = LFPy.Synapse(cell, **synapse_parameters)
         synapse.set_spike_times(np.array([5.]))
         return cell, synapse, None
+
+    def _make_distributed_synaptic_stimuli(self, cell, input_idx, **kwargs):
+
+        # Define synapse parameters
+        synapse_params = {
+            'idx': input_idx,
+            'e': 0.,                   # reversal potential
+            'syntype': 'ExpSyn',       # synapse type
+            'tau': 2.,                # syn. time constant
+            'weight': 0.001,            # syn. weight
+            'record_current': True,
+        }
+        if kwargs['input_section'] == 'tuft':
+            input_pos = ['apic']
+            maxpos = 10000
+            minpos = 200
+        elif kwargs['input_section'] == 'homogeneous':
+            input_pos = ['apic', 'dend']
+            maxpos = 10000
+            minpos = -10000
+        else:
+            input_pos = kwargs['input_section']
+            maxpos = 10000
+            minpos = -10000
+
+        num_synapses = 1000
+        cell_input_idxs = cell.get_rand_idx_area_norm(section=input_pos, nidx=num_synapses,
+                                                      z_min=minpos, z_max=maxpos)
+        spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
+
+        synapses = self.set_input_spiketrain(cell, cell_input_idxs, spike_trains, synapse_params)
+        self.input_plot(cell, cell_input_idxs, spike_trains)
+
+        return cell, synapses, None
+
+    def input_plot(self, cell, cell_input_idxs, spike_trains):
+
+        plt.close('all')
+        plt.subplot(121)
+        plt.plot(cell.xmid, cell.zmid, 'ko')
+        plt.plot(cell.xmid[cell_input_idxs], cell.zmid[cell_input_idxs], 'rD')
+        plt.axis('equal')
+        plt.subplot(122)
+        [plt.scatter(np.ones(spike_trains.shape[1]) * idx, spike_trains[idx]) for idx in spike_trains.shape[0]]
+        plt.show()
+
+
+    def set_input_spiketrain(self, cell, cell_input_idxs, spike_trains, synapse_params):
+        synapse_list = []
+        for number, comp_idx in enumerate(cell_input_idxs):
+            synapse_params.update({'idx': int(comp_idx)})
+            s = LFPy.Synapse(cell, **synapse_params)
+            s.set_spike_times(spike_trains[number])
+            synapse_list.append(s)
+        return synapse_list
+
 
 class PaperFigures():
 
@@ -469,6 +509,7 @@ class PaperFigures():
     @classmethod
     def _return_idxs_from_positions(cls, position_list, elec_x, elec_y, elec_z):
         return [cls._find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z) for pos in position_list]
+
 
 class IntroFigures():
     np.random.seed(0)
@@ -834,7 +875,7 @@ class Figure4(PaperFigures):
 
     def __init__(self, do_simulations=False):
         PaperFigures.__init__(self)
-        self.cell_name = 'n120'
+        self.cell_name = 'c12861'
         self.figure_name = 'figure_4'
         self.sim_folder = join(self.root_folder, 'paper_simulations', 'hu')
         # self.timeres = 2**-5
@@ -907,14 +948,14 @@ class Figure4(PaperFigures):
         if do_simulations:
             self._do_all_simulations()
         # self.make_figure(self.apic_idx, -60)
-        self.make_figure(self.soma_idx, -60)
-        # self.make_figure(self.apic_idx, -80)
-        # self.make_figure(self.soma_idx, -80)
+        #self.make_figure(self.soma_idx, -60)
+        self.make_figure(self.apic_idx, -80)
+        #self.make_figure(self.soma_idx, -80)
 
     def _do_all_simulations(self):
         neural_sim = NeuralSimulations(self)
-        for holding_potential in [-60]:#, -80]:
-            for input_idx in [self.soma_idx]:#, self.apic_idx]:
+        for holding_potential in [-60, -80]:
+            for input_idx in [self.soma_idx, self.apic_idx]:
                 for conductance_type in self.conductance_types:
                     neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
                                                             self.elec_x, self.elec_y, self.elec_z)
@@ -937,15 +978,15 @@ class Figure4(PaperFigures):
 
         vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-3, 1e-1], title='$V_m$', ylabel='mV',
                                   **ax_dict)
-        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-2, 1e-0], title='$V_m$', ylabel='mV',
+        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-3, 1e-1], title='$V_m$', ylabel='mV',
                                   **ax_dict)
-        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-7, 1e-5], title='$I_m$', ylabel='nA',
+        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-5, 1e-2], title='$I_m$', ylabel='nA',
                                   **ax_dict)
-        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-4, 1e-2], title='$I_m$', ylabel='nA',
+        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-6, 1e-3], title='$I_m$', ylabel='nA',
                                   **ax_dict)
         ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-4, 1e-3], title='$\Phi$', ylabel='$\mu$V',
                                   **ax_dict)
-        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-3, 1e-2], title='$\Phi$', ylabel='$\mu$V',
+        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-6, 1e-3], title='$\Phi$', ylabel='$\mu$V',
                                   **ax_dict)
 
         # vm_ax_a = fig.add_subplot(2, 4, 1, title='$V_m$', ylabel='mV',  **ax_dict)
@@ -982,6 +1023,7 @@ class Figure4(PaperFigures):
                             (self.cell_name, input_idx, conductance_type, holding_potential)))
         LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s_%d_%s_%+d.npy' %
                                   (self.cell_name, input_idx, conductance_type, holding_potential)))
+
         freqs, vmem_psd_soma = aLFP.return_freq_and_psd(tvec, vmem[self.soma_idx, :])
         freqs, vmem_psd_apic = aLFP.return_freq_and_psd(tvec, vmem[self.apic_idx, :])
         freqs, imem_psd_soma = aLFP.return_freq_and_psd(tvec, imem[self.soma_idx, :])
@@ -993,10 +1035,39 @@ class Figure4(PaperFigures):
         axes[1].loglog(freqs, vmem_psd_apic[0], c=self.conductance_clr[conductance_type])
         axes[2].loglog(freqs, imem_psd_soma[0], c=self.conductance_clr[conductance_type])
         axes[3].loglog(freqs, imem_psd_apic[0], c=self.conductance_clr[conductance_type])
-        axes[2].loglog(freqs, imem_psd_soma[0], c=self.conductance_clr[conductance_type])
-        axes[3].loglog(freqs, imem_psd_apic[0], c=self.conductance_clr[conductance_type])
         axes[4].loglog(freqs, LFP_psd_soma[0], c=self.conductance_clr[conductance_type])
         axes[5].loglog(freqs, LFP_psd_apic[0], c=self.conductance_clr[conductance_type])
+        if 1:
+            sin_freqs = np.array([1, 2, 3, 4, 5, 10, 20])
+            v_amp_soma = np.zeros(len(sin_freqs))
+            v_amp_apic = np.zeros(len(sin_freqs))
+            i_amp_soma = np.zeros(len(sin_freqs))
+            i_amp_apic = np.zeros(len(sin_freqs))
+            s_amp_soma = np.zeros(len(sin_freqs))
+            s_amp_apic = np.zeros(len(sin_freqs))
+            for idx, freq in enumerate(sin_freqs):
+                sim_name = '%s_%d_%s_%+d' % (self.cell_name, input_idx, conductance_type, holding_potential)
+                v_max = np.load(join(self.sim_folder, 'v_max_%s_%dHz.npy' % (sim_name, freq)))
+                v_min = np.load(join(self.sim_folder, 'v_min_%s_%dHz.npy' % (sim_name, freq)))
+                s_max = 1000 * np.load(join(self.sim_folder, 's_max_%s_%dHz.npy' % (sim_name, freq)))
+                s_min = 1000 * np.load(join(self.sim_folder, 's_min_%s_%dHz.npy' % (sim_name, freq)))
+                i_max = np.load(join(self.sim_folder, 'i_max_%s_%dHz.npy' % (sim_name, freq)))
+                i_min = np.load(join(self.sim_folder, 'i_min_%s_%dHz.npy' % (sim_name, freq)))
+
+                v_amp_soma[idx] = (v_max[self.soma_idx] - v_min[self.soma_idx]) / 2.
+                v_amp_apic[idx] = (v_max[self.apic_idx] - v_min[self.apic_idx]) / 2.
+                i_amp_soma[idx] = (i_max[self.soma_idx] - i_min[self.soma_idx]) / 2.
+                i_amp_apic[idx] = (i_max[self.apic_idx] - i_min[self.apic_idx]) / 2.
+                s_amp_soma[idx] = (s_max[self.elec_soma_idx] - s_min[self.elec_soma_idx]) / 2.
+                s_amp_apic[idx] = (s_max[self.elec_apic_idx] - s_min[self.elec_apic_idx]) / 2.
+
+            axes[0].loglog(sin_freqs, v_amp_soma, 'x', c=self.conductance_clr[conductance_type])
+            axes[1].loglog(sin_freqs, v_amp_apic, 'x', c=self.conductance_clr[conductance_type])
+            axes[2].loglog(sin_freqs, i_amp_soma, 'x', c=self.conductance_clr[conductance_type])
+            axes[3].loglog(sin_freqs, i_amp_apic, 'x', c=self.conductance_clr[conductance_type])
+            axes[4].loglog(sin_freqs, s_amp_soma, 'x', c=self.conductance_clr[conductance_type])
+            axes[5].loglog(sin_freqs, s_amp_apic, 'x', c=self.conductance_clr[conductance_type])
+
 
 class Hu_single_sinus(PaperFigures):
 
@@ -1004,7 +1075,7 @@ class Hu_single_sinus(PaperFigures):
         PaperFigures.__init__(self)
         self.cell_name = 'c12861'
         self.figure_name = 'Hu_single_sinus'
-        self.sim_folder = join(self.root_folder, 'paper_simulations', 'shah')
+        self.sim_folder = join(self.root_folder, 'paper_simulations', 'hu')
         # self.timeres = 2**-5
         self.conductance_dict = {'active': 'Active',
                                  'Ih_linearized': 'Linearized Ih',
@@ -1093,7 +1164,7 @@ class Hu_single_sinus(PaperFigures):
         elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
         elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
 
-        ax_dict = {'xlabel': 'ms', 'xlim': [800, 1000],
+        ax_dict = {'xlabel': 'ms', 'xlim': [1600, 2000],
                    }
         print input_idx, holding_potential
         plt.close('all')
@@ -1164,6 +1235,7 @@ class Hu_single_sinus(PaperFigures):
         axes[3].plot(tvec, imem[self.apic_idx, :], c=self.conductance_clr[conductance_type])
         axes[4].plot(tvec, LFP[self.elec_soma_idx, :], c=self.conductance_clr[conductance_type])
         axes[5].plot(tvec, LFP[self.elec_apic_idx, :], c=self.conductance_clr[conductance_type])
+
 
 class Figure3(PaperFigures):
 
@@ -1502,20 +1574,26 @@ class Figure5(PaperFigures):
         freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres / 1000., LFP[elec, :])
         ax.loglog(freqs, LFP_psd[0], c=self.mu_clr[mu], lw=2)
 
+
+
 if __name__ == '__main__':
 
     simulate = True
     # IntroFigures('hay', 'figure_2', True)
     # Figure3(False)
-    # Figure4(True)
-    Hu_single_sinus(1, simulate)
+    # Figure4(simulate)
+    # Hu_single_sinus(1, simulate)
+    # Hu_single_sinus(2, simulate)
+    # Hu_single_sinus(3, simulate)
+    # Hu_single_sinus(4, simulate)
     # Hu_single_sinus(5, simulate)
+    # Hu_single_sinus(10, simulate)
+    # Hu_single_sinus(20, simulate)
     # Hu_single_sinus(10, simulate)
     # Hu_single_sinus(30, simulate)
     # Hu_single_sinus(20, simulate)
     # Hu_single_sinus(30, simulate)
     # Hu_single_sinus(100, simulate)
     # Hu_single_sinus(200, True)
-    # Figure5()
     # IntroFigures('n120', 'figure_2').make_figure(do_simulations=False)
     # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=False)

@@ -1044,41 +1044,19 @@ def run_CA1_correlated_population_simulation(cell_params, conductance_list, ofol
         #set_trace()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 def run_correlated_population_simulation(cell_params, conductance_list, ofolder, model_path, 
                                          elec_x, elec_y, elec_z, ntsteps, spiketrain_params, 
                                          correlation, num_cells, population_radius,
                                          simulation_idx, syn_strength, resting_pot_shift=0):
    # Excitatory synapse parameters:
     synapse_params = {
-        'e' : 0,   
-        'syntype' : 'ExpSynI',      #conductance based exponential synapse
-        'tau' : .1,                #Time constant, rise           #Time constant, decay
-        'weight' : syn_strength,           #Synaptic weight
-        'color' : 'r',              #for pl.plot
-        'marker' : '.',             #for pl.plot
-        'record_current' : False,    #record synaptic currents
+        'e': 0,
+        'syntype': 'ExpSynI',      #conductance based exponential synapse
+        'tau': .1,                #Time constant, rise           #Time constant, decay
+        'weight': syn_strength,           #Synaptic weight
+        'color': 'r',              #for pl.plot
+        'marker': '.',             #for pl.plot
+        'record_current': False,    #record synaptic currents
         }
 
     cell = LFPy.Cell(**cell_params)
