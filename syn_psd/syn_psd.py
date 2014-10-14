@@ -21,7 +21,6 @@ welch_dict = {'Fs': 1000 / 2**-4,
 
 idx = 0
 syni = np.load('syn.npy')
-
 average_psd = np.zeros(10001)
 
 def plot_one_idx(idx):
@@ -35,7 +34,7 @@ def plot_one_idx(idx):
     plt.loglog(freqs_welch, np.sqrt(sig_psd_welch))
     plt.savefig('syn_psd_%d.png' % idx)
 
-def plot_psd_sig(sig, idx, average_psd):
+def plot_psd_sig_combined(sig, idx, average_psd):
     num_tsteps = len(sig)
     welch_dict = {'Fs': 1000 / 2**-4,
                   'NFFT': int(num_tsteps/divide_into_welch),
@@ -45,19 +44,17 @@ def plot_psd_sig(sig, idx, average_psd):
                   'scale_by_freq': True,
                   }
 
-
     freqs, sig_psd = aLFP.return_freq_and_psd(timeres_python/1000., sig)
     sig_psd_welch, freqs_welch = mlab.psd(sig, **welch_dict)
     sig_psd_welch = np.sqrt(sig_psd_welch)
     average_psd += sig_psd_welch
-    freqs_average = freqs_welch
 
     plt.close('all')
     plt.figure(figsize=[10, 5])
-    plt.subplot(121, xlabel='ms', ylabel='Synaptic current', ylim=[-0.15, 0.02])
+    plt.subplot(121, xlabel='ms', ylabel='Synaptic current', ylim=[-0.15, 0.02], xlim=[0, 10000])
     plt.plot(np.arange(len(sig)) * timeres_python, sig)
     plt.xticks([0, 2500, 5000, 7500, 10000])
-    plt.subplot(122, ylim=[1e-7, 1e-3], xlabel='Hz', ylabel='PSD')
+    plt.subplot(122, ylim=[1e-7, 1e-3], xlim=[1e-1, 1e4], xlabel='Hz', ylabel='PSD')
     plt.grid(True)
     plt.loglog(freqs, sig_psd[0], c='gray', lw=0.5)
     plt.loglog(freqs_welch, sig_psd_welch, 'r')
@@ -72,9 +69,8 @@ for idx in xrange(20):
     combine_idx = combine_number * idx
     sig = np.r_[syni[combine_idx, :], syni[combine_idx + 1, :], syni[combine_idx + 2, :],
                 syni[combine_idx + 3, :], syni[combine_idx + 4, :]]
-    average_psd, freqs_average = plot_psd_sig(sig[:-5], idx, average_psd)
+    average_psd, freqs_average = plot_psd_sig_combined(sig, idx, average_psd)
 
-print freqs_average, average_psd
-plt.close('all')
-plt.loglog(freqs_average, average_psd / 20)
-plt.show()
+# plt.close('all')
+# plt.loglog(freqs_average, average_psd / 20)
+# plt.show()

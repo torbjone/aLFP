@@ -1246,7 +1246,7 @@ class GenericStudy:
             maxpos = 10000
             minpos = -10000
 
-        num_synapses = 20
+        num_synapses = 1000
         cell_input_idxs = cell.get_rand_idx_area_norm(section=input_pos, nidx=num_synapses,
                                                       z_min=minpos, z_max=maxpos)
         spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)

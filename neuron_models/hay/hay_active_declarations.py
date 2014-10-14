@@ -233,6 +233,110 @@ def biophys_Ih_linearized(**kwargs):
 
     print("Linearized Ih inserted.")
 
+def biophys_Ih(**kwargs):
+
+    Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
+
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = 1.0
+        sec.Ra = 100.
+        sec.e_pas = Vrest
+    for sec in neuron.h.soma:
+        sec.insert("Ih")
+        sec.gIhbar_Ih = 0.0002
+        sec.g_pas = 0.0000338
+    for sec in neuron.h.apic:
+        sec.insert("Ih")
+        sec.cm = 2
+        sec.g_pas = 0.0000589
+
+    nrn.distribute_channels("apic", "gIhbar_Ih",
+                            2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
+    for sec in neuron.h.dend:
+        sec.insert("Ih")
+        sec.cm = 2
+        sec.g_pas = 0.0000467
+        sec.gIhbar_Ih = 0.0002
+    for sec in neuron.h.axon:
+        sec.g_pas = 0.0000325
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
+
+    print("Single Ih inserted.")
+
+def biophys_Ih_frozen(**kwargs):
+
+    Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
+
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = 1.0
+        sec.Ra = 100.
+        sec.e_pas = Vrest
+    for sec in neuron.h.soma:
+        sec.insert("Ih_frozen")
+        sec.gIhbar_Ih_frozen = 0.0002
+        sec.g_pas = 0.0000338
+    for sec in neuron.h.apic:
+        sec.insert("Ih_frozen")
+        sec.cm = 2
+        sec.g_pas = 0.0000589
+
+    nrn.distribute_channels("apic", "gIhbar_Ih_frozen",
+                            2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
+    for sec in neuron.h.dend:
+        sec.insert("Ih_frozen")
+        sec.cm = 2
+        sec.g_pas = 0.0000467
+        sec.gIhbar_Ih_frozen = 0.0002
+    for sec in neuron.h.axon:
+        sec.g_pas = 0.0000325
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
+
+    print("Single frozen Ih inserted.")
+
+
+def biophys_SKv3_1(**kwargs):
+
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = 1.0
+        sec.Ra = 100.
+        sec.e_pas = -90.
+
+    for sec in neuron.h.soma:
+        sec.insert('SKv3_1')
+        sec.insert('Ih')
+        sec.ek = -85
+        sec.gIhbar_Ih = 0.0002
+        sec.g_pas = 0.0000338
+        sec.gSKv3_1bar_SKv3_1 = 0.693
+
+    for sec in neuron.h.apic:
+        sec.cm = 2
+        sec.insert('Ih')
+        sec.insert('SKv3_1')
+        sec.ek = -85
+        sec.gSKv3_1bar_SKv3_1 = 0.000261
+        sec.g_pas = 0.0000589
+    nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.087, 0.0002)
+
+    for sec in neuron.h.dend:
+        sec.cm = 2
+        sec.insert('Ih')
+        sec.gIhbar_Ih = 0.0002
+        sec.g_pas = 0.0000467
+
+    for sec in neuron.h.axon:
+        sec.g_pas = 0.0000325
+
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
+    print("Ih and SKv3_1 ion-channels inserted.")
+
+
 
 def biophys_active(**kwargs):
 
