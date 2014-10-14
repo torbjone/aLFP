@@ -10,7 +10,6 @@ import neuron
 nrn = neuron.h
 import LFPy
 import aLFP
-from matplotlib import mlab
 from matplotlib.colors import LogNorm
 from scipy import stats
 class GenericStudy:
@@ -20,7 +19,6 @@ class GenericStudy:
         self.mu_name_dict = {-0.5: 'Regenerative ($\mu_{factor} = -0.5$)',
                              0: 'Passive ($\mu_{factor} = 0$)',
                              2: 'Restorative ($\mu_{factor} = 2$)'}
-
         self.cell_name = cell_name
         self.conductance = conductance
         self.input_type = input_type
@@ -72,7 +70,7 @@ class GenericStudy:
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 100
-            self.end_t = 10000
+            self.end_t = 20000
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
 
@@ -409,7 +407,7 @@ class GenericStudy:
             ax.set_ylim([1e-10, 1e-5])
         for ax in freq_ax_norm:
             ax.set_ylim([1e-4, 2e0])
-        # fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower center')
+        fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower center')
         letter_list = 'HIJKLMMNOPQRRSTUVWXYZ'
         for elec in xrange(len(self.elec_z)):
             # row, col = self._return_elec_row_col(elec)
@@ -1094,7 +1092,6 @@ class GenericStudy:
         for row, comp in enumerate(self.cell_plot_idxs):
             ax.arrow(xmid[comp] - 80, zmid[comp] - 10 * (row - 1), - arrow_dx,
                      arrow_dz * (row - 1), **arrow_dict)
-
         ax.axis('off')
 
     def _make_syaptic_stimuli(self, cell, input_idx):
@@ -1216,13 +1213,15 @@ class GenericStudy:
     def _run_distributed_synaptic_simulation(self, mu, input_idx, distribution, tau_w):
         plt.seed(1234)
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
-        neuron.h('forall delete_section()')
+
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_idx)
         print "Starting simulation ..."
+        import ipdb; ipdb.set_trace()
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
         self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w)
-        del cell, syn, noiseVec
+        neuron.h('forall delete_section()')
+        del cell, syn, noiseVec, electrode
 
     def _make_distributed_synaptic_stimuli(self, cell, input_sec, **kwargs):
 
@@ -1232,7 +1231,7 @@ class GenericStudy:
             'syntype': 'ExpSyn',       # synapse type
             'tau': 2.,                # syn. time constant
             'weight': 0.001,            # syn. weight
-            'record_current': True,
+            'record_current': False,
         }
         if input_sec == 'tuft':
             input_pos = ['apic']
@@ -1247,7 +1246,7 @@ class GenericStudy:
             maxpos = 10000
             minpos = -10000
 
-        num_synapses = 1000
+        num_synapses = 20
         cell_input_idxs = cell.get_rand_idx_area_norm(section=input_pos, nidx=num_synapses,
                                                       z_min=minpos, z_max=maxpos)
         spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
@@ -1994,7 +1993,7 @@ if __name__ == '__main__':
     # gs.active_q_values_colorplot()
     # gs.run_all_single_simulations()
     gs.run_all_distributed_synaptic_input_simulations()
-    gs.LFP_with_distance_study()
+    # gs.LFP_with_distance_study()
 
     # gs.test_original_hay_simple_ratio(827)
 
