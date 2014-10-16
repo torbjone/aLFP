@@ -7,11 +7,11 @@ import numpy as np
 import pylab as plt
 from plotting_convention import *
 import neuron
-nrn = neuron.h
 import LFPy
 import aLFP
 from matplotlib.colors import LogNorm
 from scipy import stats
+nrn = neuron.h
 class GenericStudy:
 
     def __init__(self, cell_name, input_type, conductance='generic', extended_electrode=False):
@@ -33,8 +33,6 @@ class GenericStudy:
         self.plot_frequencies = [2, 10, 100]
         self.holding_potential = -80
         self.mus = [-0.5, 0, 2]
-        # self.mu_clr = lambda mu: plt.cm.Dark2(int(256. * (mu - np.min(self.mus))/
-        #                                           (np.max(self.mus) - np.min(self.mus))))
         self.mu_clr = {-0.5: 'r',
                        0: 'k',
                        2: 'b'}
@@ -70,7 +68,7 @@ class GenericStudy:
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 100
-            self.end_t = 20000
+            self.end_t = 10000
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
 
@@ -382,8 +380,8 @@ class GenericStudy:
             LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
 
             freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
-            # freqs_welch, sig_psd_welch = aLFP.return_freq_and_psd_welch(LFP, self.welch_dict)
-            freqs_welch, sig_psd_welch = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+            freqs_welch, sig_psd_welch = aLFP.return_freq_and_psd_welch(LFP, self.welch_dict)
+            # freqs_welch, sig_psd_welch = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
 
             idxs = [np.argmin(np.abs(freqs_welch - freq)) for freq in self.plot_frequencies]
             for elec in xrange(len(self.elec_z)):
@@ -892,7 +890,7 @@ class GenericStudy:
 
         for idx, ax in enumerate(ax_list):
             if self.plot_psd:
-                xvec_w, yvec_w = aLFP.return_freq_and_psd(tvec, sig[idx, :])
+                xvec_w, yvec_w = aLFP.return_freq_and_psd_welch(tvec, sig[idx, :])
                 yvec_w = yvec_w[0]
                 # yvec_w, xvec_w = mlab.psd(sig[idx, :], **self.welch_dict)
                 # yvec_w = np.sqrt(yvec_w)
@@ -964,8 +962,7 @@ class GenericStudy:
         tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
 
         if not len(tvec) == self.num_tsteps:
-            raise RuntimeError("Not the expected number of time steps %d, %d" % (len(tvec),
-                                                                                 self.num_tsteps))
+            raise RuntimeError("Not the expected number of time steps %d, %d" % (len(tvec), self.num_tsteps))
         lines = []
         line_names = []
 
@@ -1199,7 +1196,7 @@ class GenericStudy:
     def run_all_distributed_synaptic_input_simulations(self):
         distributions = ['linear_increase']
         input_poss = ['tuft']
-        tau_ws = [10]
+        tau_ws = [30]
         tot_sims = len(input_poss) * len(tau_ws) * len(distributions) * len(self.mus)
         i = 1
         for distribution in distributions:
@@ -1217,7 +1214,7 @@ class GenericStudy:
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_idx)
         print "Starting simulation ..."
-        import ipdb; ipdb.set_trace()
+        #import ipdb; ipdb.set_trace()
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
         self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w)
         neuron.h('forall delete_section()')
@@ -1994,19 +1991,3 @@ if __name__ == '__main__':
     # gs.run_all_single_simulations()
     gs.run_all_distributed_synaptic_input_simulations()
     # gs.LFP_with_distance_study()
-
-    # gs.test_original_hay_simple_ratio(827)
-
-    #for idx in [0, 915]:#0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:#np.random.randint(0, 1000, size=5):
-    #    print idx
-    #    gs = GenericStudy('hay', 'wn', conductance='Ih_linearized', extended_electrode=True)
-    #    gs.test_original_hay(idx)
-    #    gs.plot_original_distance_study(idx)
-
-    #    gs = GenericStudy('c12861', 'wn', conductance='active', extended_electrode=True)
-    #    gs.test_original_hu(idx)
-    #    gs.plot_original_distance_study(idx)
-
-    #    gs = GenericStudy('n120', 'wn', conductance='active', extended_electrode=True)
-    #    gs.test_original_hu(idx)
-    #    gs.plot_original_distance_study(idx)
