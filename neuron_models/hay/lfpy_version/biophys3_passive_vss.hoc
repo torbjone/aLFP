@@ -16,12 +16,12 @@
 
 proc biophys() {
 	forall {
-	       insert passive_vss
-	       cm = 1
-	       Ra = 100
+	    insert passive_vss
+	    cm = 1
+	    Ra = 100
 	}
   	forsec "soma" {
-               gl_passive_vss = 0.0000338
+        gl_passive_vss = 0.0000338
   	}
 
 	forsec "apic" {
@@ -34,7 +34,7 @@ proc biophys() {
 	}
 
   	forsec "axon" {
-  	       gl_passive_vss = 0.0000325
+  	    gl_passive_vss = 0.0000325
 	}
 }
 

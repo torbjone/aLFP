@@ -15,13 +15,14 @@
 //
 // 08.06.2012 ehagen@umb.no
 
+Vrest = -70
 
 proc biophys() {
 	forall {
 	  insert pas
 		cm = 1
 		Ra = 100
-		e_pas = -90
+		e_pas = Vrest
 	}
 
   forsec "soma" {

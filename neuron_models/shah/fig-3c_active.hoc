@@ -1,0 +1,117 @@
+
+dist=7
+rel=0.5
+
+numbasal=70
+
+Rm = 28000.
+Cm    = 1.
+RaAll= 150.
+RaAx = 50.
+Vrest = -60.
+
+gna =  .045
+AXONM = 3
+gkdr = 0.06
+celsius = 35.0
+ka =  0.04
+ghd=0.00005
+gkm=0.04
+gcat=0.0001
+gahp=0.00001
+
+forsec "axon" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAx cm=Cm}
+forsec "soma" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
+forsec "dendrite"{insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
+forsec "user5" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
+forsec "apical_dendrite" {insert pas e_pas=Vrest g_pas = 1/Rm Ra=RaAll cm=Cm}
+access soma
+distance()
+forsec "axon" {   
+		insert km gbar_km=gkm
+        insert nax gbar_nax=gna*AXONM
+        insert kdr gkdrbar_kdr=gkdr*AXONM
+        insert kap gkabar_kap = ka
+}
+
+forsec "soma" {  
+		insert km gbar_km=gkm
+		insert hd ghdbar_hd=ghd	
+        insert na3 gbar_na3=gna
+        insert kdr gkdrbar_kdr=gkdr
+        insert kap gkabar_kap = ka
+        insert cat gcatbar_cat=gcat
+		insert cacum tau_cacum=100 depth_cacum=diam/2
+		insert KahpM95 gbar_KahpM95 = gahp 
+}
+
+for i=0, numbasal-1 dendrite[i] {
+                insert na3 gbar_na3=gna
+                insert cat  gcatbar_cat=gcat
+		insert cacum tau_cacum=100 depth_cacum=diam/2
+		insert KahpM95 gbar_KahpM95 = gahp 
+}
+
+                
+forsec "apical_dendrite" {
+		insert hd ghdbar_hd=ghd	
+                insert na3 gbar_na3=gna
+                insert kdr gkdrbar_kdr=gkdr
+		insert kap gkabar_kap=0
+		insert kad gkabar_kad=0
+		insert cacum tau_cacum=100 depth_cacum=diam/2
+		insert KahpM95 gbar_KahpM95 = gahp 
+                insert cat  gcatbar_cat=gcat
+
+		for (x,0) { xdist = distance(x)
+                	ghdbar_hd(x) = ghd*(1+3*xdist/100)
+                		if (xdist > 100){
+                        		gkabar_kad(x) = ka*(1+xdist/100)
+                			} else {
+                        		gkabar_kap(x) = ka*(1+xdist/100)
+               				}
+		}
+}
+
+forsec "user5" {
+		insert hd ghdbar_hd=ghd	
+        insert na3 gbar_na3=gna
+        insert kdr gkdrbar_kdr=gkdr
+		insert kap gkabar_kap=0
+		insert kad gkabar_kad=0
+		insert cacum tau_cacum=100 depth_cacum=diam/2
+        insert cat  gcatbar_cat=gcat
+		insert KahpM95 gbar_KahpM95 = gahp 
+
+		for (x,0) { xdist = distance(x)
+                	ghdbar_hd(x) = ghd*(1+3*xdist/100)
+                		if (xdist > 100){
+                        		gkabar_kad(x) = ka*(1+xdist/100)
+                			} else {
+                        		gkabar_kap(x) = ka*(1+xdist/100)
+               				}
+		}
+}
+
+proc init() {
+	t=0
+        forall {
+        v=Vrest
+        if (ismembrane("nax") || ismembrane("na3")) {ena=55}
+        if (ismembrane("KahpM95") || ismembrane("kap") || ismembrane("kad")) {ek=-90}
+        if (ismembrane("hd") ) {ehd_hd=-30}
+	}
+
+	finitialize(Vrest)
+        fcurrent()
+
+        forall {
+	for (x) {
+	if (ismembrane("na3")||ismembrane("nax")){e_pas(x)=v(x)+(ina(x)+ik(x))/g_pas(x)}
+	if (ismembrane("hd")) {e_pas(x)=e_pas(x)+i_hd(x)/g_pas(x)}
+	if (ismembrane("cat")){e_pas(x)=e_pas(x)+ica(x)/g_pas(x)}
+		}
+	}
+}
+
+init()

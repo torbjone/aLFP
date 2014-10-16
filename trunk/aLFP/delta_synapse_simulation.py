@@ -55,11 +55,11 @@ def run_delta_synapse_simulation(cell_params, conductance_list, ofolder, model_p
         cell_params['v_init'] = -77
         cell = LFPy.Cell(**cell_params)
         if len(synaptic_params['section']) == 3:
-            sim_name = '%s_homogeneous_sim_%d' %(conductance_type, simulation_idx)
+            sim_name = '%s_homogeneous_sim_%d' % (conductance_type, simulation_idx)
         elif len(synaptic_params['section']) == 1:
-            sim_name = '%s_%s_sim_%d' %(conductance_type, synaptic_params['section'][0], simulation_idx)
+            sim_name = '%s_%s_sim_%d' % (conductance_type, synaptic_params['section'][0], simulation_idx)
         else:
-            raise RuntimeError, "Wrong synaptic_params"
+            raise RuntimeError("Wrong synaptic_params")
         print sim_name
         if conductance_type in ['passive_vss', 'Ih_linearized']:
             for comp_idx, sec in enumerate(cell.allseclist):

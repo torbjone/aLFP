@@ -20,6 +20,7 @@ plt.rcParams.update({'font.size' : 8,
     'wspace' : 0.5, 'hspace' : 0.5})
 #np.random.seed(1234)
 
+
 def run_all_WN_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
                            simulation_params, conductance_type, epas_array=[None]):
     if conductance_type == 'Ih_linearized':
@@ -31,6 +32,19 @@ def run_all_WN_simulations(cell_params, model, input_idxs, input_scalings, ntste
             for input_scaling in input_scalings:
                 run_WN_simulation(cell_params, input_scaling, input_idx, model, ntsteps, 
                                   simulation_params, conductance_type, epas, vss=vss)        
+
+
+def run_all_CA1_WN_simulations(cell_params, model, input_idxs, input_scalings, input_shifts, ntsteps,
+                               simulation_params, conductance_type):
+
+    for input_idx in input_idxs:
+        for input_scaling in input_scalings:
+            for input_shift in input_shifts:
+                run_CA1_WN_simulation(cell_params, input_scaling, input_idx, input_shift, model, ntsteps,
+                                      simulation_params, conductance_type)
+
+
+
 
 def run_all_synaptic_simulations(cell_params, model, input_idxs, input_scalings, ntsteps,
                                  simulation_params, conductance_type, epas_array=[None]):
@@ -113,7 +127,8 @@ def test_static_Vm_distribution(cell_params, ofolder, conductance_type):
     cell = LFPy.Cell(**cell_params)
     cell.simulate(rec_vmem=True)
     plt.subplot(131, aspect='equal', frameon=False, xticks=[], yticks=[])
-    plt.title('Static Vm distribution after totally %d ms of rest' %(cell_params['tstopms'] - cell_params['tstartms']))
+    plt.title('Static Vm distribution after totally %d ms of rest'
+              %(cell_params['tstopms'] - cell_params['tstartms']))
     plt.scatter(cell.ymid, cell.zmid, c=cell.vmem[:,-1], s=5, edgecolor='none')
     plt.colorbar()
     plt.subplot(222)
@@ -167,20 +182,120 @@ def test_static_Vm_distribution(cell_params, ofolder, conductance_type):
     #plt.ylim(-80, -62)
     plt.xlim(cell.tvec[-100], cell.tvec[-1] + 1)
     plt.savefig(join(ofolder, 'Vm_distribution_active_vss.png'))
-    
-def find_static_Vm_distribution(cell_params, ofolder, conductance_type, epas=None):
 
+def plot_cell_seg_names(cell):
+
+    plt.close('all')
+    all_secs = list(set([name.split('[')[0] for name in cell.allsecnames]))
+    clrs = {}
+    all_clrs = list('rgbymk')
+    for name in all_secs:
+        clrs[name] = all_clrs.pop(0)
+    i = 0
+    line_names = []
+    lines = []
+    for sec in cell.allseclist:
+        name = sec.name().split('[')[0]
+        for seg in sec:
+            l, = plt.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]], color=clrs[name])
+            if not name in line_names:
+                line_names.append(name)
+                lines.append(l)
+            i += 1
+    plt.legend(lines, line_names, frameon=False)
+    plt.axis('equal')
+    plt.savefig('segment_names.png')
+    
+def insert_synapses(cell, synparams, section, n, spTimesFun, args):
+    '''find n compartments to insert synapses onto'''
+
+    all_secs = list(set([name.split('[')[0] for name in cell.allsecnames]))
+    idx = cell.get_rand_idx_area_norm(section=all_secs, nidx=n)
+    #Insert synapses in an iterative fashion
+    for i in idx:
+        synparams.update({'idx' : int(i)})
+
+        # Some input spike train using the function call
+        spiketimes = spTimesFun(args[0], args[1], args[2], args[3])[0]
+        # Create synapse(s) and setting times using the Synapse class in LFPy
+        s = LFPy.Synapse(cell, **synparams)
+        s.set_spike_times(spiketimes)
+
+def probe_active_currents(cell_params, folder, simulation_params,
+                          resting_pot_shift, syn_strength, spiketrain_params, conductance_type=None):
+
+   # Excitatory synapse parameters:
+    synapse_params = {
+        'e' : 0,   
+        'syntype' : 'ExpSynI',      #conductance based exponential synapse
+        'tau' : .1,                #Time constant, rise           #Time constant, decay
+        'weight' : syn_strength,           #Synaptic weight
+        'color' : 'r',              #for pl.plot
+        'marker' : '.',             #for pl.plot
+        'record_current' : False,    #record synaptic currents
+        }
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
-    cell_params['tstartms'] = -3000
-    cell_params['tstopms'] = 200
-    cell_params['timeres_NEURON'] = 2**-4
-    cell_params['timeres_python'] = 2**-4
+    
     cell = LFPy.Cell(**cell_params)
-    #for sec in cell.allseclist:
-    #    for seg in sec:
-    #        seg.vss_passive_vss = -77
-    cell.simulate(rec_vmem=True)
+
+    if not os.path.isfile(join(folder, 'xmid.npy')):
+        savelist = ['xstart', 'xmid', 'xend', 'ystart', 'ymid', 'yend', 'zstart', 'zmid', 'zend', 'diam']
+        for name in savelist:
+            np.save(join(folder, '%s.npy' %name), eval('cell.%s' %name)) 
+        plot_cell_seg_names(cell)
+    
+    add_to_name = '%d' % resting_pot_shift
+    insert_synapses(cell, synapse_params, **spiketrain_params)
+    stem = 'apic_%1.2f_%s' %(syn_strength, add_to_name)
+    if not conductance_type == None:
+        stem += '_%s' % conductance_type
+    
+    for sec in cell.allseclist:
+        for seg in sec:
+            #set_trace()
+            #print seg.pas.e
+            seg.pas.e += resting_pot_shift
+
+    cell.simulate(**simulation_params)
+    #set_trace()
+    const = (1E-2 * cell.area)
+
+    #icap = np.array([const[comp]*cell.icap[comp,:]
+    #                for comp in xrange(cell.imem.shape[0])])
+    #ipas = np.array([const[comp]*cell.ipas[comp,:]
+    #                for comp in xrange(cell.imem.shape[0])])
+    #ionic_currents = {}
+    #for ion in cell.rec_variables:
+    #    ionic_currents[ion] = np.array([const[comp]*cell.rec_variables[ion][comp,:]
+    #                                    for comp in xrange(cell.imem.shape[0])])
+        
+    plt.close('all')
+    plt.subplot(121, title='somav')
+    plt.plot(cell.tvec, cell.somav)
+    plt.subplot(122, title='Soma Currents')
+    plt.plot(cell.tvec, cell.imem[0], label='Imem')
+    #plt.plot(cell.tvec, cell.icap[0], label='Icap')
+    #plt.plot(cell.tvec, cell.ipas[0], label='Ipas')
+    #for ion in cell.rec_variables:
+    #    plt.plot(cell.tvec, ionic_currents[ion][0], label=ion)
+    plt.legend()
+    plt.savefig('%s.png' % stem)
+    
+    np.save(join(folder, 'imem_%s.npy' %(stem)), cell.imem)
+    np.save(join(folder, 'vmem_%s.npy' %(stem)), cell.vmem)
+    #np.save(join(folder, 'icap_%s.npy' %(stem)), icap)
+    #np.save(join(folder, 'ipas_%s.npy' %(stem)), ipas)
+    
+    #for ion in cell.rec_variables:
+    #    np.save(join(folder, '%s_%s.npy' %(ion, stem)), ionic_currents[ion])
+
+def quickprobe_cell(cell_params, folder):
+
+    cell = LFPy.Cell(**cell_params)
+
+    cell.simulate(rec_vmem=True, rec_imem=True)
+    
     plt.subplot(131, aspect='equal', frameon=False, xticks=[], yticks=[])
     plt.title('Static Vm distribution after totally %d ms of rest' %(cell_params['tstopms'] - cell_params['tstartms']))
     plt.scatter(cell.ymid, cell.zmid, c=cell.vmem[:,-1], s=5, edgecolor='none')
@@ -197,8 +312,48 @@ def find_static_Vm_distribution(cell_params, ofolder, conductance_type, epas=Non
     for comp in xrange(len(cell.xmid)):
         plt.plot(cell.tvec, cell.vmem[comp,:] - cell.vmem[comp,0] , 'k')
     plt.xlim(-5, cell.tvec[-1] + 5)
-    plt.savefig(join(ofolder, 'static_Vm_distribution.png'))
-    np.save(join(ofolder, 'static_Vm_distribution.npy'), cell.vmem[:,-1])
+    plt.savefig(join(folder, 'static_Vm_distribution.png'))
+    np.save(join(folder, 'static_Vm_distribution.npy'), cell.vmem[:,-1])
+    
+def find_static_Vm_distribution(cell_params, ofolder, conductance_type):
+
+    neuron.h('forall delete_section()')
+    neuron.h('secondorder=2')
+    cell_params['tstartms'] = -500
+    cell_params['tstopms'] = 500
+    cell_params['timeres_NEURON'] = 2**-5
+    cell_params['timeres_python'] = 2**-5
+
+    print cell_params['custom_code']
+
+    cell = LFPy.Cell(**cell_params)
+    #for sec in cell.allseclist:
+    #    for seg in sec:
+    #        seg.vss_passive_vss = -77
+    cell.simulate(rec_vmem=True)
+    plt.close('all')
+    plt.subplot(131, aspect='equal', frameon=False, xticks=[], yticks=[])
+    plt.title('Static Vm distribution after totally\n%d ms of rest'
+              %(cell_params['tstopms'] - cell_params['tstartms']))
+    img = plt.scatter(cell.ymid, cell.zmid, c=cell.vmem[:,-1], s=5, edgecolor='none',
+                vmin=(np.min(cell.vmem[:,-1]) - 0.5), vmax=(np.max(cell.vmem[:,-1]) + 0.5))
+    #plt.subplot(222, aspect='equal', frameon=False, xticks=[], yticks=[])
+    #plt.scatter(cell.xmid, cell.zmid, c=cell.vmem[:,-1], s=2, edgecolor='none')
+    plt.colorbar(img)
+    plt.subplot(222)
+    plt.title('All compartments Vm last %d ms' % cell_params['tstopms'])
+    for comp in xrange(len(cell.xmid)):
+        plt.plot(cell.tvec, cell.vmem[comp,:], 'k')
+    plt.xlim(-5, cell.tvec[-1] + 5)
+    plt.subplot(224)
+    plt.title('All compartments Vm shifted to 0 at start of last %d ms' %
+              cell_params['tstopms'])
+    for comp in xrange(len(cell.xmid)):
+        plt.plot(cell.tvec, cell.vmem[comp,:] - cell.vmem[comp,0] , 'k')
+    plt.xlim(-5, cell.tvec[-1] + 5)
+    plt.savefig(join(ofolder, 'static_Vm_distribution_%s.png' % conductance_type))
+    np.save(join(ofolder, 'static_Vm_distribution_%s.npy' % conductance_type),
+            cell.vmem[:,-1])
 
 def check_current_sum(cell, noiseVec):
     const = (1E-2 * cell.area)
@@ -224,7 +379,8 @@ def check_current_sum(cell, noiseVec):
     print np.sqrt(np.average(error**2)), np.max(np.abs(error))
     plt.show()
     sys.exit()
-    
+
+
 def run_WN_simulation(cell_params, input_scaling, input_idx, 
                    ofolder, ntsteps, simulation_params, conductance_type, epas=None, vss=None):
     neuron.h('forall delete_section()')
@@ -316,9 +472,71 @@ def run_WN_simulation(cell_params, input_scaling, input_idx,
     #stick_psd, freqs = find_LFP_PSD(stick, timestep)
     #np.save(join(ofolder, 'stick_%s.npy' %(sim_name)), stick)
     #np.save(join(ofolder, 'stick_psd_%s.npy' %(sim_name)), stick_psd)
-    
+
+
+def run_CA1_WN_simulation(cell_params, input_scaling, input_idx, input_shift,
+                          ofolder, ntsteps, simulation_params, conductance_type):
+
+    neuron.h('forall delete_section()')
+    neuron.h('secondorder=2')
+    cell = LFPy.Cell(**cell_params)
+
+    sim_name = '%d_%1.3f_%+1.3f_%s' %(input_idx, input_scaling, input_shift, conductance_type)
+    print sim_name
+    input_array = input_shift + input_scaling * np.load(join(ofolder, 'input_array.npy'))
+
+    noiseVec = neuron.h.Vector(input_array)
+    i = 0
+    syn = None
+    for sec in cell.allseclist:
+        for seg in sec:
+            if i == input_idx:
+                syn = neuron.h.ISyn(seg.x, sec=sec)
+            i += 1
+    if type(syn) == type(None):
+        raise RuntimeError("Wrong stimuli index")
+    syn.dur = 1E9
+    syn.delay = 0
+    noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
+    #set_trace()
+    mapping = np.load(join(ofolder, 'mapping.npy'))
+    cell.simulate(**simulation_params)
+    # Cutting of start of simulations
+
+    cut_list = ['cell.imem', 'cell.vmem', 'cell.somav']
+    for cur in cut_list:
+        try:
+            exec('%s = %s[:,-%d:]' %(cur, cur, ntsteps))
+        except IndexError:
+            exec('%s = %s[-%d:]' %(cur, cur, ntsteps))
+        except AttributeError:
+            pass
+            #cur = cur[-ntsteps:]
+
+    cell.tvec = cell.tvec[-ntsteps:] - cell.tvec[-ntsteps]
+    timestep = (cell.tvec[1] - cell.tvec[0])/1000.
+
+    np.save(join(ofolder, 'tvec.npy'), cell.tvec)
+    vmem_quickplot(cell, sim_name, ofolder, input_array=input_array)
+
+    sig = np.dot(mapping, cell.imem)
+    sig_psd, freqs = find_LFP_PSD(sig, timestep)
+    np.save(join(ofolder, 'signal_%s.npy' %(sim_name)), sig)
+    np.save(join(ofolder, 'psd_%s.npy' %(sim_name)), sig_psd)
+
+    vmem_psd, freqs = find_LFP_PSD(np.array(cell.vmem), timestep)
+    np.save(join(ofolder, 'vmem_psd_%s.npy' %(sim_name)), vmem_psd)
+    np.save(join(ofolder, 'vmem_%s.npy' %(sim_name)), cell.vmem)
+
+    imem_psd, freqs = find_LFP_PSD(cell.imem, timestep)
+    np.save(join(ofolder, 'imem_psd_%s.npy' %(sim_name)), imem_psd)
+    np.save(join(ofolder, 'imem_%s.npy' %(sim_name)), cell.imem)
+
+    np.save(join(ofolder, 'freqs.npy'), freqs)
+
+
 def run_synaptic_simulation(cell_params, input_scaling, input_idx, 
-                   ofolder, ntsteps, simulation_params, conductance_type, epas=None):
+                            ofolder, ntsteps, simulation_params, conductance_type, epas=None):
 
     neuron.h('forall delete_section()')
     neuron.h('secondorder=2')
@@ -638,7 +856,8 @@ def run_multiple_input_simulation(cell_params, ofolder, input_idx_scale, ntsteps
     if simulation_idx == None:
         input_name = join(ofolder, 'input_array_multiple_input_%d.npy' % len(input_idx_scale))
     else: 
-        input_name = join(ofolder, 'input_array_multiple_input_%d_simulation_%d.npy' % (len(input_idx_scale), simulation_idx))
+        input_name = join(ofolder, 'input_array_multiple_input_%d_simulation_%d.npy'
+                          % (len(input_idx_scale), simulation_idx))
         
     input_array = np.load(input_name)
     counter_idx = 0
@@ -785,16 +1004,16 @@ def save_WN_data(cell, sim_name, ofolder, static_Vm, input_idx, ntsteps):
 def pos_quickplot(cell, cell_name, elec_x, elec_y, elec_z, ofolder):
     plt.close('all')
     plt.subplot(121)
-    plt.scatter(cell.xmid, cell.ymid, s=cell.diam)
-    plt.scatter(elec_x, elec_y, c='r')
+    plt.scatter(cell.xmid, cell.zmid, s=cell.diam)
+    plt.scatter(elec_x, elec_z, c='r')
     plt.xlabel('x')
-    plt.ylabel('y')
+    plt.ylabel('z')
     plt.axis('equal')
     plt.subplot(122)
-    plt.scatter(cell.zmid, cell.ymid, s=cell.diam)
-    plt.scatter(elec_z, elec_y, c='r')
-    plt.xlabel('z')
-    plt.ylabel('y')    
+    plt.scatter(cell.ymid, cell.zmid, s=cell.diam)
+    plt.scatter(elec_y, elec_z, c='r')
+    plt.xlabel('y')
+    plt.ylabel('z')
     plt.axis('equal')
     plt.savefig(join(ofolder, 'pos_%s.png' % cell_name))
 
@@ -898,37 +1117,37 @@ def vmem_quickplot(cell, sim_name, ofolder, input_array=None):
     #plt.ylim(-77, -74)
     plt.title('Soma vmem')
     plt.plot(cell.tvec, cell.somav)
-    if not input_array == None:
-        plt.subplot(313)
-        plt.title('Input current')
-        #plt.ylim(-0.4, 0.4)
-        plt.plot(cell.tvec, input_array)   
+    #if not input_array == None:
+    #    plt.subplot(313)
+    #    plt.title('Input current')
+    #    #plt.ylim(-0.4, 0.4)
+    #    plt.plot(cell.tvec, input_array)
     plt.savefig(join(ofolder, 'current_%s.png' %sim_name))
 
-def initialize_cell(cell_params, pos_params, rot_params, cell_name, 
+def initialize_cell(cell_params, cell_name,
                     elec_x, elec_y, elec_z, ntsteps, ofolder, 
-                    testing=False, make_WN_input=False, input_idx_scale=None, simulation_idx=None):
+                    testing=False, make_WN_input=False, input_idx_scale=None, simulation_idx=None,
+                    rot_params=None, pos_params=None):
     """ Position and plot a cell """
     neuron.h('forall delete_section()')
-    try:
-        os.mkdir(ofolder)
-    except OSError:
-        pass
+    if not os.path.isdir(ofolder): os.mkdir(ofolder)
     foo_params = cell_params.copy()
     foo_params['tstartms'] = 0
     foo_params['tstopms'] = 1
     cell = LFPy.Cell(**foo_params)
-    cell.set_rotation(**rot_params)
-    cell.set_pos(**pos_params)       
+    if not rot_params is None:
+        cell.set_rotation(**rot_params)
+    if not rot_params is None:
+        cell.set_pos(**pos_params)
     if testing:
         aLFP.plot_comp_numbers(cell, elec_x, elec_y, elec_z)
     #find_apical_Ih_distributions(cell, ofolder)
     # Define electrode parameters
     electrode_parameters = {
-        'sigma' : 0.3,      # extracellular conductivity
-        'x' : elec_x,  # electrode requires 1d vector of positions
-        'y' : elec_y,
-        'z' : elec_z
+        'sigma': 0.3,      # extracellular conductivity
+        'x': elec_x,  # electrode requires 1d vector of positions
+        'y': elec_y,
+        'z': elec_z
         }
     dist_list = []
     for elec in xrange(len(elec_x)):
@@ -981,9 +1200,11 @@ def initialize_cell(cell_params, pos_params, rot_params, cell_name,
                 input_array[counter_idx,:] = aLFP.make_WN_input(cell_params)
                 counter_idx += 1
             if simulation_idx == None:
-                input_name = join(ofolder, 'input_array_multiple_input_%d.npy' % len(input_idx_scale))
-            else: 
-                input_name = join(ofolder, 'input_array_multiple_input_%d_simulation_%d.npy' % (len(input_idx_scale), simulation_idx))
+                input_name = join(ofolder, 'input_array_multiple_input_%d.npy'
+                                  % len(input_idx_scale))
+            else:
+                input_name = join(ofolder, 'input_array_multiple_input_%d_simulation_%d.npy'
+                                  % (len(input_idx_scale), simulation_idx))
 
             np.save(input_name, input_array)
             

@@ -117,7 +117,6 @@ def simulate():
 def plot_transfer():
     aLFP.plot_transfer_functions(model, 0.1, 0, plot_params, 
                               simulation_params, plot_compartments)
-    sys.exit()
     for input_idx in input_idxs:
         for input_scaling in input_scalings:
             print input_idx, input_scaling
