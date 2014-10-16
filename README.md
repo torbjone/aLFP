@@ -7,13 +7,10 @@ This README would normally document whatever steps are necessary to get your app
 A modeling study of the contribution of active conductances to the Local Field Potential
 
 ### How do I get set up? ###
-
+No attempts has been made for this to work at other peoples computers
 
 ### Contribution guidelines ###
 
-* Writing tests
-* Code review
-* Other guidelines
 
 ### Who do I talk to? ###
 
