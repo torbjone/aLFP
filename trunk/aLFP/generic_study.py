@@ -1,5 +1,12 @@
 __author__ = 'torbjone'
 
+if not 'DISPLAY' in os.environ:
+    import matplotlib
+    matplotlib.use('Agg')
+    at_stallo = True
+else:
+    at_stallo = False
+
 import sys
 import os
 from os.path import join

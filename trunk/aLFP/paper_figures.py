@@ -218,7 +218,7 @@ class NeuralSimulations():
         return I
 
     def _make_white_noise_stimuli(self, cell, input_idx):
-        input_scaling = 0.005
+        input_scaling = 0.0025
         max_freq = 500
         plt.seed(1234)
 
@@ -1353,17 +1353,17 @@ class Figure3(PaperFigures):
 
         self._draw_set_up_to_axis(ax_morph, input_idx, elec_x, elec_z)
 
-        vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-4, 1e0], title='$V_m$', ylabel='mV',
+        vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-2, 1e0], title='$V_m$', ylabel='mV',
                                   **ax_dict)
-        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-4, 1e-0], title='$V_m$', ylabel='mV',
+        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-2, 1e-0], title='$V_m$', ylabel='mV',
                                   **ax_dict)
-        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-7, 1e-2], title='$I_m$', ylabel='nA',
+        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-7, 1e-5], title='$I_m$', ylabel='nA',
                                   **ax_dict)
-        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-7, 1e-2], title='$I_m$', ylabel='nA',
+        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-3, 1e-2], title='$I_m$', ylabel='nA',
                                   **ax_dict)
-        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-5, 1e-2], title='$\Phi$', ylabel='$\mu$V',
+        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-4, 1e-2], title='$\Phi$', ylabel='$\mu$V',
                                   **ax_dict)
-        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-5, 1e-2], title='$\Phi$', ylabel='$\mu$V',
+        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-3, 1e-1], title='$\Phi$', ylabel='$\mu$V',
                                   **ax_dict)
 
         # vm_ax_a = fig.add_subplot(2, 4, 1, title='$V_m$', ylabel='mV',  **ax_dict)
