@@ -1,5 +1,5 @@
 __author__ = 'torbjone'
-
+import os
 if not 'DISPLAY' in os.environ:
     import matplotlib
     matplotlib.use('Agg')

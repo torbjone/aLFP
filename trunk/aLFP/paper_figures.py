@@ -218,7 +218,7 @@ class NeuralSimulations():
         return I
 
     def _make_white_noise_stimuli(self, cell, input_idx):
-        input_scaling = 0.0025
+        input_scaling = 0.001
         max_freq = 500
         plt.seed(1234)
 
@@ -1269,7 +1269,7 @@ class Figure3(PaperFigures):
         self.repeats = 6
         self.end_t = 1000 * self.repeats
         self.stimuli = 'white_noise'
-        self.conductance_types = ['Na']
+        self.conductance_types = ['Na', 'passive']
         if self.cell_name == 'hay':
             elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, 7), np.linspace(-200, 1200, 15))
             self.elec_x = elec_x.flatten()
