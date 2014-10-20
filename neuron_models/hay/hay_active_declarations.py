@@ -584,6 +584,36 @@ def biophys_NaP(**kwargs):
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("Persistent Na ion-channels inserted.")
 
+
+def biophys_NaP_linearized(**kwargs):
+
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = 1.0
+        sec.Ra = 100.
+        sec.e_pas = -90.
+
+    for sec in neuron.h.soma:
+        sec.insert('Nap_Et2_linearized')
+        sec.ena = 50
+        sec.g_pas = 0.0000338
+        sec.gNap_Et2bar_Nap_Et2_linearized = 0.00172
+        sec.V_R_Nap_Et2_linearized = kwargs['hold_potential']
+    for sec in neuron.h.apic:
+        sec.cm = 2
+        sec.g_pas = 0.0000589
+
+    for sec in neuron.h.dend:
+        sec.cm = 2
+        sec.g_pas = 0.0000467
+
+    for sec in neuron.h.axon:
+        sec.g_pas = 0.0000325
+
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
+    print("Linearized persistent Na ion-channels inserted.")
+
 def biophys_NaP_frozen(**kwargs):
 
     for sec in neuron.h.allsec():
@@ -607,8 +637,6 @@ def biophys_NaP_frozen(**kwargs):
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("Frozen persistent Na ion-channels inserted.")
-
-
 
 
 def biophys_active_frozen(**kwargs):

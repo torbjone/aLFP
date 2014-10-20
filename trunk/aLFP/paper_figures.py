@@ -88,14 +88,11 @@ class NeuralSimulations():
         plt.show()
 
     def _return_cell(self, holding_potential, conductance_type):
-        import neuron
         from hay_active_declarations import active_declarations as hay_active
         from ca1_sub_declarations import active_declarations as ca1_active
         from shah_declarations import active_declarations as shah_declarations
-        import LFPy
         neuron_models = join(self.root_folder, 'neuron_models')
         neuron.load_mechanisms(join(neuron_models))
-
         if self.cell_name == 'hay':
             neuron.load_mechanisms(join(neuron_models, 'hay', 'mod'))
             cell_params = {
@@ -342,13 +339,13 @@ class PaperFigures():
                                 'Ih_linearized_frozen': 'b', 'no_INaP': 'orange', 'no_Im': 'y',
                                 'INaP': 'orange', 'Ih': 'b', 'Im': 'g', 'Ih_frozen': 'c',
                                 'SKv3_1': 'orange', 'K': 'pink', 'Na': 'gray', 'NaP': 'gray', 'reduced': 'g',
-                                'NaP_frozen': 'c'}
+                                'NaP_frozen': 'c', 'NaP_linearized': 'orange'}
 
         self.conductance_style = {'active': '-', 'active_frozen': '-', 'Ih_linearized': '--', 'passive': '-',
                                 'Ih_linearized_frozen': '-', 'no_INaP': '-', 'no_Im': '-',
                                 'INaP': '-', 'Ih': '-', 'Im': '-', 'Ih_frozen': '-', 'SKv3_1': '-.',
                                 'NaP': '-', 'Na': '-',
-                                'K': '-', 'reduced': '-', 'NaP_frozen': '-'}
+                                'K': '-', 'reduced': '-', 'NaP_frozen': '-', 'NaP_linearized': '--'}
 
 
         self.figure_folder = join('/home', 'torbjone', 'work', 'aLFP', 'paper_figures')
@@ -1260,19 +1257,19 @@ class Figure3(PaperFigures):
                                  'SKv3_1_Ih': 'Passive+Ih+SKv3_1',
                                  'SKv3_1': 'Passive+SKv3_1',
                                  'NaP': 'Persistent sodium',
+                                 'NaP_linearized': 'Linearized persistent sodium',
                                  'NaP_frozen': 'Frozen Persistent sodium',
                                  'K': 'All posassium',
                                  'reduced': 'Reduced',}
         self.holding_potentials = [-80, -60]
-        self.elec_apic_idx = 88
-        self.elec_soma_idx = 18
+
         self.timeres_NEURON = 2**-4
         self.timeres_python = 2**-4
         self.cut_off = 0
         self.repeats = 6
         self.end_t = 1000 * self.repeats
         self.stimuli = 'white_noise'
-        self.conductance_types = ['NaP']
+        self.conductance_types = ['NaP_linearized']
         if self.cell_name == 'hay':
             elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, 7), np.linspace(-200, 1200, 15))
             self.elec_x = elec_x.flatten()
@@ -1281,6 +1278,8 @@ class Figure3(PaperFigures):
             self.plot_positions = np.array([self.elec_x, self.elec_y, self.elec_z]).T
             self.soma_idx = 0
             self.apic_idx = 852
+            self.elec_apic_idx = 88
+            self.elec_soma_idx = 18
         elif self.cell_name == 'n120':
             elec_x, elec_z = np.meshgrid(np.linspace(-150, 150, 7), np.linspace(-150, 800, 15))
             self.elec_x = elec_x.flatten()
@@ -1322,8 +1321,8 @@ class Figure3(PaperFigures):
 
         if do_simulations:
             self._do_all_simulations()
-        self.conductance_types = ['NaP', 'passive']
-        # self.make_figure(self.apic_idx, -60)
+        self.conductance_types = ['NaP', 'NaP_linearized', 'passive']
+        #self.make_figure(self.apic_idx, -60)
         self.make_figure(self.soma_idx, -60)
         # self.make_figure(self.apic_idx, -80)
         # self.make_figure(self.soma_idx, -80)
@@ -1344,9 +1343,13 @@ class Figure3(PaperFigures):
         ax_dict = {'xlim': [1e0, 450], 'xlabel': 'Hz',
                    }
         print input_idx, holding_potential
+
         plt.close('all')
+        self.fig2 = plt.figure(figsize=[12, 16])
+
         fig = plt.figure(figsize=[10, 5])
         fig.subplots_adjust(hspace=0.55, wspace=0.55, bottom=0.2)
+
         ax_morph = plt.subplot(143)
         ax_morph.axis('off')
 
@@ -1357,7 +1360,7 @@ class Figure3(PaperFigures):
         self._draw_set_up_to_axis(ax_morph, input_idx, elec_x, elec_z)
 
         vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-3, 1e-1], title='$V_m$', ylabel='mV',  **ax_dict)
-        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-2, 1e-0], title='$V_m$', ylabel='mV', **ax_dict)
+        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-3, 1e-0], title='$V_m$', ylabel='mV', **ax_dict)
         im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-8, 1e-4], title='$I_m$', ylabel='nA', **ax_dict)
         im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-4, 1e-2], title='$I_m$', ylabel='nA', **ax_dict)
         ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-5, 1e-3], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
@@ -1378,7 +1381,7 @@ class Figure3(PaperFigures):
 
         for conductance_type in self.conductance_types:
             self._plot_sigs(input_idx, conductance_type, holding_potential,
-                            sig_ax_list, tvec)
+                            sig_ax_list, tvec, elec_x, elec_z)
         simplify_axes(fig.axes)
         lines = []
         line_names = []
@@ -1387,11 +1390,15 @@ class Figure3(PaperFigures):
                           linestyle=self.conductance_style[conductance_type])
             lines.append(l)
             line_names.append(self.conductance_dict[conductance_type])
+
         fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
+        self.fig2.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
         fig.savefig(join(self.figure_folder, '%s_%s_%d_%d.png' % (self.figure_name, self.cell_name,
                                                                   holding_potential, input_idx)), dpi=150)
 
-    def _plot_sigs(self, input_idx, conductance_type, holding_potential, axes, tvec):
+        #self.fig2.savefig(join(self.figure_folder, 'test_LFP_%d_%d.png' % (input_idx, holding_potential)), dpi=300)
+
+    def _plot_sigs(self, input_idx, conductance_type, holding_potential, axes, tvec, elec_x, elec_z):
         vmem = np.load(join(self.sim_folder, 'vmem_%s_%d_%s_%+d.npy' %
                             (self.cell_name, input_idx, conductance_type, holding_potential)))
         imem = np.load(join(self.sim_folder, 'imem_%s_%d_%s_%+d.npy' %
@@ -1404,6 +1411,22 @@ class Figure3(PaperFigures):
         # plt.close('all')
         # plt.plot(tvec, imem[self.soma_idx, :])
         # plt.show()
+        line_dict = {'c': self.conductance_clr[conductance_type],
+                     'linestyle': self.conductance_style[conductance_type],
+                     'lw': 1}
+        if 1:
+            num_rows = 15
+            num_cols = 7
+            for numb in xrange(len(elec_x)):
+                ax = self.fig2.add_subplot(num_rows, num_cols, numb + 1, title='x=%d, z=%d' % (elec_x[numb], elec_z[numb]),
+                                      xlim=[1e0, 5e2], ylim=[1e-5, 1e-2])
+                #ax.axis('off')
+                #ax.grid(True)
+                simplify_axes(ax)
+                freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP[numb, -cut_off_idx:])
+                ax.loglog(freqs, LFP_psd[0], **line_dict)
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
 
         freqs, vmem_psd_soma = aLFP.return_freq_and_psd(tvec, vmem[self.soma_idx, -cut_off_idx:])
         freqs, vmem_psd_apic = aLFP.return_freq_and_psd(tvec, vmem[self.apic_idx, -cut_off_idx:])
@@ -1412,9 +1435,6 @@ class Figure3(PaperFigures):
         freqs, LFP_psd_soma = aLFP.return_freq_and_psd(tvec, LFP[self.elec_soma_idx, -cut_off_idx:])
         freqs, LFP_psd_apic = aLFP.return_freq_and_psd(tvec, LFP[self.elec_apic_idx, -cut_off_idx:])
 
-        line_dict = {'c': self.conductance_clr[conductance_type],
-                     'linestyle': self.conductance_style[conductance_type],
-                     'lw': 2}
 
         axes[0].loglog(freqs, vmem_psd_soma[0], **line_dict)
         axes[1].loglog(freqs, vmem_psd_apic[0], **line_dict)

@@ -1073,7 +1073,7 @@ class GenericStudy:
                 zorder=2, ms=15, mec='none')
         if type(input_idx) is str:
             sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 0,
-                                                        self.holding_potential, 'linear_decrease', 30)
+                                                        self.holding_potential, 'linear_increase', 30)
             synidx = np.load(join(self.sim_folder, 'synidx_%s.npy' % sim_name))
             ax.plot(xmid[synidx], zmid[synidx], 'y.', zorder=3, ms=10)
         else:
@@ -1441,9 +1441,9 @@ class GenericStudy:
         self._set_extended_electrode()
         # weights = np.linspace(0, 1, 5)
         for tau_w in [30]: #, 1, 100]:
-            for distribution in ['linear_decrease']:#, 'uniform', 'linear_decrease']:
+            for distribution in ['linear_increase']:#, 'uniform', 'linear_decrease']:
                 # for weight in weights:
-                for input_idx in ['homogeneous']: #self.cell_plot_idxs[:1]:
+                for input_idx in ['tuft']: #self.cell_plot_idxs[:1]:
                     print tau_w, distribution, input_idx
                     self._plot_LFP_with_distance(distribution, tau_w, input_idx)
                     # self._plot_LFP_with_distance(distribution, tau_w, self.cell_plot_idxs[::2], weight)
@@ -1998,5 +1998,5 @@ if __name__ == '__main__':
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
     # gs.run_all_single_simulations()
-    gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]))
-    # gs.LFP_with_distance_study()
+    # gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]))
+    gs.LFP_with_distance_study()

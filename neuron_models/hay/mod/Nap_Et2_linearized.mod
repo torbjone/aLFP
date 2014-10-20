@@ -6,7 +6,7 @@
 NEURON	{
 	SUFFIX Nap_Et2_linearized
 	USEION na READ ena WRITE ina
-	RANGE gNap_Et2bar, gNap_Et2, ina
+	RANGE gNap_Et2bar, gNap_Et2, ina, V_R
 }
 
 UNITS	{
@@ -26,11 +26,13 @@ ASSIGNED	{
 	ina	(mA/cm2)
 	gNap_Et2	(S/cm2)
 	mInf
+    dminf
 	mTau
 	mAlpha
 	mBeta
 	hInf
-	hTau
+	dhinf
+    hTau
 	hAlpha
 	hBeta
 }
