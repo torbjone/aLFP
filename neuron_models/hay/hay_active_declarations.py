@@ -555,7 +555,7 @@ def biophys_K(**kwargs):
     print("K ion-channels inserted.")
 
 
-def biophys_Na(**kwargs):
+def biophys_NaP(**kwargs):
 
     for sec in neuron.h.allsec():
         sec.insert('pas')
@@ -565,17 +565,12 @@ def biophys_Na(**kwargs):
 
     for sec in neuron.h.soma:
         sec.insert('Nap_Et2')
-        # sec.insert('NaTa_t')
         sec.ena = 50
         sec.g_pas = 0.0000338
         sec.gNap_Et2bar_Nap_Et2 = 0.00172
-        # sec.gNaTa_tbar_NaTa_t = 2.04
 
     for sec in neuron.h.apic:
         sec.cm = 2
-        # sec.insert('NaTa_t')
-        # sec.ena = 50
-        # sec.gNaTa_tbar_NaTa_t = 0.0213
         sec.g_pas = 0.0000589
 
     for sec in neuron.h.dend:
@@ -587,7 +582,33 @@ def biophys_Na(**kwargs):
 
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
-    print("Na ion-channels inserted.")
+    print("Persistent Na ion-channels inserted.")
+
+def biophys_NaP_frozen(**kwargs):
+
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = 1.0
+        sec.Ra = 100.
+        sec.e_pas = -90.
+    for sec in neuron.h.soma:
+        sec.insert('Nap_Et2_frozen')
+        sec.ena = 50
+        sec.g_pas = 0.0000338
+        sec.gNap_Et2bar_Nap_Et2_frozen = 0.00172
+    for sec in neuron.h.apic:
+        sec.cm = 2
+        sec.g_pas = 0.0000589
+    for sec in neuron.h.dend:
+        sec.cm = 2
+        sec.g_pas = 0.0000467
+    for sec in neuron.h.axon:
+        sec.g_pas = 0.0000325
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
+    print("Frozen persistent Na ion-channels inserted.")
+
+
 
 
 def biophys_active_frozen(**kwargs):
