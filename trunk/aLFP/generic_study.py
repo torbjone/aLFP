@@ -10,13 +10,13 @@ import sys
 from os.path import join
 import numpy as np
 import pylab as plt
-from plotting_convention import *
 import neuron
 import LFPy
 import aLFP
 from matplotlib.colors import LogNorm
 from scipy import stats
 nrn = neuron.h
+
 class GenericStudy:
 
     def __init__(self, cell_name, input_type, conductance='generic', extended_electrode=False):
@@ -350,7 +350,7 @@ class GenericStudy:
                 ax.set_xlabel('Hz')
                 ax.set_ylabel('$\mu V$')
             ax.grid(True)
-            simplify_axes(ax)
+            aLFP.simplify_axes(ax)
             all_elec_ax.append(ax)
 
         freq_ax = []
@@ -362,7 +362,7 @@ class GenericStudy:
                                  title='Norm Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
             ax.grid(True)
             ax_norm.grid(True)
-            simplify_axes([ax, ax_norm])
+            aLFP.simplify_axes([ax, ax_norm])
             freq_ax.append(ax)
             freq_ax_norm.append(ax_norm)
 
@@ -416,7 +416,7 @@ class GenericStudy:
         for elec in xrange(len(self.elec_z)):
             # row, col = self._return_elec_row_col(elec)
             # dist_idx = self._return_elec_dist_idx(elec)
-            mark_subplots(all_elec_ax[elec], letter_list[elec])
+            aLFP.mark_subplots(all_elec_ax[elec], letter_list[elec])
 
     def _draw_all_elecs_with_distance_active(self, fig, input_idx):
 
@@ -433,7 +433,7 @@ class GenericStudy:
                                  title='$x=%d\mu m$' % self.elec_x[elec],
                                  xlim=[1, 510])
             ax.grid(True)
-            simplify_axes(ax)
+            aLFP.simplify_axes(ax)
             all_elec_ax.append(ax)
 
         freq_ax = []
@@ -446,7 +446,7 @@ class GenericStudy:
 
             ax.grid(True)
             ax_norm.grid(True)
-            simplify_axes([ax, ax_norm])
+            aLFP.simplify_axes([ax, ax_norm])
             freq_ax.append(ax)
             freq_ax_norm.append(ax_norm)
 
@@ -508,8 +508,8 @@ class GenericStudy:
         ax_imem_2 = fig.add_subplot(num_plot_rows, num_plot_cols, 2 + num_plot_cols)
         ax_imem_3 = fig.add_subplot(num_plot_rows, num_plot_cols, 2 + 2*num_plot_cols)
 
-        mark_subplots([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
-        simplify_axes([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
+        aLFP.mark_subplots([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
+        aLFP.simplify_axes([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
 
         # ax_sig_1.set_title('Extracellular\npotential', color='g')
 
@@ -690,7 +690,7 @@ class GenericStudy:
             ax.grid(True)
             # ax.set_yscale('log')
             ax.set_xlabel(r'$\tau_w$')
-            simplify_axes(ax)
+            aLFP.simplify_axes(ax)
 
     def _draw_all_elecs_q_value(self, fig, distribution, input_idx, weight):
 
@@ -708,7 +708,7 @@ class GenericStudy:
                                  title='$x=%d\mu m$' % self.elec_x[elec],
                                  xlim=[0.1, 100])
             ax.grid(True)
-            simplify_axes(ax)
+            aLFP.simplify_axes(ax)
             all_elec_ax.append(ax)
 
         lines = []
@@ -868,8 +868,8 @@ class GenericStudy:
                               xlabel='$\mu m$', xticks=[0, 400, 800, 1200])
         ax2 = fig.add_subplot(3, 5, 11, title=r'$\tau_w$', ylim=[0, taum*2],
                               xlabel='$\mu m$', xticks=[0, 400, 800, 1200])
-        mark_subplots([ax0, ax1, ax2], 'abc')
-        simplify_axes([ax0, ax1, ax2])
+        aLFP.mark_subplots([ax0, ax1, ax2], 'abc')
+        aLFP.simplify_axes([ax0, ax1, ax2])
 
         for mu in self.mus:
             sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
@@ -1020,8 +1020,8 @@ class GenericStudy:
 
         # color_axes([ax_sig_3, ax_sig_2, ax_sig_1], 'g')
         # color_axes([ax_imem_3, ax_imem_2, ax_imem_1, ax_vmem_3, ax_vmem_2, ax_vmem_1], 'b')
-        simplify_axes(ax_list)
-        mark_subplots(ax_list, 'efghijklmn')
+        aLFP.simplify_axes(ax_list)
+        aLFP.mark_subplots(ax_list, 'efghijklmn')
         fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower right')
 
     def plot_summary(self, input_idx, distribution, tau_w):
@@ -1057,10 +1057,10 @@ class GenericStudy:
         zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
 
         if distribution is None:
-            mark_subplots(ax, 'G', xpos=0, ypos=1)
+            aLFP.mark_subplots(ax, 'G', xpos=0, ypos=1)
             sec_clrs = ['0.7'] * len(xmid)
         else:
-            mark_subplots(ax, 'd', xpos=0, ypos=1)
+            aLFP.mark_subplots(ax, 'd', xpos=0, ypos=1)
             example_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 0,
                                                self.holding_potential, distribution, 30)
             dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % example_name)).item()
@@ -1336,8 +1336,8 @@ class GenericStudy:
                 ax.set_yscale('log')
                 ax.grid(True)
 
-            simplify_axes([ax_1, ax_2, ax_3])
-        mark_subplots(fig.axes)
+            aLFP.simplify_axes([ax_1, ax_2, ax_3])
+        aLFP.mark_subplots(fig.axes)
         fig.legend(lines[:3], line_names[:3], frameon=False, ncol=3, loc='lower right')
 
     def _plot_multiple_input_EC_signals(self, fig, input_idxs, distributions, tau_w):
@@ -1365,8 +1365,8 @@ class GenericStudy:
                 ax.set_yscale('log')
                 ax.grid(True)
 
-            simplify_axes([ax_1, ax_2, ax_3])
-        mark_subplots(fig.axes)
+            aLFP.simplify_axes([ax_1, ax_2, ax_3])
+        aLFP.mark_subplots(fig.axes)
         fig.legend(lines[:3], line_names[:3], frameon=False, ncol=3, loc='lower right')
 
     def combine_extracellular_traces(self, input_idx):
@@ -1499,7 +1499,7 @@ class GenericStudy:
         ax_imem.plot(xmid[input_idx], zmid[input_idx], 'y*', zorder=1, ms=15)
         ax_vmem.plot(xmid[input_idx], zmid[input_idx], 'y*', zorder=1, ms=15)
 
-        # mark_subplots([ax_imem, ax_vmem], 'ab', xpos=0, ypos=1)
+        # aLFP.mark_subplots([ax_imem, ax_vmem], 'ab', xpos=0, ypos=1)
 
         [ax_imem.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=q_clr(q_imem[idx]), zorder=0)
         for idx in xrange(len(xmid))]
@@ -1527,7 +1527,7 @@ class GenericStudy:
         q_ax = fig.add_subplot(235)#axes([0.45, 0.1, 0.4, 0.8])
         q_res_ax = fig.add_subplot(236)#axes([0.45, 0.1, 0.4, 0.8])
 
-        mark_subplots(fig.axes)
+        aLFP.mark_subplots(fig.axes)
 
         input_name_dict = {605: 'Apical', 0: 'Somatic', 455: 'Middle'}
         fig.suptitle("Input: %s, Distribution: %s, tau: %1.2f" %(input_name_dict[input_idx], distribution, tau_w))
@@ -1975,7 +1975,7 @@ class GenericStudy:
             ax = fig.add_subplot(len(heights), len(distances) + 1, plotnum, xticklabels=[], yticklabels=[],
                                  xlim=[1, 500], ylim=[1e-8, 1e-6])
             # ax.set_title('%d %d' % (elec_x[elec], elec_z[elec]))
-            simplify_axes(ax)
+            aLFP.simplify_axes(ax)
             ax.grid(True)
             ax.loglog(freqs, LFP_restor[elec], 'r', lw=2)
             ax.loglog(freqs, LFP_passive[elec], 'b', lw=2)
