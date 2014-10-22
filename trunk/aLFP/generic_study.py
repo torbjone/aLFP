@@ -75,8 +75,8 @@ class GenericStudy:
             self._single_neural_sim_function = self._run_distributed_synaptic_simulation
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
-            self.cut_off = 100
-            self.end_t = 20000
+            self.cut_off = 1#00
+            self.end_t = 20#000
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
         elif self.input_type == 'real_wn':
@@ -360,7 +360,6 @@ class GenericStudy:
                                  title='Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
             ax_norm = fig.add_subplot(num_plot_rows, num_plot_cols, (row + 1) * num_plot_cols, aspect='equal',
                                  title='Norm Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
-
             ax.grid(True)
             ax_norm.grid(True)
             simplify_axes([ax, ax_norm])
@@ -372,17 +371,17 @@ class GenericStudy:
         freq_line_styles = ['-', '--', ':']
         for mu in self.mus:
             if type(input_idx) in [list, np.ndarray]:
-                sim_name = '%s_%s_multiple_%1.2f_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, weight, mu,
+                sim_name = '%s_%s_multiple_%1.2f_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, weight, mu,
                                                                   self.holding_potential, distribution,
-                                                                  tau_w)
+                                                                  tau_w, weight)
             elif type(input_idx) is str:
-                sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
                                                                   self.holding_potential, distribution,
-                                                                  tau_w)
+                                                                  tau_w, weight)
             else:
-                sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
+                sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
                                                             self.holding_potential, distribution,
-                                                            tau_w)
+                                                            tau_w, weight)
             # LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.use_elec_idxs, :]
             LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
 
@@ -523,8 +522,8 @@ class GenericStudy:
                 sim_name = '%s_%s_multiple_%1.2f_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, weight, mu,
                                                                   self.holding_potential, distribution, tau_w)
             elif type(input_idx) is str:
-                sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
-                                                            self.holding_potential, distribution, tau_w)
+                sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                            self.holding_potential, distribution, tau_w, weight)
             else:
                 sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                             self.holding_potential, distribution, tau_w)
@@ -769,7 +768,7 @@ class GenericStudy:
         if type(input_idx) in [list, np.ndarray]:
             filename = ('LFP_with_distance_%s_multiple_%1.2f_%s_%1.2f' % (self.cell_name, weight, distribution, tau_w))
         elif type(input_idx) is str:
-            filename = ('LFP_with_distance_%s_%s_%s_%1.2f' % (self.cell_name, input_idx, distribution, tau_w))
+            filename = ('LFP_with_distance_%s_%s_%s_%1.2f_%1.4f' % (self.cell_name, input_idx, distribution, tau_w, weight))
         else:
             filename = ('LFP_with_distance_%s_%d_%s_%1.2f' % (self.cell_name, input_idx, distribution, tau_w))
         fig.savefig(join(self.figure_folder, '%s.png' % filename), dpi=150)
@@ -1437,16 +1436,15 @@ class GenericStudy:
                         # self.plot_summary(input_idx, distribution, tau_w)
                 # self._plot_q_value(distribution, input_idx)
 
-    def LFP_with_distance_study(self):
+    def LFP_with_distance_study(self, weight):
         self._set_extended_electrode()
-        weights = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+        #weights = [0.0001, 0.0005, 0.001, 0.005, 0.01]
         for tau_w in [30]: #, 1, 100]:
             for distribution in ['linear_increase']:#, 'uniform', 'linear_decrease']:
-                for weight in weights:
-                    for input_idx in ['tuft']: #self.cell_plot_idxs[:1]:
-                        print tau_w, distribution, input_idx
-                        self._plot_LFP_with_distance(distribution, tau_w, input_idx)
-                    # self._plot_LFP_with_distance(distribution, tau_w, self.cell_plot_idxs[::2], weight)
+                for input_idx in ['tuft']: #self.cell_plot_idxs[:1]:
+                    print tau_w, distribution, input_idx
+                    self._plot_LFP_with_distance(distribution, tau_w, input_idx, weight)
+                # self._plot_LFP_with_distance(distribution, tau_w, self.cell_plot_idxs[::2], weight)
 
     def q_value_study(self):
         self._set_extended_electrode()
@@ -1998,7 +1996,7 @@ if __name__ == '__main__':
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
     # gs.run_all_single_simulations()
-    if len(sys.argv[1]) >= 2:
+    if len(sys.argv) == 3:
         gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]), float(sys.argv[2]))
     else:
-        gs.LFP_with_distance_study()
+        gs.LFP_with_distance_study(float(sys.argv[1]))
