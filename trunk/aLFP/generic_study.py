@@ -221,16 +221,17 @@ class GenericStudy:
              'tau_w_QA': np.zeros(cell.totnsegs),
              'g_w_QA': np.zeros(cell.totnsegs),
              }
+
         dist_dict = self._get_distribution(dist_dict, cell)
         if type(input_idx) is int:
-            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
-                                                        self.holding_potential, distribution, taum)
+            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                        self.holding_potential, distribution, taum, weight)
         elif type(input_idx) in [list, np.ndarray]:
-            sim_name = '%s_%s_multiple_%1.2f_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, weight, mu,
-                                                                    self.holding_potential, distribution, taum)
+            sim_name = '%s_%s_multiple_%1.2f_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, weight, mu,
+                                                                    self.holding_potential, distribution, taum, weight)
         elif type(input_idx) is str:
-            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
-                                                        self.holding_potential, distribution, taum)
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                        self.holding_potential, distribution, taum, weight)
         else:
             print input_idx, type(input_idx)
             raise RuntimeError("input_idx is not recognized!")
@@ -1202,7 +1203,7 @@ class GenericStudy:
         # plt.show()
         self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w)
 
-    def run_all_distributed_synaptic_input_simulations(self, mu):
+    def run_all_distributed_synaptic_input_simulations(self, mu, weight):
         distributions = ['linear_increase']
         input_poss = ['tuft']
         tau_ws = [30]
@@ -1212,31 +1213,30 @@ class GenericStudy:
             for input_pos in input_poss:
                 for tau_w in tau_ws:
                     #for mu in self.mus:
-                    print "%d / %d" % (i, tot_sims), distribution, input_pos, mu
-                    self._run_distributed_synaptic_simulation(mu, input_pos, distribution, tau_w)
+                    print distribution, input_pos, mu, weight
+                    self._run_distributed_synaptic_simulation(mu, input_pos, distribution, tau_w, weight)
                     #i += 1
 
-    def _run_distributed_synaptic_simulation(self, mu, input_idx, distribution, tau_w):
+    def _run_distributed_synaptic_simulation(self, mu, input_idx, distribution, tau_w, weight):
         plt.seed(1234)
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
-
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
-        cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_idx)
+        cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_idx, weight)
         print "Starting simulation ..."
         #import ipdb; ipdb.set_trace()
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w)
+        self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w, weight)
         neuron.h('forall delete_section()')
         del cell, syn, noiseVec, electrode
 
-    def _make_distributed_synaptic_stimuli(self, cell, input_sec, **kwargs):
+    def _make_distributed_synaptic_stimuli(self, cell, input_sec, weight=0.001, **kwargs):
 
         # Define synapse parameters
         synapse_params = {
             'e': 0.,                   # reversal potential
             'syntype': 'ExpSyn',       # synapse type
             'tau': 2.,                # syn. time constant
-            'weight': 0.001,            # syn. weight
+            'weight': weight,            # syn. weight
             'record_current': False,
         }
         if input_sec == 'tuft':
@@ -1439,13 +1439,13 @@ class GenericStudy:
 
     def LFP_with_distance_study(self):
         self._set_extended_electrode()
-        # weights = np.linspace(0, 1, 5)
+        weights = [0.0001, 0.0005, 0.001, 0.005, 0.01]
         for tau_w in [30]: #, 1, 100]:
             for distribution in ['linear_increase']:#, 'uniform', 'linear_decrease']:
-                # for weight in weights:
-                for input_idx in ['tuft']: #self.cell_plot_idxs[:1]:
-                    print tau_w, distribution, input_idx
-                    self._plot_LFP_with_distance(distribution, tau_w, input_idx)
+                for weight in weights:
+                    for input_idx in ['tuft']: #self.cell_plot_idxs[:1]:
+                        print tau_w, distribution, input_idx
+                        self._plot_LFP_with_distance(distribution, tau_w, input_idx)
                     # self._plot_LFP_with_distance(distribution, tau_w, self.cell_plot_idxs[::2], weight)
 
     def q_value_study(self):
@@ -1998,5 +1998,7 @@ if __name__ == '__main__':
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
     # gs.run_all_single_simulations()
-    # gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]))
-    gs.LFP_with_distance_study()
+    if len(sys.argv[1]) >= 2:
+        gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]), float(sys.argv[2]))
+    else:
+        gs.LFP_with_distance_study()

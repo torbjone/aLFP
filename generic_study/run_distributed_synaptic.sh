@@ -6,32 +6,29 @@
 #PBS -m abe
 #PBS -A nn4661k
 
-folder=correlated_population
-filename=generic_s
+folder=generic_study
+filename=generic_study.py
 
-cd /home/torbness/work/aLFP/$folder/
-
+cd /home/$USER/work/aLFP/$folder/
 mkdir /global/work/torbness/aLFP/$folder
 mkdir /global/work/torbness/aLFP/$folder/hay
-
 cp $filename /global/work/torbness/aLFP/$folder
 cd /global/work/torbness/aLFP/$folder/
 
-# Should be commited as qsub -t 0-4 <filename>
-
 maxpartasks=16
-CELLS_EACH=500
-START_CELL=$(($PBS_ARRAYID*$CELLS_EACH))
-END_CELL=$((($PBS_ARRAYID + 1)*$CELLS_EACH - 1))
 
-echo $START_CELL to $END_CELL
-tasks=$(seq $START_CELL $END_CELL)
-for t in $tasks; do
-        python $filename $correlation $stimuli_pos $t &
+WEIGHTS=(0.0001, 0.0001, 0.0005, 0.001, 0.005, 0.01)
+MUS=(-0.5, 0.0, 2.0)
+
+for mu in ${MUS[@]}; do
+    for w in ${WEIGHTS[@]}; do
+        echo $mu, $w
+        python $filename $mu $w &
         activetasks=$(jobs | wc -l)
         while [ $activetasks -ge $maxpartasks ]; do
                sleep 1
                activetasks=$(jobs | wc -l)
         done
+    done
 done
 wait

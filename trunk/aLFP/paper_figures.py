@@ -11,6 +11,7 @@ from matplotlib.collections import LineCollection
 import neuron
 import LFPy
 
+
 class NeuralSimulations():
 
     def __init__(self, PlotClass):
@@ -1269,7 +1270,7 @@ class Figure3(PaperFigures):
         self.repeats = 6
         self.end_t = 1000 * self.repeats
         self.stimuli = 'white_noise'
-        self.conductance_types = ['NaP_linearized']
+        self.conductance_types = ['Ih']['NaP_linearized']
         if self.cell_name == 'hay':
             elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, 7), np.linspace(-200, 1200, 15))
             self.elec_x = elec_x.flatten()
@@ -1539,13 +1540,13 @@ class FigureLinearization(PaperFigures):
             self._do_all_simulations()
         # self.make_figure(self.apic_idx, -60)
         # self.make_figure(self.soma_idx, -60)
-        self.make_figure(self.apic_idx, -80)
-        # self.make_figure(self.soma_idx, -80)
+        # self.make_figure(self.apic_idx, -80)
+        self.make_figure(self.soma_idx, -80)
 
     def _do_all_simulations(self):
         neural_sim = NeuralSimulations(self)
         for holding_potential in [-80.]:
-            for input_idx in [self.apic_idx]:
+            for input_idx in [self.soma_idx]:
                 for conductance_type in self.conductance_types:
                     neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
                                                             self.elec_x, self.elec_y, self.elec_z)
@@ -1569,18 +1570,12 @@ class FigureLinearization(PaperFigures):
 
         self._draw_set_up_to_axis(ax_morph, input_idx, elec_x, elec_z)
 
-        vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-4, 1e0], title='$V_m$', ylabel='mV',
-                                  **ax_dict)
-        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-4, 1e-0], title='$V_m$', ylabel='mV',
-                                  **ax_dict)
-        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-7, 1e-2], title='$I_m$', ylabel='nA',
-                                  **ax_dict)
-        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-7, 1e-2], title='$I_m$', ylabel='nA',
-                                  **ax_dict)
-        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-5, 1e-2], title='$\Phi$', ylabel='$\mu$V',
-                                  **ax_dict)
-        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-5, 1e-2], title='$\Phi$', ylabel='$\mu$V',
-                                  **ax_dict)
+        vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-4, 1e0], title='$V_m$', ylabel='mV', **ax_dict)
+        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-4, 1e-0], title='$V_m$', ylabel='mV', **ax_dict)
+        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-9, 1e-6], title='$I_m$', ylabel='nA', **ax_dict)
+        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-4, 1e-2], title='$I_m$', ylabel='nA', **ax_dict)
+        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-5, 1e-2], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
+        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-5, 1e-2], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
 
         # vm_ax_a = fig.add_subplot(2, 4, 1, title='$V_m$', ylabel='mV',  **ax_dict)
         # vm_ax_s = fig.add_subplot(2, 4, 5, title='$V_m$', ylabel='mV', **ax_dict)
@@ -1816,9 +1811,11 @@ if __name__ == '__main__':
 
     simulate = False
     # IntroFigures('hay', 'figure_2', True)
-    Figure3(0)
+    # Figure3(1)
     # Figure4(simulate)
+    InteractiveLFP()
     # FigureLinearization(False)
+
     # Hu_single_sinus(1, simulate)
     # IntroFigures('n120', 'figure_2').make_figure(do_simulations=False)
     # IntroFigures('c12861', 'figure_2').make_figure(do_simulations=False)
