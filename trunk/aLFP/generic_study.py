@@ -29,8 +29,8 @@ class GenericStudy:
         self.username = os.getenv('USER')
         self.root_folder = join('/home', self.username, 'work', 'aLFP')
         if at_stallo:
-            self.figure_folder = join('/global', self.username, 'work', 'aLFP', 'generic_study')
-            self.sim_folder = join('/global', self.username, 'work', 'aLFP', 'generic_study', cell_name)
+            self.figure_folder = join('/global', 'work', self.username, 'aLFP', 'generic_study')
+            self.sim_folder = join('/global', 'work', self.username, 'aLFP', 'generic_study', cell_name)
         else:
             self.figure_folder = join('/home', self.username, 'work', 'aLFP', 'generic_study')
             self.sim_folder = join('/home', self.username, 'work', 'aLFP', 'generic_study', cell_name)
