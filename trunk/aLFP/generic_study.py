@@ -15,7 +15,12 @@ import LFPy
 import aLFP
 from matplotlib.colors import LogNorm
 from scipy import stats
+from hay_active_declarations import active_declarations as hay_active
+from ca1_sub_declarations import active_declarations as ca1_active
+
 nrn = neuron.h
+
+
 
 class GenericStudy:
 
@@ -147,8 +152,6 @@ class GenericStudy:
         }
 
     def _return_cell(self, holding_potential, conductance_type, mu, distribution, tau_w):
-        from hay_active_declarations import active_declarations as hay_active
-        from ca1_sub_declarations import active_declarations as ca1_active
         neuron_models = join(self.root_folder, 'neuron_models')
         neuron.load_mechanisms(join(neuron_models))
 
