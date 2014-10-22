@@ -71,7 +71,6 @@ def return_freq_and_psd_welch(sig, welch_dict):
         pass
     else:
         raise RuntimeError("Not compatible with given array shape!")
-
     psd = []
     freqs = None
     for idx in xrange(sig.shape[0]):
