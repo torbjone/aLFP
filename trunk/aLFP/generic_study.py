@@ -17,10 +17,7 @@ from matplotlib.colors import LogNorm
 from scipy import stats
 from hay_active_declarations import active_declarations as hay_active
 from ca1_sub_declarations import active_declarations as ca1_active
-
 nrn = neuron.h
-
-
 
 class GenericStudy:
 
