@@ -10,12 +10,12 @@ folder=generic_study
 filename=generic_study.py
 
 cd /home/$USER/work/aLFP/trunk/aLFP
-#mkdir /global/work/torbness/aLFP/$folder
-#mkdir /global/work/torbness/aLFP/$folder/hay
-#cp $filename /global/work/torbness/aLFP/$folder
-#cd /global/work/torbness/aLFP/$folder/
+mkdir /global/work/torbness/aLFP/$folder
+mkdir /global/work/torbness/aLFP/$folder/hay
+cp $filename /global/work/torbness/aLFP/$folder
+cd /global/work/torbness/aLFP/$folder/
 
-maxpartasks=4
+maxpartasks=16
 
 WEIGHTS=(0.0001 0.0001 0.0005 0.001 0.005 0.01)
 MUS=(-0.5 0.0 2.0)
