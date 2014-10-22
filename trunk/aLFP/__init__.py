@@ -12,3 +12,5 @@ from spike_impact_simulation import *
 from ih_reach_impact import *
 from generic_study import *
 from plotting_convention import *
+import hay_active_declarations
+import ca1_sub_declarations

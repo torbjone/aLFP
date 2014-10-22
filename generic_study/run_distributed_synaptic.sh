@@ -23,7 +23,7 @@ MUS=(-0.5 0.0 2.0)
 for mu in ${MUS[@]}; do
     for w in ${WEIGHTS[@]}; do
         echo $mu, $w
-        #python $filename $mu $w &
+        python $filename $mu $w &
         activetasks=$(jobs | wc -l)
         while [ $activetasks -ge $maxpartasks ]; do
                sleep 1
