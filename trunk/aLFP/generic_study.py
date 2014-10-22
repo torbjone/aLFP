@@ -77,8 +77,8 @@ class GenericStudy:
             self._single_neural_sim_function = self._run_distributed_synaptic_simulation
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
-            self.cut_off = 1#00
-            self.end_t = 20#000
+            self.cut_off = 100
+            self.end_t = 20000
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
         elif self.input_type == 'real_wn':
