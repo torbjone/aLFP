@@ -1985,7 +1985,34 @@ class GenericStudy:
         fig.legend([l2, l1], ['Passive', 'Restorative'], frameon=False, ncol=2, loc='lower center')
         fig.savefig(join(self.figure_folder, 'resonance_test_%s_%d_%1.5f.png' % (distribution, input_idx, rotation)))
 
+    def distribute_cellsims_MPI(self):
+        """ Run with
+            openmpirun -np 4 python example_mpi.py
+        """
+        from mpi4py import MPI
+        COMM = MPI.COMM_WORLD
+        SIZE = COMM.Get_size()
+        RANK = COMM.Get_rank()
+        weights = np.array([0.0001, 0.0005, 0.001, 0.005, 0.01])
+        sim_num = 0
+        for weight in weights:
+            for mu in self.mus:
+                if divmod(sim_num, SIZE)[1] == RANK:
+                    print RANK, "simulating ", weight, mu
+                    self.run_all_distributed_synaptic_input_simulations(mu, weight)
+                sim_num += 1
+        COMM.Barrier()
+        print RANK, "reached this point"
+        plot_num = 0
+        for weight in weights:
+            if divmod(plot_num, SIZE)[1] == RANK:
+                print RANK, "plotting ", weight
+                self.LFP_with_distance_study(weight)
+            plot_num += 1
 
+
+        # if divmod(cellindex, SIZE)[1] == RANK:
+        #     self.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]), float(sys.argv[2]))
 if __name__ == '__main__':
 
     gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
@@ -1996,7 +2023,10 @@ if __name__ == '__main__':
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
     # gs.run_all_single_simulations()
-    if len(sys.argv) == 3:
-        gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]), float(sys.argv[2]))
-    else:
-        gs.LFP_with_distance_study(float(sys.argv[1]))
+
+    gs.distribute_cellsims_MPI()
+
+    # if len(sys.argv) == 3:
+    #     gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]), float(sys.argv[2]))
+    # else:
+    #     gs.LFP_with_distance_study(float(sys.argv[1]))

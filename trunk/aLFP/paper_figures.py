@@ -722,6 +722,7 @@ class IntroFigures():
         fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
         fig.savefig(join(self.figure_folder, '%s_%s.png' % (self.figure_name, self.cell_name)), dpi=200)
 
+
 class Figure4(PaperFigures):
 
     def __init__(self, weight, do_simulations=False):
@@ -790,8 +791,8 @@ class Figure4(PaperFigures):
 
         if do_simulations:
             self._do_all_simulations(weight)
-        # self.make_figure(self.apic_idx, -60, weight)
-        self.make_figure(self.soma_idx, -60, weight)
+        self.make_figure(self.apic_idx, -60, weight)
+        # self.make_figure(self.soma_idx, -60, weight)
         # self.make_figure(self.apic_idx, -80)
         # self.make_figure(self.soma_idx, -80)
 
@@ -817,10 +818,10 @@ class Figure4(PaperFigures):
         self._draw_set_up_to_axis(ax_morph, input_idx, elec_x, elec_z)
         vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-2, 1e1], ylabel='mV', **ax_dict)
         vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-2, 1e1], ylabel='mV', **ax_dict)
-        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-6, 1e-3], title='Transmembrane\ncurrent', ylabel='nA', **ax_dict)
-        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-4, 1e-1], title='Transmembrane\ncurrent', ylabel='nA', **ax_dict)
+        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-4, 1e-0], title='Transmembrane\ncurrent', ylabel='nA', **ax_dict)
+        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-6, 1e-2], title='Transmembrane\ncurrent', ylabel='nA', **ax_dict)
         ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-4, 1e-1], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
-        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-3, 1e-0], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
+        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-4, 1e-1], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
         sig_ax_list = [vm_ax_s, vm_ax_a, im_ax_s, im_ax_a, ec_ax_s, ec_ax_a]
         [ax.grid(True) for ax in sig_ax_list]
         mark_subplots([vm_ax_a, im_ax_a, vm_ax_s, im_ax_s])
