@@ -2029,4 +2029,4 @@ if __name__ == '__main__':
     # if len(sys.argv) == 3:
     #     gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]), float(sys.argv[2]))
     # else:
-    #     gs.LFP_with_distance_study(float(sys.argv[1]))
+    #    gs.LFP_with_distance_study(float(sys.argv[1]))
