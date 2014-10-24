@@ -1218,6 +1218,16 @@ class GenericStudy:
 
     def _run_distributed_synaptic_simulation(self, mu, input_idx, distribution, tau_w, weight):
         plt.seed(1234)
+
+
+        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
+                                                        self.holding_potential, distribution, tau_w, weight)
+
+        if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
+            print "Skipping ", mu, input_idx, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
+            return
+
+
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_idx, weight)
@@ -2029,4 +2039,4 @@ if __name__ == '__main__':
     # if len(sys.argv) == 3:
     #     gs.run_all_distributed_synaptic_input_simulations(float(sys.argv[1]), float(sys.argv[2]))
     # else:
-    #     gs.LFP_with_distance_study(float(sys.argv[1]))
+    #    gs.LFP_with_distance_study(float(sys.argv[1]))
