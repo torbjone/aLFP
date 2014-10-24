@@ -1368,7 +1368,7 @@ class FigureLinearization(PaperFigures):
         if do_simulations:
             self._do_all_simulations(weight)
         self.make_figure(self.apic_idx, -80, weight)
-        self.make_figure(self.soma_idx, -80, weight)
+        #self.make_figure(self.soma_idx, -80, weight)
 
     def _do_all_simulations(self, weight):
         neural_sim = NeuralSimulations(self)
@@ -1399,10 +1399,10 @@ class FigureLinearization(PaperFigures):
 
         vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-5, 1e1], ylabel='mV', **ax_dict)
         vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-5, 1e1], ylabel='mV', **ax_dict)
-        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-9, 1e-5], title='$I_m$', ylabel='nA', **ax_dict)
-        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-5, 1e-1], title='$I_m$', ylabel='nA', **ax_dict)
-        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-6, 1e-2], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
-        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-5, 1e-1], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
+        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-5, 1e-1], title='$I_m$', ylabel='nA', **ax_dict)
+        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-8, 1e-4], title='$I_m$', ylabel='nA', **ax_dict)
+        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-5, 1e-1], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
+        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-6, 1e-2], title='$\Phi$', ylabel='$\mu$V', **ax_dict)
 
         # vm_ax_a = fig.add_subplot(2, 4, 1, title='$V_m$', ylabel='mV',  **ax_dict)
         # vm_ax_s = fig.add_subplot(2, 4, 5, title='$V_m$', ylabel='mV', **ax_dict)
@@ -1642,7 +1642,7 @@ if __name__ == '__main__':
     # IntroFigures('hay', 'figure_2', True)
     # Figure3(float(sys.argv[1]), False)
     # Figure4(float(sys.argv[1]), simulate)
-    FigureLinearization(float(sys.argv[1]), True)
+    FigureLinearization(float(sys.argv[1]), False)
 
     # Hu_single_sinus(1, simulate)
     # IntroFigures('n120', 'figure_2').make_figure(do_simulations=False)
