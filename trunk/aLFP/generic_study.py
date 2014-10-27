@@ -757,7 +757,7 @@ class GenericStudy:
         fig = plt.figure(figsize=[24, 12])
         fig.subplots_adjust(hspace=0.5, wspace=0.5, top=0.9, bottom=0.13,
                             left=0.04, right=0.98)
-        self._draw_setup_to_axis(fig, input_idx, plotpos=(1, 11, 3))
+        self._draw_setup_to_axis(fig, input_idx, weight, plotpos=(1, 11, 3))
         self._draw_all_elecs_with_distance(fig, distribution, tau_w, input_idx, weight)
         self._draw_membrane_signals_to_axes_distance_study(fig, distribution, tau_w, input_idx, weight)
 
@@ -1039,7 +1039,7 @@ class GenericStudy:
         filename = '%s_psd' % filename if self.plot_psd else filename
         fig.savefig(join(self.figure_folder, '%s.png' % filename))
 
-    def _draw_setup_to_axis(self, fig, input_idx, distribution=None, plotpos=152):
+    def _draw_setup_to_axis(self, fig, input_idx, weight, distribution=None, plotpos=152):
         if type(plotpos) is int:
             ax = fig.add_subplot(plotpos)
         else:
@@ -1072,8 +1072,8 @@ class GenericStudy:
         ax.plot(xmid[self.cell_plot_idxs], zmid[self.cell_plot_idxs], 'o', c='orange',
                 zorder=2, ms=15, mec='none')
         if type(input_idx) is str:
-            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, 0,
-                                                        self.holding_potential, 'linear_increase', 30)
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%1.2f_%1.4f' % (self.cell_name, self.input_type, input_idx, 0,
+                                                        self.holding_potential, 'linear_increase', 30, weight)
             synidx = np.load(join(self.sim_folder, 'synidx_%s.npy' % sim_name))
             ax.plot(xmid[synidx], zmid[synidx], 'y.', zorder=3, ms=10)
         else:
@@ -2004,15 +2004,15 @@ class GenericStudy:
         SIZE = COMM.Get_size()
         RANK = COMM.Get_rank()
         weights = np.array([0.0001, 0.0005, 0.001, 0.005, 0.01])
-        sim_num = 0
-        for weight in weights:
-            for mu in self.mus:
-                if divmod(sim_num, SIZE)[1] == RANK:
-                    print RANK, "simulating ", weight, mu
-                    self.run_all_distributed_synaptic_input_simulations(mu, weight)
-                sim_num += 1
-        COMM.Barrier()
-        print RANK, "reached this point"
+        # sim_num = 0
+        # for weight in weights:
+        #     for mu in self.mus:
+        #         if divmod(sim_num, SIZE)[1] == RANK:
+        #             print RANK, "simulating ", weight, mu
+        #             self.run_all_distributed_synaptic_input_simulations(mu, weight)
+        #         sim_num += 1
+        # COMM.Barrier()
+        # print RANK, "reached this point"
         plot_num = 0
         for weight in weights:
             if divmod(plot_num, SIZE)[1] == RANK:
