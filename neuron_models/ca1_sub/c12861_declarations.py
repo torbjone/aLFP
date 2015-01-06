@@ -40,49 +40,52 @@ def test_steady_state(input_idx, hold_potential):
     }
 
     cell = LFPy.Cell(**cell_params)
+    for sec in cell.allseclist:
+        #bla = cell.get_idx(sec.name())
+        print sec.name()
 
-    apic_stim_idx = cell.get_idx('apic[66]')[0]
-    figfolder = join(model_path, 'verifications')
-    if not os.path.isdir(figfolder): os.mkdir(figfolder)
-
-    plt.seed(1234)
-    apic_tuft_idx = cell.get_closest_idx(-400, 0, -50)
-    trunk_idx = cell.get_closest_idx(-100, 0, 0)
-    axon_idx = cell.get_idx('axon_IS')[0]
-    basal_idx = cell.get_closest_idx(100, 100, 0)
-    soma_idx = 0
-
-    print input_idx, hold_potential
-    idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
-                         trunk_idx, axon_idx, basal_idx])
-
-    input_scaling = .01
-
-    sim_params = {'rec_vmem': True,
-                  'rec_imem': True,
-                  'rec_variables': []}
-    cell.simulate(**sim_params)
-
-    simfolder = join(model_path, 'simresults')
-    if not os.path.isdir(simfolder): os.mkdir(simfolder)
-
-    simname = join(simfolder, 'simple_%d_%1.3f' % (input_idx, input_scaling))
-    if 'use_channels' in cell_params['custom_fun_args'][0] and \
-                    len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
-        for ion in cell_params['custom_fun_args'][0]['use_channels']:
-            simname += '_%s' % ion
-    else:
-        simname += '_passive'
-
-    if 'hold_potential' in cell_params['custom_fun_args'][0]:
-        simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
-
-    [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
-    # plt.plot(cell.tvec, cell.somav)
-    plt.show()
-    #plot_cell_steady_state(cell)
+    # apic_stim_idx = cell.get_idx('apic[66]')[0]
+    # figfolder = join(model_path, 'verifications')
+    # if not os.path.isdir(figfolder): os.mkdir(figfolder)
+    #
+    # plt.seed(1234)
+    # apic_tuft_idx = cell.get_closest_idx(-400, 0, -50)
+    # trunk_idx = cell.get_closest_idx(-100, 0, 0)
+    # axon_idx = cell.get_idx('axon_IS')[0]
+    # basal_idx = cell.get_closest_idx(100, 100, 0)
+    # soma_idx = 0
+    #
+    # print input_idx, hold_potential
+    # idx_list = np.array([soma_idx, apic_stim_idx, apic_tuft_idx,
+    #                      trunk_idx, axon_idx, basal_idx])
+    #
+    # input_scaling = .01
+    #
+    # sim_params = {'rec_vmem': True,
+    #               'rec_imem': True,
+    #               'rec_variables': []}
+    # cell.simulate(**sim_params)
+    #
+    # simfolder = join(model_path, 'simresults')
+    # if not os.path.isdir(simfolder): os.mkdir(simfolder)
+    #
+    # simname = join(simfolder, 'simple_%d_%1.3f' % (input_idx, input_scaling))
+    # if 'use_channels' in cell_params['custom_fun_args'][0] and \
+    #                 len(cell_params['custom_fun_args'][0]['use_channels']) > 0:
+    #     for ion in cell_params['custom_fun_args'][0]['use_channels']:
+    #         simname += '_%s' % ion
+    # else:
+    #     simname += '_passive'
+    #
+    # if 'hold_potential' in cell_params['custom_fun_args'][0]:
+    #     simname += '_%+d' % cell_params['custom_fun_args'][0]['hold_potential']
+    #
+    # [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(len(cell.xmid))]
+    # # plt.plot(cell.tvec, cell.somav)
+    # plt.show()
+    # #plot_cell_steady_state(cell)
 
 if __name__ == '__main__':
-    aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
+    #aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
 
-    #test_steady_state(0, -80)
+    test_steady_state(0, -80)

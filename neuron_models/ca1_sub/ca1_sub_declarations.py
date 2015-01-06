@@ -415,7 +415,6 @@ def area_study(cell):
 def active_declarations(**kwargs):
     ''' Set active conductances for modified CA1 cell
     '''
-
     section_dict = make_section_lists(kwargs['cellname'])
     modify_morphology(section_dict, kwargs['cellname'])
     biophys_passive(section_dict, **kwargs)
@@ -599,10 +598,129 @@ def test_morphology(hold_potential, cellname):
         plt.show()
 
 
+def _make_WN_input(cell, max_freq):
+    """ White Noise input ala Linden 2010 is made """
+    tot_ntsteps = round((cell.tstopms - cell.tstartms)/\
+                  cell.timeres_NEURON + 1)
+    I = np.zeros(tot_ntsteps)
+    tvec = np.arange(tot_ntsteps) * cell.timeres_NEURON
+    for freq in xrange(1, max_freq + 1):
+        I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
+    return I
+
+def _make_white_noise_stimuli(cell, input_idx):
+
+    input_scaling = 0.0005
+    max_freq = 1000
+    input_array = input_scaling * _make_WN_input(cell, max_freq)
+
+    noise_vec = neuron.h.Vector(input_array)
+    i = 0
+    syn = None
+    for sec in cell.allseclist:
+        for seg in sec:
+            if i == input_idx:
+                print "Input i" \
+                      "nserted in ", sec.name()
+                syn = neuron.h.ISyn(seg.x, sec=sec)
+            i += 1
+    if syn is None:
+        raise RuntimeError("Wrong stimuli index")
+    syn.dur = 1E9
+    syn.delay = 0
+    noise_vec.play(syn._ref_amp, cell.timeres_NEURON)
+    return cell, syn, noise_vec
+
+
+def test_white_noise_input():
+
+    input = 'apic'
+    timeres = 2**-4
+    cut_off = 0
+    tstopms = 1000
+    tstartms = 0
+    cellname = 'c12861'
+    holding_potential = -60
+    model_path = cellname
+    use_channels = ['Im']
+    lambda_f = 100
+
+    cell_params = {
+        'morphology': join(model_path, '%s.hoc' % cellname),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init': holding_potential,             # initial crossmembrane potential
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': lambda_f,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': timeres,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+        'custom_fun': [active_declarations],  # will execute this function
+        'custom_fun_args': [{'use_channels': use_channels,
+                             'cellname': cellname,
+                             'hold_potential': holding_potential}],
+    }
+
+    cell = LFPy.Cell(**cell_params)
+
+    apic_idx = cell.get_closest_idx(x=0, y=0, z=350)
+    soma_idx = 0
+
+    if input is 'apic':
+        input_idx = apic_idx
+    else:
+        input_idx = soma_idx
+    plt.seed(1234)
+    print input_idx, holding_potential
+    sim_params = {'rec_vmem': True,
+                  'rec_imem': True}
+    import aLFP
+    num_elecs = 5
+    electrode_parameters = {
+            'sigma': 0.3,
+            'x': np.ones(num_elecs) * 100,
+            'y': np.zeros(num_elecs),
+            'z': np.linspace(-200, 600, num_elecs)
+    }
+    electrode = LFPy.RecExtElectrode(**electrode_parameters)
+    elec_clr = ['cyan', 'orange', 'pink', 'g', 'y']
+
+    cell, syn, noise_vec = _make_white_noise_stimuli(cell, input_idx)
+    cell.simulate(electrode=electrode, **sim_params)
+
+    freqs, [psd_s] = aLFP.return_freq_and_psd(cell.tvec, cell.imem[soma_idx, :])
+    freqs, [psd_a] = aLFP.return_freq_and_psd(cell.tvec, cell.imem[apic_idx, :])
+    freqs, psd_e = aLFP.return_freq_and_psd(cell.tvec, electrode.LFP)
+
+    plt.subplot(121, title="Number of compartments: %d" % cell.totnsegs)
+    [plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], c='k') for idx in xrange(cell.totnsegs)]
+    plt.plot(cell.xmid[soma_idx], cell.zmid[soma_idx], 'rD')
+    plt.plot(cell.xmid[apic_idx], cell.zmid[apic_idx], 'bD')
+    [plt.plot(electrode.x[idx], electrode.z[idx], 'o', c=elec_clr[idx]) for idx in xrange(num_elecs)]
+
+    plt.subplot(322, xlim=[1, 1000], title='Soma imem psd', ylim=[1e-8, 1e-4])
+    plt.loglog(freqs, psd_s)
+    plt.grid(True)
+
+    plt.subplot(324, xlim=[1, 1000], title='Apic imem psd', ylim=[1e-8, 1e-3])
+    plt.loglog(freqs, psd_a)
+    plt.grid(True)
+
+    plt.subplot(326, xlim=[1, 1000], title='LFP', ylim=[1e-10, 1e-5])
+    [plt.loglog(freqs, psd_e[idx], c=elec_clr[idx]) for idx in xrange(num_elecs)]
+    plt.grid(True)
+
+    plt.savefig('wn_test_Im_apic_whole.png')
+
 if __name__ == '__main__':
     # aLFP.explore_morphology(join('c12861', 'c12861.hoc'))
-    test_morphology(-60, 'c12861')
+    # test_morphology(-60, 'c12861')
     # test_steady_state(0, -80, 'c12861')
+
+    test_white_noise_input()
 
     # test_frozen_currents(0, -80, 'c12861')
     # test_frozen_currents(0, -70, 'c12861')

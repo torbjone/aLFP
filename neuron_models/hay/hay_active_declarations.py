@@ -50,7 +50,6 @@ def _get_total_area():
     total_area = 0
     for sec in nrn.allsec():
         for seg in sec:
-           # Never mind the units, as long as it is consistent
            total_area += nrn.area(seg.x)
     return total_area
 
@@ -65,8 +64,7 @@ def _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance):
     normalization = 0
     for sec in neuron.h.allsec():
         for seg in sec:
-            normalization += nrn.area(seg.x) * (decrease_factor - (decrease_factor - 1) *
-                                                nrn.distance(seg.x)/max_dist)
+            normalization += nrn.area(seg.x) * (decrease_factor - (decrease_factor - 1) * nrn.distance(seg.x)/max_dist)
     return total_conductance / normalization
 
 
@@ -87,16 +85,27 @@ def biophys_zuchkova(**kwargs):
 
 def biophys_generic(**kwargs):
 
+    v = kwargs['hold_potential']
+    if kwargs['tau_w'] is 'auto':
+        mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
+        mBeta = 0.001 * 193. * np.exp(v / 33.1)
+        tau_w = 1/(mAlpha + mBeta)
+        print "Ih calculated tau_w: ", tau_w
+    else:
+        tau_w = kwargs['tau_w']
+
+
     for sec in neuron.h.allsec():
         sec.insert("QA")
         sec.V_r_QA = kwargs['hold_potential']
-        sec.tau_w_QA = kwargs['tau_w']
+        sec.tau_w_QA = tau_w
         sec.Ra = 100
         sec.cm = 1.0
         sec.g_pas_QA = kwargs['g_pas']
 
-    total_w_conductance = kwargs['total_w_conductance']
+
     total_area = _get_total_area()
+    total_w_conductance = kwargs['average_w_conductance'] * total_area
     max_dist = _get_longest_distance()
 
     if kwargs['distribution'] == 'uniform':
@@ -128,7 +137,8 @@ def biophys_generic(**kwargs):
             seg.mu_QA = seg.g_w_QA / seg.g_pas_QA * kwargs['mu_factor']
 
     if np.abs(cond_check - total_w_conductance) < 1e-6:
-        print "Works", cond_check, total_w_conductance, cond_check - total_w_conductance
+        pass
+        #print "Works", cond_check, total_w_conductance, cond_check - total_w_conductance
     else:
         raise RuntimeError("Total conductance not as expected")
 

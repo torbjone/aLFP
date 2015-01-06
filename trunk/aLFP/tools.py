@@ -42,7 +42,6 @@ def return_dipole_stick(imem, ymid):
         stick_values[idx] += imem[comp]
     return stick_values[::-1] # Reverse array
 
-
 def make_white_noise(N):
     return np.random.random(N)
 
