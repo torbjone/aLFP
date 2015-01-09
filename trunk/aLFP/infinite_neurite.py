@@ -72,7 +72,7 @@ def infinite_axon_quasi_active(**kwargs):
         sec.g_pas_QA = 1 / 30000.
         sec.g_w_QA = 2 / 30000.
         for seg in sec:
-            if neuron.h.distance(seg.x) <= 50:
+            if neuron.h.distance(seg.x) <= 0:
                 seg.mu_QA = sec.g_w_QA / sec.g_pas_QA * kwargs['mu_factor_1']
             else:
                 seg.mu_QA = sec.g_w_QA / sec.g_pas_QA * kwargs['mu_factor_2']
