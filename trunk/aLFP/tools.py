@@ -92,7 +92,7 @@ def return_freq_and_psd_welch(sig, welch_dict):
     for idx in xrange(sig.shape[0]):
         yvec_w, freqs = mlab.psd(sig[idx, :], **welch_dict)
         psd.append(yvec_w)
-    return freqs, np.sqrt(np.array(psd))
+    return freqs, np.array(psd)
 
 
 def return_psd(sig, neural_sim_params):
