@@ -399,7 +399,7 @@ class GenericStudy:
                                                             self.holding_potential, distribution,
                                                             tau)
             # LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.use_elec_idxs, :]
-            LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
+            LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
 
             # freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
             if self.input_type is 'distributed_synaptic':
@@ -426,7 +426,7 @@ class GenericStudy:
             line_names.append(self.mu_name_dict[mu])
 
         for ax in all_elec_ax:# + freq_ax:
-            ax.set_ylim([1e-16, 1e-8])
+            ax.set_ylim([1e-10, 1e-2])
         # for ax in freq_ax_norm:
         #     ax.set_ylim([1e-4, 2e0])
         fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower center')
@@ -473,7 +473,7 @@ class GenericStudy:
         freq_line_styles = ['-', '--', ':']
         sim_name = '%s_%s_%d_%+d_%s' % (self.cell_name, self.input_type, input_idx,
                                         self.holding_potential, self.conductance)
-        LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
+        LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
         freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
         freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP)
 
@@ -558,7 +558,7 @@ class GenericStudy:
             [ax.set_xscale('log') for ax in ax_list]
             [ax.set_yscale('log') for ax in ax_list]
             [ax.grid(True) for ax in ax_list]
-            [ax.set_xlim([1e0, 5e2]) for ax in ax_list]
+            [ax.set_xlim([1e0, 450]) for ax in ax_list]
 
             for ax in [ax_vmem_1, ax_vmem_2, ax_vmem_3]:
                 max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()[1:]) for l in ax.get_lines()])))
@@ -742,7 +742,7 @@ class GenericStudy:
                     sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                                 self.holding_potential, distribution, tau_w)
                 # LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.use_elec_idxs, :]
-                LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
+                LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
                 freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
 
                 for elec in xrange(len(self.elec_z)):
@@ -788,7 +788,7 @@ class GenericStudy:
         elif type(input_idx) is str:
             filename = ('dist_syn_LFP_with_distance_%s_%s_%s_%s_%1.4f' % (self.cell_name, input_idx, distribution, tau, weight))
         else:
-            filename = ('LFP_with_distance_%s_%d_%s_%s' % (self.cell_name, input_idx, distribution, tau))
+            filename = ('aLFP_with_distance_%s_%d_%s_%s' % (self.cell_name, input_idx, distribution, tau))
         fig.savefig(join(self.figure_folder, '%s.png' % filename), dpi=150)
 
         # sys.exit()
@@ -928,7 +928,7 @@ class GenericStudy:
             # ax.plot(xvec, yvec, color=self.mu_clr[mu], lw=1, alpha=0.1)
             # print "Low freqs: ", xvec[:3]
             # max_freq = np.argmax(yvec_w[1:])
-            ax.set_title('Mean: %1.3f\nSTD: %1.3f' % (np.mean(sig[idx, :-1]), np.std(sig[idx, :-1])))
+            #ax.set_title('Mean: %1.3f\nSTD: %1.3f' % (np.mean(sig[idx, :-1]), np.std(sig[idx, :-1])))
             ax.plot(xvec, yvec, color=self.mu_clr[mu], lw=2)
             # if mu == 2.0:
             #     ax.set_xlabel('Max f: %1.1f Hz' % xvec_w[max_freq])
@@ -997,7 +997,7 @@ class GenericStudy:
         for mu in self.mus:
             sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                self.holding_potential, distribution, tau_w)
-            LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+            LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
             if hasattr(self, 'short_list_elecs'):
                 LFP = LFP[self.short_list_elecs, :]
             vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
@@ -1352,7 +1352,7 @@ class GenericStudy:
             for mu in self.mus:
                 sim_name = '%s_%s_%d_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, input_idx, mu,
                                                    self.holding_potential, dist, tau_w)
-                LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+                LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
                 lines.append(plt.plot(0, 0, color=self.mu_clr[mu], lw=2)[0])
                 line_names.append('$\mu_{factor} = %1.1f$' % mu)
                 self._plot_sig_to_axes([ax_3, ax_2, ax_1], LFP, tvec, mu)
@@ -1381,7 +1381,7 @@ class GenericStudy:
             for mu in self.mus:
                 sim_name = '%s_%s_multiple_%1.1f_%+d_%s_%1.2f' % (self.cell_name, self.input_type, mu,
                                                                   self.holding_potential, dist, tau_w)
-                LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+                LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
                 lines.append(plt.plot(0, 0, color=self.mu_clr[mu], lw=2)[0])
                 line_names.append('$\mu_{factor} = %1.1f$' % mu)
                 self._plot_sig_to_axes([ax_3, ax_2, ax_1], LFP, tvec, mu)
@@ -1445,7 +1445,7 @@ class GenericStudy:
     def run_all_single_simulations(self):
         distributions = ['linear_increase']#, 'linear_decrease', 'uniform']
         input_idxs = [605]#, 0]
-        tau_ws = ['auto0.1', 'auto10']#, 5, 500]
+        tau_ws = ['auto']#, 'auto10']#, 5, 500]
         make_summary_plot = True
         tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
         i = 1
@@ -1454,7 +1454,7 @@ class GenericStudy:
                 for tau_w in tau_ws:
                     for mu in self.mus:
                         print "%d / %d" % (i, tot_sims)
-                        self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
+                        #self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
                         i += 1
                     if make_summary_plot:
                         self._plot_LFP_with_distance(distribution, tau_w, input_idx)
@@ -1463,13 +1463,13 @@ class GenericStudy:
 
     def LFP_with_distance_study(self, weight):
         self._set_extended_electrode()
-        #weights = [0.0001, 0.0005, 0.001, 0.005, 0.01]
-        for tau_w in ['auto']: #, 1, 100]:
-            for distribution in ['linear_increase']:#, 'uniform', 'linear_decrease']:
-                for input_idx in ['tuft', 'distal_tuft']: #self.cell_plot_idxs[:1]:
+
+        for tau_w in ['auto']:
+            for distribution in ['linear_increase']:
+                for input_idx in ['homogeneous', 'tuft', 'distal_tuft']:
                     print tau_w, distribution, input_idx
                     self._plot_LFP_with_distance(distribution, tau_w, input_idx, weight)
-                # self._plot_LFP_with_distance(distribution, tau_w, self.cell_plot_idxs[::2], weight)
+
 
     def q_value_study(self):
         #self._set_extended_electrode()
@@ -1506,8 +1506,8 @@ class GenericStudy:
         if self.conductance is 'active':
             sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
         else:
-            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, input_idx, 2.0,
-                                                        self.holding_potential, distribution, tau)
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, str(input_idx), 2.0,
+                                                        self.holding_potential, distribution, tau, 0.0001)
 
         vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
         imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
@@ -1563,8 +1563,8 @@ class GenericStudy:
         if self.conductance is 'active':
             sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
         else:
-            sim_name = '%s_%s_%d_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, input_idx, 2.0,
-                                                     self.holding_potential, distribution, tau)
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, str(input_idx), 2.0,
+                                                     self.holding_potential, distribution, tau, 0.0001)
         distances = np.linspace(-2000, 2000, 60)
         heights = np.linspace(1600, -400, 30)
         elec_x, elec_z = np.meshgrid(distances, heights)
@@ -1591,7 +1591,7 @@ class GenericStudy:
             cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
             electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
             electrode.calc_lfp()
-            LFP = electrode.LFP
+            LFP = 1000 * electrode.LFP
             freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
             np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
             np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
@@ -1634,31 +1634,41 @@ class GenericStudy:
         q = max_value / dc
 
         max_q_value = 9.
-
+        levels = [1e-6]
         img_freq = freq_ax.imshow(freq_at_max, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
                         vmin=1, vmax=500., aspect=1, norm=LogNorm(), interpolation='none')
+
         img_q = q_ax.imshow(q[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
                         vmin=1, vmax=max_q_value, aspect=1, interpolation='none')
         img_q_res = q_res_ax.imshow(res_amp/dc, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
                         vmin=1, vmax=max_q_value, aspect=1, interpolation='none')
         img_amp = amp_ax.imshow(max_value[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), vmin=1e-15, vmax=1e-8, interpolation='none')
-        img_dc = dc_ax.imshow(dc[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), vmin=1e-15, vmax=1e-8, interpolation='none')
-        img_res = res_ax.imshow(res_amp[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), vmin=1e-15, vmax=1e-8, interpolation='none')
+                        aspect=1, norm=LogNorm(), vmin=1e-8, vmax=1e-2, interpolation='none')
 
+        img_dc = dc_ax.imshow(dc[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=1, norm=LogNorm(), vmin=1e-8, vmax=1e-2, interpolation='none')
+        img_res = res_ax.imshow(res_amp[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=1, norm=LogNorm(), vmin=1e-8, vmax=1e-2, interpolation='none')
+
+        amp_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=1, norm=LogNorm(), origin='upper')
+        #dc_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                aspect=1, norm=LogNorm(), origin='upper')
+        q_res_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=1, norm=LogNorm(), origin='upper')
+        freq_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=1, norm=LogNorm(), origin='upper')
+        q_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                        aspect=1, norm=LogNorm(), origin='upper')
 
         xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
         zend = np.load(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)))
-        xmid = np.load(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
 
         for ax in [freq_ax, q_ax, q_res_ax, amp_ax, dc_ax, res_ax]:
             [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color='w', zorder=2)
-             for idx in xrange(len(xmid))]
+             for idx in xrange(len(xstart))]
 
         amp_ax.plot([np.max(distances) + 100, np.max(distances) + 100], [0, 500], lw=5, c='k', clip_on=False)
         amp_ax.text(np.max(distances) + 200, 200, '500 $\mu m$')
@@ -1678,15 +1688,15 @@ class GenericStudy:
         fig = plt.figure(figsize=[16, 12])
 
         fig.subplots_adjust(hspace=0.5, wspace=0.5, top=0.9, bottom=0.13, left=0.04, right=0.98)
-        self._draw_membrane_signals_to_axes_q_value_colorplot(fig, input_idx, distribution, tau_w)
+        #self._draw_membrane_signals_to_axes_q_value_colorplot(fig, input_idx, distribution, tau_w)
         self._draw_elecs_q_value_colorplot(fig, input_idx, distribution, tau_w)
         tau = '%1.2f' % tau_w if type(tau_w) in [float, int] else tau_w
         if self.conductance is 'active':
-            filename = ('color_q_value_%s_%d_%s' % (self.cell_name, input_idx, self.conductance))
+            filename = ('color_q_value_%s_%s_%s' % (self.cell_name, str(input_idx), self.conductance))
         else:
-            filename = ('color_q_value_%s_%d_%s_%s_%s' %
-                        (self.cell_name, input_idx, self.conductance, distribution, tau))
-        fig.savefig(join(self.figure_folder, 'q_value', '%s_freq.png' % filename), dpi=150)
+            filename = ('color_q_value_%s_%s_%s_%s_%s' %
+                        (self.cell_name, str(input_idx), self.conductance, distribution, tau))
+        fig.savefig(join(self.figure_folder, 'q_value', '%s.png' % filename), dpi=150)
 
     def active_q_values_colorplot(self):
         for input_idx in [0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:
@@ -1694,8 +1704,8 @@ class GenericStudy:
 
     def generic_q_values_colorplot(self):
         for tau_w in ['auto']:
-            for distribution in ['linear_increase', 'linear_decrease', 'uniform']:
-                for input_idx in [605, 0]:
+            for distribution in ['linear_increase']:#, 'linear_decrease', 'uniform']:
+                for input_idx in ['distal_tuft']:#, 0]:
                     print distribution, input_idx, tau_w
                     self._q_value_study_colorplot(input_idx, distribution, tau_w)
                     #sys.exit()
@@ -1985,7 +1995,7 @@ class GenericStudy:
         cell.set_rotation(z=rotation)
         electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
         electrode.calc_lfp()
-        LFP = electrode.LFP
+        LFP = 1000 * electrode.LFP
         return aLFP.return_freq_and_psd(cell.tvec[1] / 1000., LFP)
 
     def one_resonance_plot(self, rotation):
@@ -2051,16 +2061,17 @@ class GenericStudy:
         COMM = MPI.COMM_WORLD
         SIZE = COMM.Get_size()
         RANK = COMM.Get_rank()
-        weights = np.array([0.0001, 0.0005, 0.001, 0.005, 0.01])
-        # sim_num = 0
-        # for weight in weights:
-        #     for mu in self.mus:
-        #         if divmod(sim_num, SIZE)[1] == RANK:
-        #             print RANK, "simulating ", weight, mu
-        #             self.run_all_distributed_synaptic_input_simulations(mu, weight)
-        #         sim_num += 1
-        # COMM.Barrier()
-        # print RANK, "reached this point"
+        weights = np.array([0.0001, 0.0005])
+        sim_num = 0
+        for weight in weights:
+            for input_sec in ['homogeneous', 'tuft', 'distal_tuft']:
+                for mu in self.mus:
+                    if divmod(sim_num, SIZE)[1] == RANK:
+                        print RANK, "simulating ", weight, mu
+                        self._run_distributed_synaptic_simulation(mu, input_sec, 'linear_increase', 'auto', weight)
+                sim_num += 1
+        COMM.Barrier()
+        print RANK, "reached this point"
         plot_num = 0
         for weight in weights:
             if divmod(plot_num, SIZE)[1] == RANK:
@@ -2074,17 +2085,17 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    # gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
+    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
     # gs.run_all_multiple_input_simulations()
     # gs.run_all_single_simulations()
-    # gs.generic_q_values_colorplot()
+    gs.generic_q_values_colorplot()
     # gs.q_value_study()
     # gs.active_q_values_colorplot()
 
     # gs.distribute_cellsims_MPI()
 
-    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
-    # gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
-
-
-    gs.LFP_with_distance_study(0.0001)
+    # gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
+    # if len(sys.argv) == 3:
+    #     gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
+    # else:
+    #     gs.LFP_with_distance_study(0.0001)

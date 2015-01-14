@@ -377,7 +377,7 @@ class PaperFigures():
         self.figure_folder = join('/home', 'torbjone', 'work', 'aLFP', 'paper_figures')
         self.root_folder = join('/home', 'torbjone', 'work', 'aLFP')
 
-    def _draw_morph_to_axis(self, ax, input_pos, distribution=None):
+    def _draw_morph_to_axis(self, ax, input_pos, ic_comp=None, distribution=None):
 
         xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
@@ -388,6 +388,8 @@ class PaperFigures():
 
         if type(input_pos) is int:
             ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=2, ms=10)
+        elif type(input_pos) in [list, np.ndarray]:
+            ax.plot(xmid[input_pos], zmid[input_pos], 'k.', zorder=2, ms=3)
 
         if distribution is None:
             clr_list = ['0.5' for idx in xrange(len(xmid))]
@@ -395,7 +397,8 @@ class PaperFigures():
             color_at_pos = lambda d: plt.cm.hot(int(256./1500 * d))
             dist = np.sqrt(xmid**2 + zmid**2)
             clr_list = [color_at_pos(dist[idx]) for idx in xrange(len(xmid))]
-            ax.scatter(xmid[0], zmid[0], c='orange', edgecolor='none', s=50)
+            if not ic_comp is None:
+                ax.scatter(xmid[ic_comp], zmid[ic_comp], c='orange', edgecolor='none', s=50)
         else:
             raise NotImplementedError("Implement other dists to use this")
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1.5, color=clr_list[idx], zorder=0, alpha=1)
@@ -583,7 +586,6 @@ class IntroFigures():
         self.end_t = 1000 * self.repeats
         self.start_t = 0
         self.sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_white_noise')
-
         self.ec_ax_dict = {'frameon': True,
                            'xticks': [1e0, 1e1, 1e2],
                            'xticklabels': [],
@@ -592,6 +594,7 @@ class IntroFigures():
                            'ylim': [1e-6, 1e-2],
                            'xlim': [1, 500]}
         self.clip_on = True
+
     def _set_synaptic_properties(self):
 
         self.start_t = 0
@@ -618,13 +621,11 @@ class IntroFigures():
         self.plot_positions = np.array([self.elec_x, self.elec_y, self.elec_z]).T
         self.conductance_types = ['active', 'passive']
         self.conductance_name_dict = {'active': 'Active',
-                                      'passive': 'Passive'
-        }
+                                      'passive': 'Passive'}
         self.soma_idx = 0
         self.apic_idx = 852
         self.use_elec_idxs = [8, 36, 26, 67, 85]
         self.ax_dict = {'ylim': [-300, 1300], 'xlim': [-400, 400]}
-
 
     def _draw_morph_to_axis(self, ax, input_pos):
         xstart = np.load(join(self.sim_folder, 'xstart_%s.npy' % self.type_name))
@@ -1658,8 +1659,8 @@ class FigureSystematic(PaperFigures):
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
         self.holding_potential = -80
-        self.elec_apic_idx = 1
-        self.elec_soma_idx = 13
+        self.elec_apic_idx = 0
+        self.elec_soma_idx = 12
         self.soma_idx = 0
         self.tau_w = 'auto'
         self.numrows = 6
@@ -1825,7 +1826,6 @@ class FigureNeurite(PaperFigures):
         self.mu_name_dict = {'-0.5': 'Regenerative ($\mu_{factor} = -0.5$)',
                              '0.0': 'Passive ($\mu_{factor} = 0$)',
                              '2.0': 'Restorative ($\mu_{factor} = 2$)'}
-
         self.mu_clr = {'-0.5': 'r',
                        '0.0': 'k',
                        '2.0': 'b'}
@@ -1890,7 +1890,7 @@ class FigureNeurite(PaperFigures):
     def _initialize_figure(self):
         plt.close('all')
         self.fig = plt.figure(figsize=[5, 10])
-        self.fig.subplots_adjust(hspace=0.55, wspace=0.55, bottom=0.1, top=0.95)
+        self.fig.subplots_adjust(hspace=0.55, wspace=0.55, bottom=0.2, top=0.95, left=0.17, right=0.96)
         self._draw_neurite()
         ax_dict = {'xlim': [1, 450], 'xscale': 'log', 'yscale': 'log'}
 
@@ -1929,6 +1929,9 @@ class FigureNeurite(PaperFigures):
         for ax in ax_list:
             max_exponent = np.ceil(np.log10(np.max([np.max(l.get_ydata()[1:]) for l in ax.get_lines()])))
             ax.set_ylim([10**(max_exponent - 3), 2*10**max_exponent])
+            ax.set_yticks(ax.get_yticks()[::4])
+            ax.set_xticks([1, 10, 100])
+            ax.set_xticklabels(['1', '', '100'])
 
         lines = []
         line_names = []
@@ -1936,8 +1939,7 @@ class FigureNeurite(PaperFigures):
             l, = plt.plot(0, 0, color=self.mu_clr[conductance_type], lw=2)
             lines.append(l)
             line_names.append(self.mu_name_dict[conductance_type])
-        self.fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
-
+        self.fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=1)
         self.fig.savefig(join(self.figure_folder, '%s.png' % self.figure_name), dpi=150)
 
     def _plot_sigs(self):
@@ -2077,6 +2079,113 @@ class FigureTimeConstant(PaperFigures):
         ax2.loglog(freqs, vmem_psd[0], c=self.mu_clr[mu], lw=2)
 
 
+class FigureDistributedSynaptic(PaperFigures):
+
+    def __init__(self):
+        PaperFigures.__init__(self)
+        self.cell_name = 'hay'
+        self.figure_name = 'figure_distributed_synaptic'
+        self.conductance = 'generic'
+        self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
+        self.timeres = 2**-4
+        self.holding_potential = -80
+        self.soma_idx = 0
+        self.apic_idx = 605
+        self.input_idx = self.apic_idx
+        self.elec_idx = 13
+        self.distribution = 'linear_increase'
+        self.input_secs = ['distal_tuft', 'tuft', 'homogeneous']
+        self.mus = [-0.5, 0, 2]
+        self.mu_name_dict = {-0.5: 'Regenerative ($\mu_{factor} = -0.5$)',
+                             0: 'Passive ($\mu_{factor} = 0$)',
+                             2: 'Restorative ($\mu_{factor} = 2$)'}
+        self.input_type = 'distributed_synaptic'
+        self.tau_w = 'auto'
+        self.weight = 0.0001
+
+
+        self.mu_clr = {-0.5: 'r',
+                       0: 'k',
+                       2: 'b'}
+        self._initialize_figure()
+        self.make_figure()
+        self._finitialize_figure()
+
+    def _initialize_figure(self):
+        elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
+        elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
+
+        plt.close('all')
+        self.fig = plt.figure(figsize=[10, 4])
+        self.fig.subplots_adjust(hspace=0.3, wspace=0.9, bottom=0.3, left=0.17, right=0.98)
+        self.ax_morph_1 = self.fig.add_axes([0., 0.2, 0.15, 0.8], aspect='equal')
+        self.ax_morph_2 = self.fig.add_axes([0.32, 0.2, 0.15, 0.8], aspect='equal')
+        self.ax_morph_3 = self.fig.add_axes([0.64, 0.2, 0.15, 0.8], aspect='equal')
+        self.ax_morph_1.axis('off')
+        self.ax_morph_2.axis('off')
+        self.ax_morph_3.axis('off')
+        mark_subplots(self.fig.axes, 'ABC', xpos=0.3, ypos=.95)
+
+        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, 'distal_tuft', 2.0,
+                                                           self.holding_potential, self.distribution, 'auto', self.weight)
+        input_1 = np.load(join(self.sim_folder, 'synidx_%s.npy' % sim_name))
+        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, 'tuft', 2.0,
+                                                           self.holding_potential, self.distribution, 'auto', self.weight)
+        input_2 = np.load(join(self.sim_folder, 'synidx_%s.npy' % sim_name))
+
+
+        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, 'homogeneous', 2.0,
+                                                           self.holding_potential, self.distribution, 'auto', self.weight)
+        input_3 = np.load(join(self.sim_folder, 'synidx_%s.npy' % sim_name))
+        self._draw_morph_to_axis(self.ax_morph_1, input_1, distribution=self.distribution)
+        self._draw_morph_to_axis(self.ax_morph_2, input_2, distribution=self.distribution)
+        self._draw_morph_to_axis(self.ax_morph_3, input_3, distribution=self.distribution)
+        self.ax_morph_1.scatter(elec_x[self.elec_idx], elec_z[self.elec_idx], c='cyan', edgecolor='none', s=50)
+        self.ax_morph_2.scatter(elec_x[self.elec_idx], elec_z[self.elec_idx], c='cyan', edgecolor='none', s=50)
+        self.ax_morph_3.scatter(elec_x[self.elec_idx], elec_z[self.elec_idx], c='cyan', edgecolor='none', s=50)
+
+    def _finitialize_figure(self):
+        lines = []
+        line_names = []
+        for mu in self.mus:
+            l, = plt.plot(0, 0, color=self.mu_clr[mu], lw=2)
+            lines.append(l)
+            line_names.append(self.mu_name_dict[mu])
+        self.fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
+        simplify_axes(self.fig.axes)
+        self.fig.savefig(join(self.figure_folder, '%s_%s.png' % (self.figure_name, self.cell_name)), dpi=150)
+
+    def make_figure(self):
+        for numb, input_sec in enumerate(self.input_secs):
+            self._plot_sigs(numb, input_sec)
+
+    def _plot_sigs(self, numb, input_sec):
+
+        tau = '%1.2f' % self.tau_w if type(self.tau_w) in [int, float] else self.tau_w
+        freqs = None
+        LFP_dict = {}
+        for mu in self.mus:
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_sec, mu,
+                                                           self.holding_potential, self.distribution, tau, self.weight)
+            LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.elec_idx, :-1]
+            num_tsteps = len(LFP)
+            divide_into_welch = 16.
+            welch_dict = {'Fs': 1000 / self.timeres,
+                               'NFFT': int(num_tsteps/divide_into_welch),
+                               'noverlap': int(num_tsteps/divide_into_welch/2.),
+                               'window': plt.window_hanning,
+                               'detrend': plt.detrend_mean,
+                               'scale_by_freq': True,
+                               }
+            freqs, LFP_psd = aLFP.return_freq_and_psd_welch(LFP, welch_dict)
+            LFP_dict[mu] = LFP_psd
+
+        normalize = np.max([np.max(sig) for key, sig in LFP_dict.items()])
+        ax_dict = {'xlim': [1, 450], 'xlabel': 'Hz', 'ylabel': 'Norm. LFP PSD'}
+        ax0 = self.fig.add_subplot(1, 3, numb + 1, ylim=[1e-2, 1e0], **ax_dict)
+        for key, sig in LFP_dict.items():
+            ax0.loglog(freqs, sig[0] / normalize, c=self.mu_clr[key], lw=2)
+
 
 if __name__ == '__main__':
 
@@ -2088,6 +2197,4 @@ if __name__ == '__main__':
     # FigureSystematic()
     # FigureTimeConstant()
     FigureNeurite(do_simulations=False).make_figure()
-
-    # Hu_single_sinus(1, simulate)
-    #IntroFigures('c12861', 'figure_2').make_figure(do_simulations=False)
+    # FigureDistributedSynaptic()
