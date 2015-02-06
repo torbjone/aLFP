@@ -10,18 +10,16 @@ def active_declarations(**kwargs):
         sec.insert("QA")
         sec.V_r_QA = -80.
         v = -80.
-        mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
-        mBeta = 0.001 * 193. * np.exp(v / 33.1)
-        tau_w = 1/(mAlpha + mBeta)
-
-
-        sec.tau_w_QA = tau_w
-        sec.Ra = 150.
+        # mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
+        # mBeta = 0.001 * 193. * np.exp(v / 33.1)
+        # tau_w = 1/(mAlpha + mBeta)
+        sec.tau_w_QA = 50
+        sec.Ra = 100.
         sec.cm = 1.0
-        sec.g_pas_QA = 0.0001
-        sec.g_w_QA = 0.0001 * 5
+        sec.g_pas_QA = 0.00005
+        sec.g_w_QA = 0.00005
         for seg in sec:
-            if neuron.h.distance(seg.x) <= 50:
+            if neuron.h.distance(seg.x) <= 100:
                 seg.mu_QA = sec.g_w_QA / sec.g_pas_QA * kwargs['mu_factor_1']
             else:
                 seg.mu_QA = sec.g_w_QA / sec.g_pas_QA * kwargs['mu_factor_2']

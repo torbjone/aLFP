@@ -30,11 +30,11 @@ def make_cell_uniform(Vrest=-80):
             if neuron.h.ismembrane("Ih_frozen"):
                 seg.e_pas += seg.ihcn_Ih_frozen/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_mod"):
-                seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_mod/seg.g_pas
+                seg.e_pas += seg.ihcn_Ih_linearized_mod/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_v2"):
-                seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_v2/seg.g_pas
+                seg.e_pas += seg.ihcn_Ih_linearized_v2/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_v2_frozen"):
-                seg.e_pas = seg.e_pas + seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
+                seg.e_pas += seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
 
 def _get_longest_distance():
 
@@ -87,9 +87,9 @@ def biophys_generic(**kwargs):
 
     v = kwargs['hold_potential']
     if 'auto' in kwargs['tau_w']:
-        mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
-        mBeta = 0.001 * 193. * np.exp(v / 33.1)
-        tau = 1/(mAlpha + mBeta)
+        # mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
+        # mBeta = 0.001 * 193. * np.exp(v / 33.1)
+        tau = 50 #1/(mAlpha + mBeta)
         if '0.1' in kwargs['tau_w']:
             print "1/10th of auto"
             tau_w = tau * 0.1
@@ -110,7 +110,6 @@ def biophys_generic(**kwargs):
         sec.cm = 1.0
         sec.g_pas_QA = kwargs['g_pas']
 
-
     total_area = _get_total_area()
     total_w_conductance = kwargs['average_w_conductance'] * total_area
     max_dist = _get_longest_distance()
@@ -120,7 +119,7 @@ def biophys_generic(**kwargs):
             for seg in sec:
                 seg.g_w_QA = total_w_conductance / total_area
     elif kwargs['distribution'] == 'linear_increase':
-        increase_factor = 100
+        increase_factor = 60
         conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_w_conductance)
         nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
@@ -128,7 +127,7 @@ def biophys_generic(**kwargs):
                 seg.g_w_QA = conductance_factor * (1 + (increase_factor - 1) * nrn.distance(seg.x) / max_dist)
 
     elif kwargs['distribution'] == 'linear_decrease':
-        decrease_factor = 100
+        decrease_factor = 60
         conductance_factor = _get_linear_decrease_factor(decrease_factor, max_dist, total_w_conductance)
         nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
@@ -735,7 +734,7 @@ def make_syaptic_stimuli(cell, input_idx):
         'e': 0.,                   # reversal potential
         'syntype': 'ExpSyn',       # synapse type
         'tau': 10.,                # syn. time constant
-        'weight': 0.001,            # syn. weight
+        'weight': 0.00145,            # syn. weight
         'record_current': True,
     }
     synapse = LFPy.Synapse(cell, **synapse_parameters)
@@ -754,7 +753,7 @@ def active_declarations(**kwargs):
 def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
 
     timeres = 2**-4
-    cut_off = 0
+    cut_off = 2000
     tstopms = 150
     tstartms = -cut_off
     model_path = join('lfpy_version')
@@ -783,13 +782,12 @@ def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
     make_syaptic_stimuli(cell, input_idx)
     cell.simulate(rec_vmem=True, rec_imem=True)
 
-    plt.subplot(211, title='Soma')
+    plt.subplot(211, title='Soma', ylim=[holding_potential-1.5, holding_potential+2.5])
     plt.plot(cell.tvec, cell.vmem[0, :], label='%d %s %d mV' % (input_idx, conductance_type,
                                                                 holding_potential))
 
-    plt.subplot(212, title='Input idx %d' % input_idx)
-    plt.plot(cell.tvec, cell.vmem[input_idx, :], label='%d %s %d mV' % (input_idx, conductance_type,
-                                                           holding_potential))
+    plt.subplot(212, title='Shifted', ylim=[-0.5, 3])
+    plt.plot(cell.tvec, cell.vmem[input_idx, :] - cell.vmem[input_idx, 0])
 
 def test_frozen_currents(input_idx, holding_potential):
 
@@ -809,17 +807,17 @@ def test_frozen_currents(input_idx, holding_potential):
 def test_steady_state():
 
     timeres = 2**-4
-    cut_off = 0
-    tstopms = 100
+    cut_off = 6000
+    tstopms = 1000
     tstartms = -cut_off
     model_path = join('lfpy_version')
-
+    neuron.load_mechanisms('mod')
     cell_params = {
         'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
         #'rm' : 30000,               # membrane resistance
         #'cm' : 1.0,                 # membrane capacitance
         #'Ra' : 100,                 # axial resistance
-        'v_init': -80,             # initial crossmembrane potential
+        'v_init': -60,             # initial crossmembrane potential
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
         'lambda_f': 100,           # segments are isopotential at this frequency
@@ -829,8 +827,8 @@ def test_steady_state():
         'tstopms': tstopms,
         'custom_code': [join(model_path, 'custom_codes.hoc')],
         'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{'conductance_type': 'passive',
-                             'hold_potential': -80}],
+        'custom_fun_args': [{'conductance_type': 'active',
+                             'hold_potential': -60}],
     }
 
     cell = LFPy.Cell(**cell_params)
@@ -838,6 +836,7 @@ def test_steady_state():
     cell.simulate(rec_vmem=True, rec_imem=True)
 
     plt.plot(cell.tvec, cell.somav)
+    plt.ylim([-60.1, -59.9])
     plt.show()
 
 def return_frozen_gh(holding_potential):
@@ -903,8 +902,10 @@ def plot_frozen_gh():
     plt.savefig('frozen_Ih_conductance.png')
 
 if __name__ == '__main__':
-
-    plot_frozen_gh()
+    #test_steady_state()
+    simulate_synaptic_input(0, -65, 'active')
+    plt.savefig('Ca_initiation_testing_-65_inited_long_cutoff.png')
+    #plot_frozen_gh()
     # test_frozen_currents(0, -80)
     # test_frozen_currents(0, -70)
     # test_frozen_currents(0, -60)
