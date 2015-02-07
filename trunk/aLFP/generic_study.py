@@ -1548,12 +1548,12 @@ class GenericStudy:
 
         ax_dict = {'frame_on': False, 'xticks': [], 'yticks': []}
 
-        amp_ax = fig.add_subplot(332, **ax_dict)
-        dc_ax = fig.add_subplot(333, **ax_dict)
-        freq_ax = fig.add_subplot(335, **ax_dict)
-        res_ax = fig.add_subplot(336, **ax_dict)
-        q_ax = fig.add_subplot(3, 3, 8, **ax_dict)
-        q_res_ax = fig.add_subplot(3, 3, 9, **ax_dict)
+        amp_ax = fig.add_axes([0., 0.3, 0.8, 0.6], **ax_dict)
+        # dc_ax = fig.add_subplot(333, **ax_dict)
+        freq_ax = fig.add_subplot(325, **ax_dict)
+        # res_ax = fig.add_subplot(336, **ax_dict)
+        q_ax = fig.add_subplot(326, **ax_dict)
+        # q_res_ax = fig.add_subplot(3, 3, 9, **ax_dict)
 
         aLFP.mark_subplots(fig.axes)
 
@@ -1563,8 +1563,8 @@ class GenericStudy:
         else:
             sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, str(input_idx), 2.0,
                                                      self.holding_potential, distribution, tau)
-        distances = np.linspace(-2000, 2000, 60)
-        heights = np.linspace(1600, -400, 30)
+        distances = np.linspace(-2500, 2500, 100)
+        heights = np.linspace(1850, -650, 50)
         elec_x, elec_z = np.meshgrid(distances, heights)
         elec_x = elec_x.flatten()
         elec_z = elec_z.flatten()
@@ -1576,6 +1576,10 @@ class GenericStudy:
                 'y': elec_y,
                 'z': elec_z
         }
+
+        lfp_trace_positions = np.array([[200, 0], [200, 475], [200, 950], [200, 1425]])
+
+        lfp_trace_elec_idxs = [np.argmin((elec_x - dist)**2 + (elec_z - height)**2) for dist, height in lfp_trace_positions]
 
         if 1:
             print "Recalculating extracellular potential"
@@ -1631,48 +1635,52 @@ class GenericStudy:
 
         amp_ax.set_title('Max amplitude')
         freq_ax.set_title('Frequency at max amplitude\n(Mode: %1.1f Hz)' % res_freq)
-        dc_ax.set_title('Amplitude at %1.1f Hz' % freqs[1])
-        res_ax.set_title('Amplitude at %1.1f Hz' % freqs[res_idx])
+        # dc_ax.set_title('Amplitude at %1.1f Hz' % freqs[1])
+        # res_ax.set_title('Amplitude at %1.1f Hz' % freqs[res_idx])
         q_ax.set_title('q-value\nMax amp / amp[%1.1f Hz]' % freqs[1])
-        q_res_ax.set_title('q-value\namp[%1.1f Hz] / amp[%1.1f Hz]' % (freqs[res_idx], freqs[1]))
+        # q_res_ax.set_title('q-value\namp[%1.1f Hz] / amp[%1.1f Hz]' % (freqs[res_idx], freqs[1]))
         q = max_value / dc
 
         max_q_value = 9.
         levels = [1e-6]
         vmin = 1e-8
-        vmax = 1e-2
-        img_freq = freq_ax.imshow(freq_at_max, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        vmin=1, vmax=500., aspect=1, norm=LogNorm(), interpolation='none')
+        vmax = 1e-3
 
-        img_q = q_ax.imshow(q[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        vmin=1, vmax=max_q_value, aspect=1, interpolation='none')
-        img_q_res = q_res_ax.imshow(res_amp/dc, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        vmin=1, vmax=max_q_value, aspect=1, interpolation='none')
-        img_amp = amp_ax.imshow(max_value[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), vmin=vmin, vmax=vmax, interpolation='none')
+        imshow_dict = {'extent': [np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                       'interpolation': 'none',
+                       'aspect': 1,
+                       }
 
-        img_dc = dc_ax.imshow(dc[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), vmin=vmin, vmax=vmax, interpolation='none')
-        img_res = res_ax.imshow(res_amp[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), vmin=vmin, vmax=vmax, interpolation='none')
+        img_amp = amp_ax.imshow(max_value[:, :],  norm=LogNorm(), vmin=vmin, vmax=vmax, cmap=plt.cm.bone_r, **imshow_dict)
+        img_freq = freq_ax.imshow(freq_at_max,  vmin=1, vmax=500., cmap=plt.cm.gray_r, norm=LogNorm(), **imshow_dict)
+        img_q = q_ax.imshow(q[:, :], vmin=1, vmax=max_q_value, cmap=plt.cm.gray_r, **imshow_dict)
 
-        amp_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), origin='upper')
+        amp_ax.plot(elec_x[lfp_trace_elec_idxs], elec_z[lfp_trace_elec_idxs], 'ro', ms=20)
+
+        # img_q_res = q_res_ax.imshow(res_amp/dc, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                 vmin=1, vmax=max_q_value, aspect=1, interpolation='none')
+        # img_dc = dc_ax.imshow(dc[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                 aspect=1, norm=LogNorm(), vmin=vmin, vmax=vmax, interpolation='none')
+        # img_res = res_ax.imshow(res_amp[:, :], extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                 aspect=1, norm=LogNorm(), vmin=vmin, vmax=vmax, interpolation='none')
+
+        # amp_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                 aspect=1, norm=LogNorm(), origin='upper')
         #dc_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
         #                aspect=1, norm=LogNorm(), origin='upper')
-        q_res_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), origin='upper')
-        freq_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), origin='upper')
-        q_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                        aspect=1, norm=LogNorm(), origin='upper')
+        # q_res_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                 aspect=1, norm=LogNorm(), origin='upper')
+        # freq_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                 aspect=1, norm=LogNorm(), origin='upper')
+        # q_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+        #                 aspect=1, norm=LogNorm(), origin='upper')
 
         xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
         zend = np.load(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)))
 
-        for ax in [freq_ax, q_ax, q_res_ax, amp_ax, dc_ax, res_ax]:
+        for ax in [freq_ax, q_ax, amp_ax]:
             [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color='w', zorder=2)
              for idx in xrange(len(xstart))]
 
@@ -1680,14 +1688,14 @@ class GenericStudy:
         amp_ax.text(np.max(distances) + 200, 200, '500 $\mu m$')
         clbar_args = {'orientation': 'horizontal', 'shrink': 0.7,
                       }
-        plt.colorbar(img_q, ax=q_ax, ticks=[1, 5, 9], **clbar_args)
-        plt.colorbar(img_q_res, ax=q_res_ax, ticks=[1, 5, 9], **clbar_args)
-        plt.colorbar(img_q_res, ax=fig.axes[0], ticks=[1, 5, 9], **clbar_args)
-        plt.colorbar(img_q_res, ax=fig.axes[1], ticks=[1, 5, 9], **clbar_args)
+        # plt.colorbar(img_q_res, ax=q_res_ax, ticks=[1, 5, 9], **clbar_args)
+        # plt.colorbar(img_q_res, ax=fig.axes[0], ticks=[1, 5, 9], **clbar_args)
+        # plt.colorbar(img_q_res, ax=fig.axes[1], ticks=[1, 5, 9], **clbar_args)
+        plt.colorbar(img_amp, ax=amp_ax, orientation='horizontal', shrink=0.3)
         plt.colorbar(img_freq, ax=freq_ax, **clbar_args)
-        plt.colorbar(img_amp, ax=amp_ax, **clbar_args)
-        plt.colorbar(img_res, ax=res_ax, **clbar_args)
-        plt.colorbar(img_dc, ax=dc_ax, **clbar_args)
+        plt.colorbar(img_q, ax=q_ax, ticks=[1, 5, 9], **clbar_args)
+        # plt.colorbar(img_res, ax=res_ax, **clbar_args)
+        # plt.colorbar(img_dc, ax=dc_ax, **clbar_args)
 
     def _q_value_study_colorplot(self, input_idx, distribution=None, tau_w=None):
         plt.close('all')
@@ -1702,7 +1710,7 @@ class GenericStudy:
         else:
             filename = ('color_q_value_%s_%s_%s_%s_%s' %
                         (self.cell_name, str(input_idx), self.conductance, distribution, tau))
-        fig.savefig(join(self.figure_folder, 'q_value', '%s.pdf' % filename), dpi=150)
+        fig.savefig(join(self.figure_folder, 'q_value', '%s.png' % filename), dpi=150)
 
     def active_q_values_colorplot(self):
         for input_idx in [0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:
