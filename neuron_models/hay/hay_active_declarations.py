@@ -11,6 +11,11 @@ nrn = neuron.h
 import LFPy
 
 def make_cell_uniform(Vrest=-80):
+
+    for sec in nrn.allsec():
+        for seg in sec:
+            if nrn.ismembrane("ca_ion"):
+                print "Cai: ", sec.name(), seg.cai, seg.ica
     neuron.h.t = 0
     neuron.h.finitialize(Vrest)
     neuron.h.fcurrent()
@@ -35,6 +40,11 @@ def make_cell_uniform(Vrest=-80):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_v2_frozen"):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
+    print
+    for sec in nrn.allsec():
+        for seg in sec:
+            if nrn.ismembrane("ca_ion"):
+                print "Cai: ", sec.name(), seg.cai, seg.ica
 
 def _get_longest_distance():
 
@@ -530,6 +540,79 @@ def biophys_reduced(**kwargs):
     print("reduced ion-channels inserted.")
 
 
+def biophys_regenerative(**kwargs):
+
+    for sec in neuron.h.allsec():
+        sec.insert('pas')
+        sec.cm = 1.0
+        sec.Ra = 100.
+        sec.e_pas = -90.
+
+    for sec in neuron.h.soma:
+        # sec.insert('Ca_LVAst')
+        # sec.insert('Ca_HVA')
+        sec.insert('SKv3_1')
+        # sec.insert('SK_E2')
+        # sec.insert('K_Tst')
+        # sec.insert('K_Pst')
+        sec.insert('Nap_Et2')
+        sec.insert('NaTa_t')
+        # sec.insert('CaDynamics_E2')
+        # sec.insert('Ih')
+        # sec.ek = -85
+        sec.ena = 50
+        # sec.gIhbar_Ih = 0.0002
+        sec.g_pas = 0.0000338
+        # sec.decay_CaDynamics_E2 = 460.0
+        # sec.gamma_CaDynamics_E2 = 0.000501
+        # sec.gCa_LVAstbar_Ca_LVAst = 0.00343
+        # sec.gCa_HVAbar_Ca_HVA = 0.000992
+        sec.gSKv3_1bar_SKv3_1 = 0.693
+        # sec.gSK_E2bar_SK_E2 = 0.0441
+        # sec.gK_Tstbar_K_Tst = 0.0812
+        # sec.gK_Pstbar_K_Pst = 0.00223
+        sec.gNap_Et2bar_Nap_Et2 = 0.00172
+        sec.gNaTa_tbar_NaTa_t = 2.04
+
+    for sec in neuron.h.apic:
+        sec.cm = 2
+        # sec.insert('Ih')
+        # sec.insert('SK_E2')
+        # sec.insert('Ca_LVAst')
+        # print sec.eca
+        # sec.insert('Ca_HVA')
+        # sec.insert('SKv3_1')
+        # sec.insert('NaTa_t')
+        # sec.insert('Im')
+        # sec.insert('CaDynamics_E2')
+        # sec.ek = -85
+        # sec.ena = 50
+        # sec.decay_CaDynamics_E2 = 122
+        # sec.gamma_CaDynamics_E2 = 0.000509
+        # sec.gSK_E2bar_SK_E2 = 0.0012
+        # sec.gSKv3_1bar_SKv3_1 = 0.000261
+        # sec.gNaTa_tbar_NaTa_t = 0.0213
+        # sec.gImbar_Im = 0.0000675
+        sec.g_pas = 0.0000589
+
+    # nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.087, 0.0002)
+    # nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.0, 0.010, 685.0, 885.0, 0.0187)
+    # nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.0, 0.10, 685.00, 885.0, 0.000555)
+
+    for sec in neuron.h.dend:
+        sec.cm = 2
+        # sec.insert('Ih')
+        # sec.gIhbar_Ih = 0.0002
+        sec.g_pas = 0.0000467
+
+    for sec in neuron.h.axon:
+        sec.g_pas = 0.0000325
+
+    if 'hold_potential' in kwargs:
+        make_cell_uniform(Vrest=kwargs['hold_potential'])
+    print("Regenerative ion-channels inserted.")
+
+
 def biophys_K(**kwargs):
 
     for sec in neuron.h.allsec():
@@ -753,7 +836,7 @@ def active_declarations(**kwargs):
 def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
 
     timeres = 2**-4
-    cut_off = 2000
+    cut_off = 0
     tstopms = 150
     tstartms = -cut_off
     model_path = join('lfpy_version')
@@ -830,11 +913,8 @@ def test_steady_state():
         'custom_fun_args': [{'conductance_type': 'active',
                              'hold_potential': -60}],
     }
-
     cell = LFPy.Cell(**cell_params)
-
     cell.simulate(rec_vmem=True, rec_imem=True)
-
     plt.plot(cell.tvec, cell.somav)
     plt.ylim([-60.1, -59.9])
     plt.show()
@@ -884,7 +964,6 @@ def return_frozen_gh(holding_potential):
 
     return dist, gIh, gpas
 
-
 def plot_frozen_gh():
     dist, gIh_80, gpas = return_frozen_gh(-80)
     dist, gIh_70, gpas = return_frozen_gh(-70)
@@ -901,10 +980,64 @@ def plot_frozen_gh():
     plt.xlabel('Distance from soma [$\mu m$]')
     plt.savefig('frozen_Ih_conductance.png')
 
+
+def test_ca_initiation():
+
+    timeres = 2**-2
+    cut_off = 0
+    tstopms = 6000
+    tstartms = -cut_off
+    model_path = join('lfpy_version')
+    neuron.load_mechanisms('mod')
+    cell_params = {
+        'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
+        #'rm' : 30000,               # membrane resistance
+        #'cm' : 1.0,                 # membrane capacitance
+        #'Ra' : 100,                 # axial resistance
+        'v_init': -60,             # initial crossmembrane potential
+        'passive': False,           # switch on passive mechs
+        'nsegs_method': 'lambda_f',  # method for setting number of segments,
+        'lambda_f': 100,           # segments are isopotential at this frequency
+        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+        'timeres_python': 1,
+        'tstartms': tstartms,          # start time, recorders start at t=0
+        'tstopms': tstopms,
+        'custom_code': [join(model_path, 'custom_codes.hoc')],
+        'custom_fun': [active_declarations],  # will execute this function
+        'custom_fun_args': [{'conductance_type': 'active',
+                             'hold_potential': -60}],
+    }
+    cell = LFPy.Cell(**cell_params)
+    cell.simulate(rec_vmem=True, rec_imem=True, rec_variables=['ica', 'cai'])
+    plt.subplots_adjust(wspace=0.6, hspace=0.6)
+    plt.subplot(231, title='Membrane potential soma')
+    plt.plot(cell.tvec, cell.vmem[0, :])
+    plt.ylim([-61.5, -59.8])
+    plt.subplot(232, title='Calcium current soma')
+    plt.plot(cell.tvec, cell.rec_variables['ica'][0, :])
+    plt.ylim([0, -0.000008])
+    plt.subplot(233, title='Calcium concentration soma')
+    plt.plot(cell.tvec, cell.rec_variables['cai'][0, :])
+    plt.ylim([0, 0.00015])
+
+    apic_idx = cell.get_closest_idx(x=0, y=0, z=1000)
+    plt.subplot(234, title='Membrane potential apic')
+    plt.plot(cell.tvec, cell.vmem[apic_idx, :])
+    plt.ylim([-61.5, -59.8])
+    plt.subplot(235, title='Calcium current apic')
+    plt.plot(cell.tvec, cell.rec_variables['ica'][apic_idx, :])
+    plt.ylim([0, -0.000008])
+    plt.subplot(236, title='Calcium concentration apic')
+    plt.plot(cell.tvec, cell.rec_variables['cai'][apic_idx, :])
+    plt.ylim([0, 0.00015])
+    plt.savefig('ca_initiation_init.png')
+    #plt.show()
+
 if __name__ == '__main__':
     #test_steady_state()
-    simulate_synaptic_input(0, -65, 'active')
-    plt.savefig('Ca_initiation_testing_-65_inited_long_cutoff.png')
+    #simulate_synaptic_input(0, -65, 'active')
+    # plt.savefig('Ca_initiation_testing.png')
+    test_ca_initiation()
     #plot_frozen_gh()
     # test_frozen_currents(0, -80)
     # test_frozen_currents(0, -70)

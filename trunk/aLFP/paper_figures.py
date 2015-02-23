@@ -553,7 +553,7 @@ class PaperFigures():
 class IntroFigures():
     np.random.seed(0)
     conductance_clr = {'active': 'r', 'active_frozen': 'b', 'Ih_linearized': 'g', 'passive': 'k',
-                       'Ih_linearized_frozen': 'c'}
+                       'Ih_linearized_frozen': 'c', 'NaP': 'pink', 'regenerative': 'c'}
     def __init__(self, cell_name, figure_name, weight=0.001, do_simulations=False):
         
         self.cell_name = cell_name
@@ -588,7 +588,7 @@ class IntroFigures():
                                                            self.elec_x, self.elec_y, self.elec_z, self.weight)
 
     def _set_white_noise_properties(self):
-        self.repeats = 6
+        self.repeats = 2
         self.cut_off = 0
         self.end_t = 1000 * self.repeats
         self.start_t = 0
@@ -626,9 +626,11 @@ class IntroFigures():
         self.elec_z = elec_z.flatten()
         self.elec_y = np.zeros(len(self.elec_x))
         self.plot_positions = np.array([self.elec_x, self.elec_y, self.elec_z]).T
-        self.conductance_types = ['active', 'passive']
+        self.conductance_types = ['regenerative', 'NaP', 'active', 'passive']
         self.conductance_name_dict = {'active': 'Active',
-                                      'passive': 'Passive'}
+                                      'passive': 'Passive',
+                                      'NaP': 'Sodium',
+                                      'regenerative': 'Regenerative'}
         self.soma_idx = 0
         self.apic_idx = 852
         self.use_elec_idxs = [8, 36, 26, 67, 85]
@@ -707,7 +709,7 @@ class IntroFigures():
                                        conductance_type)
 
     def make_figure(self):
-
+        self.conductance_types = ['regenerative', 'NaP', 'active', 'passive']
         tvec = np.load(join(self.sim_folder, 'tvec_%s.npy' % self.type_name))
         elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.type_name))
         elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.type_name))
@@ -737,8 +739,8 @@ class IntroFigures():
         # ax1.text(190, -300, '200 $\mu$m', verticalalignment='center', horizontalalignment='right')
         fig.text(0.01, 0.75, 'Apical input', rotation='vertical', va='center', size=20)
         fig.text(0.01, 0.25, 'Somatic input', rotation='vertical', va='center', size=20)
-        fig.text(0.25, .95, '-80 mV', rotation='horizontal', ha='center', size=20)
-        fig.text(0.75, .95, '-60 mV', rotation='horizontal', ha='center', size=20)
+        fig.text(0.25, .95, '%d mV' % self.holding_potentials[0], rotation='horizontal', ha='center', size=20)
+        fig.text(0.75, .95, '%d mV' % self.holding_potentials[1], rotation='horizontal', ha='center', size=20)
 
         ax1.plot([100, 300], [-300, -300], lw=3, clip_on=False, c='k')
         ax1.text(200, -350, '200 $\mu m$', va='top', ha='center')
@@ -775,7 +777,7 @@ class IntroFigures():
         [ax.axis('off') for ax in ax_list]
 
         fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
-        fig.savefig(join(self.figure_folder, '%s.png' % self.figure_name), dpi=200)
+        fig.savefig(join(self.figure_folder, '%s_regenerative.png' % self.figure_name), dpi=200)
 
 
 class Figure4_OLD(PaperFigures):
@@ -2127,6 +2129,11 @@ class FigureNeurite2(PaperFigures):
         self.LFP_ax_list_1 = [self.fig.add_subplot(4, self.num_cols,  1 + idx + self.num_cols * 0, ylim=lfp_ylim_list[idx], **ax_dict)
                                for idx in xrange(self.num_cols)]
 
+        mark_subplots(self.ax_neur_1, 'E')
+        mark_subplots(self.LFP_ax_list_1, 'ABCD', ypos=1.2, xpos=0.1)
+        mark_subplots(self.vmem_ax_list_1, 'FGHI', ypos=1.2, xpos=0.1)
+        mark_subplots(self.imem_ax_list_1, 'JKLM', ypos=1.2, xpos=0.1)
+
         [ax.set_ylabel('$I_m$') for ax in [self.imem_ax_list_1[0]]]
         [ax.set_ylabel('$V_m$') for ax in [self.vmem_ax_list_1[0]]]
         [ax.set_ylabel('$\Phi$') for ax in [self.LFP_ax_list_1[0]]]
@@ -2442,18 +2449,27 @@ class FigureDistanceStudy(PaperFigures):
 
     def _initialize_figure(self):
         plt.close('all')
-        self.fig = plt.figure(figsize=[10, 8])
-        self.fig.subplots_adjust(hspace=0.5, wspace=0.3, top=0.9, bottom=0.05, left=0.05, right=0.98)
+        self.fig = plt.figure(figsize=[10, 10])
+        self.fig.subplots_adjust(hspace=0.5, wspace=0.4, top=0.94, bottom=0.05, left=0.03, right=0.96)
         ax_dict = {'frame_on': False, 'xticks': [], 'yticks': []}
-        lfp_ax_dict = {'xlim': [1, 450], 'ylim': [1e-8, 1e-4], 'xscale': 'log', 'yscale': 'log', 'xlabel': 'Hz',
+        lfp_ax_dict = {'xlim': [1, 450], 'xscale': 'log', 'yscale': 'log', 'xlabel': 'Hz',
                        'ylabel': 'LFP'}
-        self.amp_ax = self.fig.add_subplot(221, **ax_dict)#[0., 0.3, 0.8, 0.6]
-        self.lfp_ax = self.fig.add_subplot(243, **lfp_ax_dict)
-        self.sig_ax = self.fig.add_subplot(244, xlim=[240, 290], xlabel='ms')
-        self.freq_ax = self.fig.add_subplot(223, **ax_dict)
-        self.q_ax = self.fig.add_subplot(224, **ax_dict)
+        self.amp_ax = self.fig.add_subplot(321, **ax_dict)#[0., 0.3, 0.8, 0.6]
+        self.sig_ax = self.fig.add_subplot(322, xlim=[240, 290], xlabel='ms', xticks=[])
+        self.freq_ax = self.fig.add_subplot(323, **ax_dict)
+        self.lfp_ax = self.fig.add_subplot(324, ylim=[1e-7, 1e-4], **lfp_ax_dict)
+        self.q_ax = self.fig.add_subplot(325, **ax_dict)
+        self.lfp2_ax = self.fig.add_subplot(326, ylim=[1e-9, 1e-5], **lfp_ax_dict)
         self.lfp_ax.grid('on')
-        mark_subplots(self.fig.axes)
+        self.lfp2_ax.grid('on')
+        self.sig_ax.axis('off')
+
+        self.sig_ax.plot([280, 290], [-1, -1], 'k', lw=4, clip_on=False)
+        self.sig_ax.text(282, -1.2, '10 $ms$')
+
+        #self.sig_ax
+
+        mark_subplots(self.fig.axes, xpos=0.)
 
     def _finitialize_figure(self):
 
@@ -2480,8 +2496,10 @@ class FigureDistanceStudy(PaperFigures):
         }
 
         lfp_trace_positions = np.array([[200, 0], [200, 500], [200, 1000], [200, 1500]])
-
         lfp_trace_elec_idxs = [np.argmin((elec_x - dist)**2 + (elec_z - height)**2) for dist, height in lfp_trace_positions]
+
+        lfp2_trace_positions = np.array([[600, 0], [600, 500], [600, 1000], [600, 1500]])
+        lfp2_trace_elec_idxs = [np.argmin((elec_x - dist)**2 + (elec_z - height)**2) for dist, height in lfp2_trace_positions]
 
         if 0:
             print "Recalculating extracellular potential"
@@ -2544,34 +2562,43 @@ class FigureDistanceStudy(PaperFigures):
         q = max_value / dc
 
         max_q_value = 9.
-        vmin = 1e-8
-        vmax = 1e-2
+        vmin = 1e-7
+        vmax = 1e-4
 
         imshow_dict = {'extent': [np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
                        'interpolation': 'none',
                        'aspect': 1,
+                       'cmap': plt.cm.gist_yarg
                        }
 
-        img_amp = self.amp_ax.imshow(max_value,  norm=LogNorm(), vmin=vmin, vmax=vmax, cmap=plt.cm.bone_r, **imshow_dict)
-        img_freq = self.freq_ax.imshow(freq_at_max,  vmin=1, vmax=500., cmap=plt.cm.gray_r, norm=LogNorm(), **imshow_dict)
-        img_q = self.q_ax.imshow(q, vmin=1, vmax=max_q_value, cmap=plt.cm.gray_r, **imshow_dict)
+        img_amp = self.amp_ax.imshow(max_value,  norm=LogNorm(), vmin=vmin, vmax=vmax, **imshow_dict)
+        img_freq = self.freq_ax.imshow(freq_at_max,  vmin=10, vmax=50., **imshow_dict)
+
+        img_q = self.q_ax.imshow(q, vmin=1, vmax=max_q_value, **imshow_dict)
+        # img_q = self.q_ax.contourf(q, cmap=plt.cm.gist_yarg, aspect=1, origin='upper', levels=[1, 3, 5, 7, 9],
+        #                            extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)], extend='max')
+
         self.amp_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                      aspect=1, norm=LogNorm(), origin='upper', levels=[1e-8], colors=['g'])
+                      aspect=1, norm=LogNorm(), origin='upper', levels=[1e-7], colors=['b'])
         self.freq_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                      aspect=1, norm=LogNorm(), origin='upper', levels=[1e-8], colors=['g'])
+                      aspect=1, norm=LogNorm(), origin='upper', levels=[1e-7], colors=['b'])
         self.q_ax.contour(max_value, extent=[np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
-                      aspect=1, norm=LogNorm(), origin='upper', levels=[1e-8], colors=['g'])
+                      aspect=1, norm=LogNorm(), origin='upper', levels=[1e-7], colors=['b'])
 
         # lfp_clr = ['lime', 'chocolate', 'yellow', 'purple']
         # lfp_clr = ['0.0', '0.25', '0.5', '.75']
 
         lfp_clr = lambda d: plt.cm.Reds(int(256./(len(lfp_trace_elec_idxs)) * (d + 1)))
+        lfp2_clr = lambda d: plt.cm.Greens(int(256./(len(lfp_trace_elec_idxs)) * (d + 1)))
         tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
 
         for numb, idx in enumerate(lfp_trace_elec_idxs):
             self.amp_ax.plot(elec_x[idx], elec_z[idx], 'o', c=lfp_clr(numb), ms=10)
             self.lfp_ax.loglog(freqs, LFP_psd[idx], lw=2, c=lfp_clr(numb))
 
+        for numb, idx in enumerate(lfp2_trace_elec_idxs):
+            self.amp_ax.plot(elec_x[idx], elec_z[idx], 'o', c=lfp2_clr(numb), ms=10)
+            self.lfp2_ax.loglog(freqs, LFP_psd[idx], lw=2, c=lfp2_clr(numb))
             # self.LFP_arrow_to_axis([elec_x[idx], elec_z[idx]], self.amp_ax, ax_, c=lfp_clr[numb])
 
         self.sig_ax.plot(tvec, LFP[lfp_trace_elec_idxs[1]] / np.max(np.abs(LFP[lfp_trace_elec_idxs[1]])), lw=2, c=lfp_clr(1))
@@ -2580,21 +2607,31 @@ class FigureDistanceStudy(PaperFigures):
             #self.sig_ax.plot(tvec, LFP[idx], lw=2, c=lfp_clr(numb))
 
         xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
+        xmid = np.load(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)))
         xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         zend = np.load(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
 
         for ax in [self.freq_ax, self.q_ax, self.amp_ax]:
             [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color='w', zorder=2)
              for idx in xrange(len(xstart))]
+        self.amp_ax.plot(xmid[self.input_idx], zmid[self.input_idx], 'y*', ms=10)
+        self.amp_ax.plot([np.min(distances), np.min(distances)], [100, 600], lw=5, c='k', clip_on=False)
+        self.amp_ax.text(np.min(distances) + 170, 400, '500 $\mu m$')
 
-        self.amp_ax.plot([np.max(distances) + 100, np.max(distances) + 100], [100, 600], lw=5, c='k', clip_on=False)
-        self.amp_ax.text(np.max(distances) + 200, 400, '500 $\mu m$')
-        clbar_args = {'orientation': 'horizontal', 'shrink': 0.7,}
+        clbar_args = {'orientation': 'vertical', 'shrink': 0.7,}
 
-        plt.colorbar(img_amp, ax=self.amp_ax, label='PSD', **clbar_args)
-        plt.colorbar(img_freq, ax=self.freq_ax, label='Hz', **clbar_args)
-        plt.colorbar(img_q, ax=self.q_ax, ticks=[1, 5, 9], **clbar_args)
+        cax_1 = self.fig.add_axes([0.45, 0.73, 0.01, 0.2])
+        cax_2 = self.fig.add_axes([0.45, 0.4, 0.01, 0.2])
+        cax_3 = self.fig.add_axes([0.45, 0.06, 0.01, 0.2])
+
+        cl1 = plt.colorbar(img_amp, cax=cax_1, label='PSD')
+        cl2 = plt.colorbar(img_freq, cax=cax_2, label='Hz', extend='max')
+        cl3 = plt.colorbar(img_q, cax=cax_3, ticks=[1, 5, 9], extend='max')
+
+
+
 
 if __name__ == '__main__':
 
@@ -2605,6 +2642,6 @@ if __name__ == '__main__':
     # Figure4b(0.001, False)
     # FigureSystematic()
     # FigureTimeConstant()
-    # FigureNeurite2(do_simulations=False).make_figure()
+    FigureNeurite2(do_simulations=False).make_figure()
     # FigureDistributedSynaptic()
-    FigureDistanceStudy()
+    # FigureDistanceStudy()
