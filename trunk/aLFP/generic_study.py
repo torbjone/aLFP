@@ -69,7 +69,7 @@ class GenericStudy:
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 0
-            self.repeats = 1
+            self.repeats = 2
             self.end_t = 1000 * self.repeats
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
@@ -1454,10 +1454,10 @@ class GenericStudy:
                 for tau_w in tau_ws:
                     for mu in self.mus:
                         print "%d / %d" % (i, tot_sims)
-                        #self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
+                        self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
                         i += 1
                     if make_summary_plot:
-                        #self.plot_summary(input_idx, distribution, tau_w)
+                        self.plot_summary(input_idx, distribution, tau_w)
                         self._plot_LFP_with_distance(distribution, tau_w, input_idx)
                 # self._plot_q_value(distribution, input_idx)
 
@@ -2100,8 +2100,8 @@ class GenericStudy:
 if __name__ == '__main__':
 
     gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
-    # gs.run_all_single_simulations()
-    gs.generic_q_values_colorplot()
+    gs.run_all_single_simulations()
+    # gs.generic_q_values_colorplot()
 
     # gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
     # if len(sys.argv) == 3:

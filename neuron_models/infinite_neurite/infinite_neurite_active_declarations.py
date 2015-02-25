@@ -9,7 +9,7 @@ def active_declarations(**kwargs):
         sec.nseg = 101
         sec.insert("QA")
         sec.V_r_QA = -80.
-        v = -80.
+        # v = -80.
         # mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
         # mBeta = 0.001 * 193. * np.exp(v / 33.1)
         # tau_w = 1/(mAlpha + mBeta)

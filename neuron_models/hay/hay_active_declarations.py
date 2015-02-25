@@ -12,10 +12,10 @@ import LFPy
 
 def make_cell_uniform(Vrest=-80):
 
-    for sec in nrn.allsec():
-        for seg in sec:
-            if nrn.ismembrane("ca_ion"):
-                print "Cai: ", sec.name(), seg.cai, seg.ica
+    # for sec in nrn.allsec():
+    #     for seg in sec:
+    #         if nrn.ismembrane("ca_ion"):
+    #             print "Cai: ", sec.name(), seg.cai, seg.ica
     neuron.h.t = 0
     neuron.h.finitialize(Vrest)
     neuron.h.fcurrent()
@@ -40,11 +40,17 @@ def make_cell_uniform(Vrest=-80):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_v2_frozen"):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
-    print
-    for sec in nrn.allsec():
-        for seg in sec:
-            if nrn.ismembrane("ca_ion"):
-                print "Cai: ", sec.name(), seg.cai, seg.ica
+    # print
+    # e = []
+    # for sec in nrn.allsec():
+    #     for seg in sec:
+    #         e.append(seg.e_pas)
+            # if nrn.ismembrane("ca_ion"):
+            #     print "Cai: ", sec.name(), seg.cai, seg.ica
+    # plt.plot(e)
+    # plt.ylim([0, -100])
+    # plt.xlim([-10, 700])
+    # plt.show()
 
 def _get_longest_distance():
 
@@ -95,7 +101,7 @@ def biophys_zuchkova(**kwargs):
 
 def biophys_generic(**kwargs):
 
-    v = kwargs['hold_potential']
+    # v = kwargs['hold_potential']
     if 'auto' in kwargs['tau_w']:
         # mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
         # mBeta = 0.001 * 193. * np.exp(v / 33.1)
@@ -1008,7 +1014,7 @@ def test_ca_initiation():
                              'hold_potential': -60}],
     }
     cell = LFPy.Cell(**cell_params)
-    cell.simulate(rec_vmem=True, rec_imem=True, rec_variables=['ica', 'cai'])
+    cell.simulate(rec_vmem=True, rec_imem=True)
     plt.subplots_adjust(wspace=0.6, hspace=0.6)
     plt.subplot(231, title='Membrane potential soma')
     plt.plot(cell.tvec, cell.vmem[0, :])
@@ -1030,8 +1036,8 @@ def test_ca_initiation():
     plt.subplot(236, title='Calcium concentration apic')
     plt.plot(cell.tvec, cell.rec_variables['cai'][apic_idx, :])
     plt.ylim([0, 0.00015])
-    plt.savefig('ca_initiation_init.png')
-    #plt.show()
+    # plt.savefig('ca_initiation_init.png')
+    plt.show()
 
 if __name__ == '__main__':
     #test_steady_state()
