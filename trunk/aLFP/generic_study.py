@@ -23,9 +23,13 @@ nrn = neuron.h
 class GenericStudy:
 
     def __init__(self, cell_name, input_type, conductance='generic', extended_electrode=False):
-        self.mu_name_dict = {-0.5: 'Regenerative ($\mu_{factor} = -0.5$)',
-                             0: 'Passive ($\mu_{factor} = 0$)',
-                             2: 'Restorative ($\mu_{factor} = 2$)'}
+        # self.mu_name_dict = {-1: 'Regenerative ($\mu^* =\ -1$)',
+        #                      0: 'Passive ($\mu^* =\ 0$)',
+        #                      4: 'Restorative ($\mu^* =\ 4$)'}
+        self.mu_name_dict = {-0.5: 'Regenerative ($\mu^* =\ -0.5$)',
+                             0: 'Passive ($\mu^* =\ 0$)',
+                             2: 'Restorative ($\mu^* =\ 2$)'}
+
         self.cell_name = cell_name
         self.conductance = conductance
         self.input_type = input_type
@@ -174,7 +178,7 @@ class GenericStudy:
                                      'distribution': distribution,
                                      'tau_w': tau_w,
                                      #'total_w_conductance': 6.23843378791,# / 5,
-                                     'average_w_conductance': 0.00005,
+                                     'avrg_w_bar': 0.00005 * 2,
                                      'hold_potential': holding_potential}]
             }
         elif self.cell_name in ['n120', 'c12861']:
@@ -222,7 +226,7 @@ class GenericStudy:
              'v': np.zeros(cell.totnsegs),
              'mu_QA': np.zeros(cell.totnsegs),
              'tau_w_QA': np.zeros(cell.totnsegs),
-             'g_w_QA': np.zeros(cell.totnsegs),
+             'g_w_bar_QA': np.zeros(cell.totnsegs),
              }
 
         if not self.repeats is None:
@@ -895,15 +899,15 @@ class GenericStudy:
                                                self.holding_potential, distribution, taum)
             dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % sim_name)).item()
             largest_dist_idx = np.argmax(dist_dict['dist'])
-            ax0.scatter(dist_dict['dist'], dist_dict['g_w_QA'], c=dist_dict['sec_clrs'],
-                        edgecolor='none', label='g_w')
+            ax0.scatter(dist_dict['dist'], dist_dict['g_w_bar_QA'], c=dist_dict['sec_clrs'],
+                        edgecolor='none', label='g_w_bar')
 
             ax0.scatter(dist_dict['dist'], dist_dict['g_pas_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none', label='g_pas')
             ax0.text(dist_dict['dist'][largest_dist_idx] + 100,
                      dist_dict['g_pas_QA'][largest_dist_idx], 'g_pas')
             ax0.text(dist_dict['dist'][largest_dist_idx] + 100,
-                     dist_dict['g_w_QA'][largest_dist_idx], 'g_w')
+                     dist_dict['g_w_bar_QA'][largest_dist_idx], 'g_w_bar')
             ax1.scatter(dist_dict['dist'], dist_dict['mu_QA'], c=dist_dict['sec_clrs'],
                         edgecolor='none')
 
@@ -1206,16 +1210,27 @@ class GenericStudy:
         # self._quickplot_setup(cell, electrode)
         cell, syn, noiseVec = self._make_white_noise_stimuli(cell, input_idx)
         print "Starting simulation ..."
-        # dist = []
-        # gh = []
-        # nrn.distance()
-        # for sec in cell.allseclist:
-        #     for seg in sec:
-        #         dist.append(nrn.distance(seg.x))
-        #         gh.append(seg.g_w_QA)
-        #
-        # plt.plot(dist, gh, 'o')
-        # plt.show()
+        dist = []
+        gw = []
+        gL = []
+        mus = []
+        nrn.distance(0, 0.5)
+        for sec in cell.allseclist:
+            for seg in sec:
+                dist.append(nrn.distance(seg.x))
+                gw.append(seg.g_w_bar_QA)
+                gL.append(seg.g_pas_QA)
+                mus.append(seg.mu_QA)
+        plt.close('all')
+        plt.subplot(121, xlabel='Distance', ylabel='$S/cm^2$')
+        plt.plot(dist, gw, 'bo', label='g_w_bar')
+        plt.plot(dist, gL, 'ko', label='g_L')
+        plt.legend()
+        plt.subplot(122, xlabel='Distance')
+        plt.plot(dist, mus, 'ro', label='$\mu$')
+        plt.legend()
+
+        plt.savefig('%s_%s.png' % (distribution, str(mu)))
         # np.save(join(self.root_folder, 'linear_increase.npy'), [dist, gh])
 
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
@@ -1443,22 +1458,22 @@ class GenericStudy:
                     self.plot_summary(input_idx, distribution, taum)
 
     def run_all_single_simulations(self):
-        distributions = ['linear_increase']#, 'linear_decrease', 'uniform']
-        input_idxs = [605]#, 0]
-        tau_ws = ['auto']#, 'auto10', 'auto0.1']#, 5, 500]
+        distributions = ['linear_decrease', 'linear_increase', 'uniform']
+        input_idxs = [605, 0]
+        tau_ws = ['auto', 'auto10', 'auto0.1']#, 5, 500]
         make_summary_plot = True
         tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
         i = 1
-        for distribution in distributions:
-            for input_idx in input_idxs:
-                for tau_w in tau_ws:
+        for tau_w in tau_ws:
+            for distribution in distributions:
+                for input_idx in input_idxs:
                     for mu in self.mus:
                         print "%d / %d" % (i, tot_sims)
                         self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
                         i += 1
                     if make_summary_plot:
-                        self.plot_summary(input_idx, distribution, tau_w)
-                        self._plot_LFP_with_distance(distribution, tau_w, input_idx)
+                       self.plot_summary(input_idx, distribution, tau_w)
+                       self._plot_LFP_with_distance(distribution, tau_w, input_idx)
                 # self._plot_q_value(distribution, input_idx)
 
     def LFP_with_distance_study(self, weight):
@@ -1710,7 +1725,7 @@ class GenericStudy:
         else:
             filename = ('color_q_value_%s_%s_%s_%s_%s' %
                         (self.cell_name, str(input_idx), self.conductance, distribution, tau))
-        fig.savefig(join(self.figure_folder, 'q_value', '%s.png' % filename), dpi=150)
+        fig.savefig(join(self.figure_folder, 'q_value', '%s_2.png' % filename), dpi=150)
 
     def active_q_values_colorplot(self):
         for input_idx in [0, 370, 415, 514, 717, 743, 762, 827, 915, 957]:
@@ -2099,12 +2114,13 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
-    gs.run_all_single_simulations()
+    # gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
+    # gs.run_all_single_simulations()
+    # sys.exit()
     # gs.generic_q_values_colorplot()
 
-    # gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
-    # if len(sys.argv) == 3:
-    #    gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
-    # else:
-    #    gs.LFP_with_distance_study(0.0001)
+    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
+    if len(sys.argv) == 3:
+       gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
+    else:
+       gs.LFP_with_distance_study(0.0001)

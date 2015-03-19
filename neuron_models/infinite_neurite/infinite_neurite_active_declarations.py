@@ -17,9 +17,9 @@ def active_declarations(**kwargs):
         sec.Ra = 100.
         sec.cm = 1.0
         sec.g_pas_QA = 0.00005
-        sec.g_w_QA = 0.00005
+        sec.g_w_bar_QA = 0.00005 * 2
         for seg in sec:
             if neuron.h.distance(seg.x) <= 100:
-                seg.mu_QA = sec.g_w_QA / sec.g_pas_QA * kwargs['mu_factor_1']
+                seg.mu_QA = sec.g_w_bar_QA / sec.g_pas_QA * kwargs['mu_factor_1']
             else:
-                seg.mu_QA = sec.g_w_QA / sec.g_pas_QA * kwargs['mu_factor_2']
+                seg.mu_QA = sec.g_w_bar_QA / sec.g_pas_QA * kwargs['mu_factor_2']

@@ -127,20 +127,22 @@ def biophys_generic(**kwargs):
         sec.g_pas_QA = kwargs['g_pas']
 
     total_area = _get_total_area()
-    total_w_conductance = kwargs['average_w_conductance'] * total_area
+    total_w_conductance = kwargs['avrg_w_bar'] * total_area
     max_dist = _get_longest_distance()
+    print "Max dist: ", max_dist
 
     if kwargs['distribution'] == 'uniform':
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.g_w_QA = total_w_conductance / total_area
+                seg.g_w_bar_QA = total_w_conductance / total_area
     elif kwargs['distribution'] == 'linear_increase':
         increase_factor = 60
         conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_w_conductance)
         nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.g_w_QA = conductance_factor * (1 + (increase_factor - 1) * nrn.distance(seg.x) / max_dist)
+                seg.g_w_bar_QA = conductance_factor * (1 + (increase_factor - 1.) * nrn.distance(seg.x) / max_dist)
+        print 'Linear increase:  %1.8f + %1.10f * x' % (conductance_factor, conductance_factor*(increase_factor - 1.) / max_dist)
 
     elif kwargs['distribution'] == 'linear_decrease':
         decrease_factor = 60
@@ -148,15 +150,15 @@ def biophys_generic(**kwargs):
         nrn.distance(0, 0.5)
         for sec in neuron.h.allsec():
             for seg in sec:
-                seg.g_w_QA = (conductance_factor * (decrease_factor - (decrease_factor - 1) *
-                                                    nrn.distance(seg.x) / max_dist))
+                seg.g_w_bar_QA = conductance_factor*(decrease_factor - (decrease_factor - 1.) * nrn.distance(seg.x) / max_dist)
+        print 'Linear decrease: %1.8f - %1.10f * x' % (conductance_factor * decrease_factor, conductance_factor * (decrease_factor - 1.) / max_dist)
     else:
         raise RuntimeError("Unknown distribution...")
     cond_check = 0
     for sec in neuron.h.allsec():
         for seg in sec:
-            cond_check += seg.g_w_QA * nrn.area(seg.x)
-            seg.mu_QA = seg.g_w_QA / seg.g_pas_QA * kwargs['mu_factor']
+            cond_check += seg.g_w_bar_QA * nrn.area(seg.x)
+            seg.mu_QA = seg.g_w_bar_QA / seg.g_pas_QA * kwargs['mu_factor']
 
     if np.abs(cond_check - total_w_conductance) < 1e-6:
         pass
