@@ -1158,13 +1158,18 @@ class GenericStudy:
             max_freq = 500
             input_array = input_scaling * self._make_WN_input(cell, max_freq)
         elif self.input_type == 'real_wn':
-            tot_ntsteps = round((cell.tstopms - cell.tstartms)/\
-                          cell.timeres_NEURON + 1)
+            tot_ntsteps = round((cell.tstopms - cell.tstartms)/cell.timeres_NEURON + 1)
             input_scaling = .1
             input_array = input_scaling * (np.random.random(tot_ntsteps) - 0.5)
         else:
             raise RuntimeError("Unrecognized input_type!")
         noise_vec = neuron.h.Vector(input_array) if weight is None else neuron.h.Vector(input_array * weight)
+
+        print np.std(input_array) * 1000
+        plt.close('all')
+        plt.plot(input_array)
+        plt.show()
+
         i = 0
         syn = None
         for sec in cell.allseclist:
@@ -1173,6 +1178,7 @@ class GenericStudy:
                     print "Input i" \
                           "nserted in ", sec.name()
                     syn = neuron.h.ISyn(seg.x, sec=sec)
+                    print "Dist: ", nrn.distance(seg.x)
                 i += 1
         if syn is None:
             raise RuntimeError("Wrong stimuli index")
@@ -2114,13 +2120,13 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    # gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
-    # gs.run_all_single_simulations()
+    gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
+    gs.run_all_single_simulations()
     # sys.exit()
     # gs.generic_q_values_colorplot()
 
-    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
-    if len(sys.argv) == 3:
-       gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
-    else:
-       gs.LFP_with_distance_study(0.0001)
+    # gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
+    # if len(sys.argv) == 3:
+    #    gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
+    # else:
+    #    gs.LFP_with_distance_study(0.0001)
