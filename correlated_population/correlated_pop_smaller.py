@@ -27,16 +27,16 @@ folder = 'hay_smaller_pop'
 if at_stallo:
     neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', model)
     cut_off = 2000
-    timeres = 2**-6
+    timeres = 2**-4
 else:
     neuron_model = join('..', 'neuron_models', model)
     cut_off = 2000
-    timeres = 2**-6
+    timeres = 2**-4
 
-num_cells = 2500
-population_radius = 500
+num_cells = 25
+population_radius = 50
 
-tstopms = 1000
+tstopms = 100
 ntsteps = round((tstopms - 0) / timeres)
 
 n_elecs_center = 8
@@ -62,24 +62,24 @@ n_elecs = len(elec_x)
 #np.save(join(folder, 'elec_z.npy'), elec_z)
 
 model_path = join(neuron_model, 'lfpy_version')
-LFPy.cell.neuron.load_mechanisms(join(neuron_model, 'mod'))      
-LFPy.cell.neuron.load_mechanisms(join(neuron_model, '..'))      
+neuron.load_mechanisms(join(neuron_model, 'mod'))
+neuron.load_mechanisms(join(neuron_model, '..'))
 
 cell_params = {
-    'morphology' : join(model_path, 'morphologies', 'cell1.hoc'),
+    'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
     #'rm' : 30000,               # membrane resistance
     #'cm' : 1.0,                 # membrane capacitance
     #'Ra' : 100,                 # axial resistance
-    'v_init' : -77,             # initial crossmembrane potential 
-    'passive' : False,           # switch on passive mechs
-    'nsegs_method' : 'lambda_f',# method for setting number of segments,
-    'lambda_f' : 100,           # segments are isopotential at this frequency
-    'timeres_NEURON' : timeres,   # dt of LFP and NEURON simulation.
-    'timeres_python' : 1,
-    'tstartms' : -cut_off,          #start time, recorders start at t=0
-    'tstopms' : tstopms, 
-    'custom_code'  : [join(model_path, 'custom_codes.hoc'), \
-                      join(model_path, 'biophys3_passive.hoc')],
+    'v_init': -77,             # initial crossmembrane potential
+    'passive': False,           # switch on passive mechs
+    'nsegs_method': 'lambda_f',# method for setting number of segments,
+    'lambda_f': 100,           # segments are isopotential at this frequency
+    'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
+    'timeres_python': timeres,
+    'tstartms': -cut_off,          #start time, recorders start at t=0
+    'tstopms': tstopms,
+    'custom_code': [join(model_path, 'custom_codes.hoc'),
+                    join(model_path, 'biophys3_passive.hoc')],
 }
 
 
@@ -121,7 +121,7 @@ def simulate_single_cell():
                              }
     correlation = float(sys.argv[2])
     syn_strength = 0.015
-    simulation_idx=int(sys.argv[4])
+    simulation_idx = int(sys.argv[4])
     aLFP.run_correlated_population_simulation(cell_params, conductance_list, folder, model_path, 
                                               elec_x, elec_y, elec_z, ntsteps, spiketrain_params, 
                                               correlation, num_cells, population_radius, simulation_idx,

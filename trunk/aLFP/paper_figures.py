@@ -2416,8 +2416,8 @@ class FigureDistanceStudyInfiniteNeurite(PaperFigures):
 
 if __name__ == '__main__':
 
-    # IntroFigures('hay', 'figure_1', 0.001, False).make_figure()
-    IntroFigures('hay', 'figure_2', 0.0005, True).make_figure()
+    IntroFigures('hay', 'figure_1', 0.001, False).make_figure()
+    # IntroFigures('hay', 'figure_2', 0.0005, True).make_figure()
     # Figure3(0.0005, False)
     # Figure4(0.0005, False)
     # Figure4b(0.001, False)

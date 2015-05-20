@@ -2125,7 +2125,7 @@ if __name__ == '__main__':
     # sys.exit()
     # gs.generic_q_values_colorplot()
 
-    # gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
+    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
     # if len(sys.argv) == 3:
     #    gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
     # else:
