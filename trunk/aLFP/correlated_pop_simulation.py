@@ -3,17 +3,18 @@ import os
 import sys
 from os.path import join
 import random
-import numpy as np
-import pylab as plt
-import neuron
-import LFPy
-
 if not 'DISPLAY' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
     at_stallo = True
 else:
     at_stallo = False
+import numpy as np
+import pylab as plt
+import neuron
+import LFPy
+
+
 import aLFP
 import scipy.fftpack as ff
 import scipy.signal
