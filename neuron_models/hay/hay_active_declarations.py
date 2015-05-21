@@ -191,7 +191,7 @@ def biophys_passive(**kwargs):
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
 
-    print("Passive dynamics inserted.")
+    #print("Passive dynamics inserted.")
 
 
 def biophys_Ih_linearized_frozen(**kwargs):
@@ -472,7 +472,7 @@ def biophys_active(**kwargs):
 
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
-    print("active ion-channels inserted.")
+    #print("active ion-channels inserted.")
 
 
 def biophys_reduced(**kwargs):
