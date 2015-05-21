@@ -9,7 +9,7 @@ proc topol() { local i
   basic_shape()
 }
 proc basic_shape() {
-  axon {pt3dclear() pt3dadd(-100, 0, 0, 2) pt3dadd(100, 0, 0, 2)}
+  axon {pt3dclear() pt3dadd(0, 0, 0, 2) pt3dadd(2000, 0, 0, 2)}
 }
 
 objref all

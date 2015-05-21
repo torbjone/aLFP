@@ -1,5 +1,6 @@
 : Dynamics that track inside calcium concentration
 : modified from Destexhe et al. 1994
+: Added INITIAL block Torbjorn Ness 2015
 
 NEURON	{
 	SUFFIX CaDynamics_E2
@@ -33,4 +34,7 @@ BREAKPOINT	{ SOLVE states METHOD cnexp }
 
 DERIVATIVE states	{
 	cai' = -(10000)*(ica*gamma/(2*FARADAY*depth)) - (cai - minCai)/decay
+}
+INITIAL {
+    cai = -(10000)*(ica*gamma/(2*FARADAY*depth)) * decay + minCai
 }
