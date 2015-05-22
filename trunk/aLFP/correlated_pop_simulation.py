@@ -40,9 +40,8 @@ class Population():
 
         if at_stallo:
             self.neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', self.model)
-            self.fig_folder = join('/home', 'torbness', 'work', 'aLFP', 'correlated_population')
-            self.data_folder = join('/home', 'torbness', 'work', 'aLFP', 'correlated_population', self.sim_name)
-
+            self.fig_folder = join('/global', 'work' 'torbness', 'aLFP', 'correlated_population')
+            self.data_folder = join('/global', 'work', 'torbness', 'aLFP', 'correlated_population', self.sim_name)
         else:
             self.fig_folder = join('/home', 'torbjone', 'work', 'aLFP', 'correlated_population')
             self.data_folder = join('/home', 'torbjone', 'work', 'aLFP', 'correlated_population', self.sim_name)
@@ -351,7 +350,10 @@ class Population():
         aLFP.simplify_axes(elec_axs.values())
         lfp_max = 0
         for conductance_type in conductance_list:
-            session_name = join(self.data_folder, 'lfp_%s_total.npy' % self.stem)
+            local_stem = '%s_%s_%s_%dmV_c%1.2f_w%1.5f_R%d_N%d' % (self.model, self.input_region, conductance_type,
+                                                           self.holding_potential, self.correlation, self.weight,
+                                                           self.population_radius, self.num_cells)
+            session_name = join(self.data_folder, 'lfp_%s_total.npy' % local_stem)
             lfp = np.load(session_name)
 
             freq, psd = aLFP.return_freq_and_psd_welch(lfp, self.welch_dict)
@@ -413,6 +415,18 @@ def distribute_cellsims_MPI():
                 print RANK, "plotting", pop.stem
                 pop.plot_LFP(conductance_types)
             sim_num += 1
+
+
+def plot_all_LFPs():
+
+    correlations = [0.0, 0.1, 1.0]
+    conductance_types = ['active', 'passive']
+    input_regions = ['homogeneous', 'tuft']
+    for correlation in correlations:
+        for input_region in input_regions:
+            pop = Population(correlation=correlation, input_region=input_region)
+            pop.plot_LFP(conductance_types)
+
 
 def test_sim():
 
