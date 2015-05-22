@@ -41,7 +41,7 @@ class Population():
 
         if at_stallo:
             self.neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', self.model)
-            self.fig_folder = join('/global', 'work' 'torbness', 'aLFP', 'correlated_population')
+            self.fig_folder = join('/global', 'work', 'torbness', 'aLFP', 'correlated_population')
             self.data_folder = join('/global', 'work', 'torbness', 'aLFP', 'correlated_population', self.sim_name)
         else:
             self.fig_folder = join('/home', 'torbjone', 'work', 'aLFP', 'correlated_population')
