@@ -36,7 +36,8 @@ class Population():
 
         self.model = 'hay'
         self.sim_name = 'hay_smaller_pop'
-        self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g', -0.5: 'r', 0.0: 'k', 2.0: 'b'}
+        self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g',
+                                -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
         if at_stallo:
             self.neuron_model = join('/home', 'torbness', 'work', 'aLFP', 'neuron_models', self.model)
@@ -59,7 +60,7 @@ class Population():
         self.conductance_type = conductance_type
         self.input_region = input_region
         self.weight = weight
-        self.end_t = 5000
+        self.end_t = 10000
         self.num_tsteps = round((self.end_t - 0) / self.timeres + 1)
         self.tvec = np.linspace(0, self.end_t, self.num_tsteps)
         self.stem = '%s_%s_%s_%dmV_c%1.2f_w%1.5f_R%d_N%d' % (self.model, self.input_region, self.conductance_type,
@@ -271,7 +272,7 @@ class Population():
 
         sim_name = '%s_cell_%d' % (self.stem, cell_idx)
 
-        cell.simulate(rec_imem=True, rec_vmem=True)
+        cell.simulate(rec_imem=True, rec_vmem=False)
 
         if np.max(cell.somav) > -40:
             is_spiking = True
@@ -279,7 +280,7 @@ class Population():
             is_spiking = False
 
         plt.close('all')
-        plt.title('%s\nMEAN: %f mV, STD: %f mV' % (sim_name, np.mean(cell.vmem), np.std(cell.vmem)))
+        plt.title('%s\nMEAN: %f mV, STD: %f mV' % (sim_name, np.mean(cell.somav), np.std(cell.somav)))
         plt.plot(cell.tvec, cell.somav)
         plt.savefig(join(self.fig_folder, '%s.png' % sim_name))
 
@@ -367,6 +368,76 @@ class Population():
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
         fig.savefig(join(self.fig_folder, 'center_LFP_%s.png' % self.stem))
 
+
+def alternative_MPI_dist():
+
+    from mpi4py import MPI
+
+    class Tags():
+        def __init__(self):
+            self.READY = 0
+            self.DONE = 1
+            self.EXIT = 2
+            self.START = 3
+    tags = Tags()
+    # Initializations and preliminaries
+    comm = MPI.COMM_WORLD   # get MPI communicator object
+    size = comm.size        # total number of processes
+    rank = comm.rank        # rank of this process
+    status = MPI.Status()   # get MPI status object
+    num_workers = size - 1
+
+    if rank == 0:
+        # Master process executes code below
+        print "NOT NOT NOT Initializing population"
+        # pop = Population(initialize=True)
+
+        correlations = [0.0, 0.1]
+        conductance_types = ['active']#, 'passive']
+        input_regions = ['homogeneous']#, 'tuft']
+
+        num_cells = 5 #pop.num_cells
+
+        print("Master starting with %d workers" % num_workers)
+        for correlation in correlations:
+            for input_region in input_regions:
+                for conductance in conductance_types:
+                    pop = Population(conductance_type=conductance,
+                                     correlation=correlation,
+                                     input_region=input_region)
+                    for cell_idx in xrange(num_cells):
+                        data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+                        source = status.Get_source()
+                        tag = status.Get_tag()
+                        if tag == tags.READY and source % 2:
+                            comm.send([pop, cell_idx], dest=source, tag=tags.START)
+                            print("Sending task  to worker %d" % source)
+                            #task_index += 1
+                        elif tag == tags.DONE:
+                            print("Worker %d completed task" % source)
+        for worker in range(1, num_workers + 1):
+            comm.send([None, None], dest=worker, tag=tags.EXIT)
+        print("Master finishing")
+    else:
+        # Worker processes execute code below
+        #print("I am a worker with rank %d." % rank)
+        while True:
+            if not rank % 2:
+                break
+            comm.send(None, dest=0, tag=tags.READY)
+            [pop, cell_idx] = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
+            tag = status.Get_tag()
+            if tag == tags.START:
+                # Do the work here
+                print rank, "put to work"
+                plt.pause(1 + np.random.random())
+                comm.send(None, dest=0, tag=tags.DONE)
+            elif tag == tags.EXIT:
+                print rank, "exiting"
+                break
+        comm.send(None, dest=0, tag=tags.EXIT)
+
+
 def distribute_cellsims_MPI():
     """ Run with
         openmpirun -np 4 python example_mpi.py
@@ -382,14 +453,16 @@ def distribute_cellsims_MPI():
 
     correlations = [0.0, 0.1, 1.0]
     conductance_types = ['active', 'passive']
-    input_regions = ['homogeneous', 'tuft']
+    input_regions = ['basal', 'distal_tuft', 'homogeneous']
     sim_num = 0
+    if RANK % 2:
+        return
     for correlation in correlations:
         for input_region in input_regions:
             for conductance in conductance_types:
                 pop = Population(conductance_type=conductance, correlation=correlation, input_region=input_region)
                 for cell_idx in xrange(pop.num_cells):
-                    if divmod(sim_num, SIZE)[1] == RANK:
+                    if divmod(sim_num, SIZE / 2)[1] == RANK / 2:
                         print "Rank %d simulating %s_cell_%d" % (RANK, pop.stem, cell_idx)
                         pop.run_single_cell_simulation(cell_idx)
                     sim_num += 1
@@ -441,5 +514,7 @@ def test_sim():
 if __name__ == '__main__':
     #test_sim()
     distribute_cellsims_MPI()
+    # alternative_MPI_dist()
     # pop = Population(correlation=0.0, input_region='tuft')
     # pop.plot_LFP(['active', 'passive'])
+    # plot_all_LFPs()
