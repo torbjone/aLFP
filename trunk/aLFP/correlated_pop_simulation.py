@@ -266,11 +266,18 @@ class Population():
         return cell
 
     def run_single_cell_simulation(self, cell_idx):
+
+        sim_name = '%s_cell_%d' % (self.stem, cell_idx)
+
+        if os.path.isfile(join(self.data_folder, 'lfp_%s.npy' % sim_name)):
+            print "Skipping", sim_name
+            return None
+
+
         plt.seed(cell_idx)
         cell = self.return_cell(cell_idx)
         cell = self.set_synaptic_input(cell)
 
-        sim_name = '%s_cell_%d' % (self.stem, cell_idx)
 
         cell.simulate(rec_imem=True, rec_vmem=False)
 
@@ -446,9 +453,9 @@ def distribute_cellsims_MPI():
     COMM = MPI.COMM_WORLD
     SIZE = COMM.Get_size()
     RANK = COMM.Get_rank()
-    if RANK == 0:
-        print "Initializing population"
-        pop = Population(initialize=True)
+    #if RANK == 0:
+    #    print "Initializing population"
+    #    pop = Population(initialize=True)
     COMM.Barrier()
 
     correlations = [0.0, 0.1, 1.0]
