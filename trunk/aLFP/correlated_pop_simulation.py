@@ -456,14 +456,14 @@ def distribute_cellsims_MPI():
     #if RANK == 0:
     #    print "Initializing population"
     #    pop = Population(initialize=True)
-    COMM.Barrier()
+    #COMM.Barrier()
 
     correlations = [0.0, 0.1, 1.0]
     conductance_types = ['active', 'passive']
     input_regions = ['basal', 'distal_tuft', 'homogeneous']
     sim_num = 0
-    if RANK % 2:
-        return
+    #if RANK % 2:
+    #    return
     #for correlation in correlations:
     #    for input_region in input_regions:
     #        for conductance in conductance_types:
@@ -480,22 +480,24 @@ def distribute_cellsims_MPI():
     for correlation in correlations:
         for input_region in input_regions:
             for conductance in conductance_types:
+
                 pop = Population(conductance_type=conductance, correlation=correlation, input_region=input_region)
                 if divmod(sim_num, SIZE / 2)[1] == RANK / 2:
+                    print correlation, input_region, conductance
                     print RANK, "summing", pop.stem
-                    pop.sum_signals()
+                    #pop.sum_signals()
                 sim_num += 1
-    COMM.Barrier()
-    if RANK == 0:
-        print "Plotting LFPs"
-    sim_num = 0
-    for correlation in correlations:
-        for input_region in input_regions:
-            pop = Population(correlation=correlation, input_region=input_region)
-            if divmod(sim_num, SIZE / 2)[1] == RANK / 2:
-                print RANK, "plotting", pop.stem
-                pop.plot_LFP(conductance_types)
-            sim_num += 1
+    #COMM.Barrier()
+    #if RANK == 0:
+    #    print "Plotting LFPs"
+    #sim_num = 0
+    #for correlation in correlations:
+    #    for input_region in input_regions:
+    #        pop = Population(correlation=correlation, input_region=input_region)
+    #        if divmod(sim_num, SIZE / 2)[1] == RANK / 2:
+    #            print RANK, "plotting", pop.stem
+    #            pop.plot_LFP(conductance_types)
+    #        sim_num += 1
 
 
 def plot_all_LFPs():
