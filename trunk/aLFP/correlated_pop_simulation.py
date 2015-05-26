@@ -464,16 +464,16 @@ def distribute_cellsims_MPI():
     sim_num = 0
     if RANK % 2:
         return
-    for correlation in correlations:
-        for input_region in input_regions:
-            for conductance in conductance_types:
-                pop = Population(conductance_type=conductance, correlation=correlation, input_region=input_region)
-                for cell_idx in xrange(pop.num_cells):
-                    if divmod(sim_num, SIZE / 2)[1] == RANK / 2:
-                        print "Rank %d simulating %s_cell_%d" % (RANK, pop.stem, cell_idx)
-                        pop.run_single_cell_simulation(cell_idx)
-                    sim_num += 1
-    COMM.Barrier()
+    #for correlation in correlations:
+    #    for input_region in input_regions:
+    #        for conductance in conductance_types:
+    #            pop = Population(conductance_type=conductance, correlation=correlation, input_region=input_region)
+    #            for cell_idx in xrange(pop.num_cells):
+    #                if divmod(sim_num, SIZE / 2)[1] == RANK / 2:
+    #                    print "Rank %d simulating %s_cell_%d" % (RANK, pop.stem, cell_idx)
+    #                    pop.run_single_cell_simulation(cell_idx)
+    #                sim_num += 1
+    #COMM.Barrier()
     if RANK == 0:
         print "Summing signals."
     sim_num = 0
@@ -485,6 +485,7 @@ def distribute_cellsims_MPI():
                     print RANK, "summing", pop.stem
                     pop.sum_signals()
                 sim_num += 1
+    COMM.Barrier()
     if RANK == 0:
         print "Plotting LFPs"
     sim_num = 0
