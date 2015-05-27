@@ -35,7 +35,7 @@ class Population():
                  weight=0.0001, input_region='homogeneous', initialize=False):
 
         self.model = 'hay'
-        self.sim_name = 'hay_smaller_pop'
+        self.sim_name = 'stallo_10s'
         self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g',
                                 -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
@@ -131,7 +131,7 @@ class Population():
         self.elec_y = np.r_[elec_y_center, elec_y_lateral]
         self.elec_z = np.r_[elec_z_center, elec_z_lateral]
 
-        self.center_idxs = np.arange(n_elecs_center)
+        self.center_idxs = np.arange(n_elecs_center)[1:-1]
         self.lateral_idxs = np.arange(n_elecs_center, n_elecs_lateral + n_elecs_center)
 
         self.num_elecs = len(self.elec_x)
@@ -317,13 +317,13 @@ class Population():
         x_y_z_rot = np.load(join(self.data_folder, 'x_y_z_rot_%d_%d.npy' %
                                 (self.num_cells, self.population_radius)))
 
-        ax.scatter(x_y_z_rot[0, :], x_y_z_rot[2, :], c='k', edgecolor='none', s=10, zorder=1)
+        ax.scatter(x_y_z_rot[0, :], x_y_z_rot[2, :], c='gray', edgecolor='none', s=10, zorder=1)
 
         plot_idx = np.argmin(np.abs(x_y_z_rot[0, :]))
         plt.seed(plot_idx)
         cell = self.return_cell(plot_idx)
         cell = self.set_synaptic_input(cell)
-        [ax.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], color='grey', zorder=0)
+        [ax.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], color='k', zorder=0)
                         for idx in xrange(len(cell.xstart))]
         ax.plot(cell.xmid[cell.synidx], cell.zmid[cell.synidx], '.', c='r', ms=2)
 
@@ -334,7 +334,7 @@ class Population():
         elec_axs = {}
         elec_psd_axs = {}
         elec_ax_dict = {'xticks': []}
-        elec_psd_ax_dict = {'ylim': [1e-10, 1e-2], 'xlim': [1e0, 1e3]}
+        elec_psd_ax_dict = {'ylim': [1e-7, 1e-0], 'xlim': [1e0, 1e3]}
 
         ax0 = fig.add_subplot(131, aspect=1, frameon=False, xticks=[], yticks=[])
         ax0.scatter(self.elec_x[self.center_idxs], self.elec_z[self.center_idxs], zorder=2, s=50)
@@ -342,20 +342,20 @@ class Population():
 
         for numb, elec_idx in enumerate(self.center_idxs):
             title = 'x: %d$\mu$m, z: %d$\mu$m' % (self.elec_x[elec_idx], self.elec_z[elec_idx])
-            elec_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 3, 3*(len(self.center_idxs) - numb) - 1,
-                                                 title=title, **elec_ax_dict)
-            elec_psd_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 3, 3*(len(self.center_idxs) - numb),
-                                                     **elec_psd_ax_dict)
+            #elec_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 3, 3*(len(self.center_idxs) - numb) - 1,
+            #                                     title=title, **elec_ax_dict)
+            elec_psd_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 2, 2*(len(self.center_idxs) - numb),
+                                                     title=title, **elec_psd_ax_dict)
             elec_psd_axs[elec_idx].grid(True)
             if self.elec_z[elec_idx] == np.min(self.elec_z):
-                elec_axs[elec_idx].set_xticks([0, self.end_t])
-                elec_axs[elec_idx].set_xlabel('Time [ms]')
-                elec_axs[elec_idx].set_ylabel('$\mu$V')
+                #elec_axs[elec_idx].set_xticks([0, self.end_t])
+                #elec_axs[elec_idx].set_xlabel('Time [ms]')
+                #elec_axs[elec_idx].set_ylabel('$\mu$V')
                 elec_psd_axs[elec_idx].set_ylabel('$\mu$V$^2$/Hz')
                 elec_psd_axs[elec_idx].set_xlabel('Frequency [Hz]')
 
         aLFP.simplify_axes(elec_psd_axs.values())
-        aLFP.simplify_axes(elec_axs.values())
+        #aLFP.simplify_axes(elec_axs.values())
         lfp_max = 0
         for conductance_type in conductance_list:
             local_stem = '%s_%s_%s_%dmV_c%1.2f_w%1.5f_R%d_N%d' % (self.model, self.input_region, conductance_type,
@@ -367,11 +367,11 @@ class Population():
             freq, psd = aLFP.return_freq_and_psd_welch(lfp, self.welch_dict)
             for elec_idx in self.center_idxs:
                 lfp_max = np.max([lfp_max, np.max(np.abs(lfp[elec_idx]))])
-                elec_axs[elec_idx].plot(self.tvec, lfp[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+                #elec_axs[elec_idx].plot(self.tvec, lfp[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
                 elec_psd_axs[elec_idx].loglog(freq, psd[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
 
-        [ax.set_ylim([-lfp_max, lfp_max]) for ax in elec_axs.values()]
-        [ax.set_yticks([-1.5, 1.5]) for ax in elec_axs.values()]
+        #[ax.set_ylim([-lfp_max, lfp_max]) for ax in elec_axs.values()]
+        #[ax.set_yticks([-1.5, 1.5]) for ax in elec_axs.values()]
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
         fig.savefig(join(self.fig_folder, 'center_LFP_%s.png' % self.stem))
 
@@ -504,7 +504,7 @@ def plot_all_LFPs():
 
     correlations = [0.0, 0.1, 1.0]
     conductance_types = ['active', 'passive']
-    input_regions = ['homogeneous', 'tuft']
+    input_regions = ['basal', 'homogeneous', 'distal_tuft']
     for correlation in correlations:
         for input_region in input_regions:
             pop = Population(correlation=correlation, input_region=input_region)
@@ -523,8 +523,8 @@ def test_sim():
 
 if __name__ == '__main__':
     #test_sim()
-    distribute_cellsims_MPI()
+    #distribute_cellsims_MPI()
     # alternative_MPI_dist()
-    # pop = Population(correlation=0.0, input_region='tuft')
-    # pop.plot_LFP(['active', 'passive'])
-    # plot_all_LFPs()
+    #pop = Population(correlation=0.0, input_region='basal')
+    #pop.plot_LFP(['active', 'passive'])
+    plot_all_LFPs()
