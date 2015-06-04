@@ -648,6 +648,7 @@ def MPI_population_simulation():
         sys.exit()
 
     if rank == 0:
+        pop = Population(initialize=True)
         # Master process executes code below
         correlations = [0.0, 1.0]
         conductance_types = [-0.5, 0.0, 2.0]
@@ -702,14 +703,13 @@ def MPI_population_simulation():
             if tag == tags.START:
                 # Do the work here
                 print "\033[93m%d put to work on %s cell %d\033[0m" % (rank, str(pop_dict.values()), cell_idx)
-                #try:
-                pop = Population(**pop_dict)
-                pop.run_single_cell_simulation(cell_idx)
-                # except:
-                #     print "\033[91mNode %d exiting with ERROR\033[0m" % rank
-                #     comm.send(None, dest=0, tag=tags.ERROR)
-                #     sys.exit()
-
+                try:
+                    pop = Population(**pop_dict)
+                    pop.run_single_cell_simulation(cell_idx)
+                except:
+                    print "\033[91mNode %d exiting with ERROR\033[0m" % rank
+                    comm.send(None, dest=0, tag=tags.ERROR)
+                    sys.exit()
                 comm.send(None, dest=0, tag=tags.DONE)
             elif tag == tags.EXIT:
                 print "\033[93m%d exiting\033[0m" % rank
