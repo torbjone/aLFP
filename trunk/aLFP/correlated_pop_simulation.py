@@ -54,6 +54,9 @@ class Population():
         self.timeres = 2**-4
         self.num_cells = 400
         self.population_radius = 200.
+        self.dr = 25.
+        self.population_sizes = np.arange(self.dr, self.population_radius + self.dr, self.dr)
+
         self.num_synapses = 1000
         self.correlation = correlation
         self.holding_potential = holding_potential
@@ -304,6 +307,18 @@ class Population():
             total_signal += np.load('%s_cell_%d.npy' % (session_name, cell_idx))
         np.save('%s_total.npy' % session_name, total_signal)
 
+    def sum_signals_by_population_size(self):
+        x_y_z_rot = np.load(join(self.data_folder, 'x_y_z_rot_%d_%d.npy' % (self.num_cells, self.population_radius)))
+        session_name = join(self.data_folder, 'lfp_%s' % self.stem)
+        for size in self.population_sizes:
+            total_signal = np.zeros((self.num_elecs, self.num_tsteps))
+            for cell_idx in xrange(self.num_cells):
+                if np.sqrt(np.sum(x_y_z_rot[:2, cell_idx]**2)) <= size:
+                    #print 'x, y, size:', x_y_z_rot[:2, cell_idx], size
+                    total_signal += np.load('%s_cell_%d.npy' % (session_name, cell_idx))
+            np.save('%s_total_%d.npy' % (session_name, size), total_signal)
+
+
     def set_input_spiketrain(self, cell, all_spike_trains, cell_input_idxs, spike_train_idxs):
         """ Makes synapses and feeds them predetermined spiketimes """
         for number, comp_idx in enumerate(cell_input_idxs):
@@ -418,7 +433,7 @@ def alternative_MPI_dist():
                         tag = status.Get_tag()
                         if tag == tags.READY and source % 2:
                             comm.send([pop, cell_idx], dest=source, tag=tags.START)
-                            print("Sending task  to worker %d" % source)
+                            print("Sending task to worker %d" % source)
                             #task_index += 1
                         elif tag == tags.DONE:
                             print("Worker %d completed task" % source)
@@ -441,6 +456,87 @@ def alternative_MPI_dist():
                 comm.send(None, dest=0, tag=tags.DONE)
             elif tag == tags.EXIT:
                 print rank, "exiting"
+                break
+        comm.send(None, dest=0, tag=tags.EXIT)
+
+def MPI_population_size_sum():
+    """ Run with
+        openmpirun -np 4 python example_mpi.py
+    """
+    from mpi4py import MPI
+
+    class Tags():
+        def __init__(self):
+            self.READY = 0
+            self.DONE = 1
+            self.EXIT = 2
+            self.START = 3
+            self.ERROR = 4
+    tags = Tags()
+    # Initializations and preliminaries
+    comm = MPI.COMM_WORLD   # get MPI communicator object
+    size = comm.size        # total number of processes
+    rank = comm.rank        # rank of this process
+    status = MPI.Status()   # get MPI status object
+    num_workers = size - 1
+
+    if rank == 0:
+        # Master process executes code below
+        correlations = [0.0, 0.1, 1.0]
+        conductance_types = ['active', 'passive']
+        input_regions = ['homogeneous', 'distal_tuft', 'basal']
+
+        print("\033[95m Master starting with %d workers" % num_workers)
+        task = 0
+        num_tasks = len(correlations) * len(conductance_types) * len(input_regions)
+        for correlation in correlations:
+            for input_region in input_regions:
+                for conductance in conductance_types:
+                    pop = Population(conductance_type=conductance,
+                                     correlation=correlation,
+                                     input_region=input_region)
+                    task += 1
+                    sent = False
+                    while not sent:
+                        data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+                        source = status.Get_source()
+                        tag = status.Get_tag()
+                        if tag == tags.READY:
+                            comm.send(pop, dest=source, tag=tags.START)
+                            print "\033[95m Sending task %d/%d to worker %d\033[0m" % (task, num_tasks, source)
+                            sent = True
+                        elif tag == tags.DONE:
+                            print "\033[95m Worker %d completed task %d/%d\033[0m" % (source, task, num_tasks)
+                        elif tag == tags.ERROR:
+                            print "\033[91mMaster detected ERROR at node %d. Aborting...\033[0m" % source
+                            for worker in range(1, num_workers + 1):
+                                print "sending"
+                                comm.send(None, dest=worker, tag=tags.EXIT)
+                            sys.exit()
+
+        for worker in range(1, num_workers + 1):
+            comm.send(None, dest=worker, tag=tags.EXIT)
+        print("\033[95m Master finishing\033[0m")
+    else:
+        #print("I am a worker with rank %d." % rank)
+        while True:
+            comm.send(None, dest=0, tag=tags.READY)
+            pop = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
+            tag = status.Get_tag()
+            if tag == tags.START:
+                # Do the work here
+                print "\033[93m%d put to work\033[0m" % rank
+                # plt.pause(1 + np.random.random())
+                try:
+                    pop.sum_signals_by_population_size()
+                except:
+                    print "\033[91mNode %d exiting with ERROR\033[0m" % rank
+                    comm.send(None, dest=0, tag=tags.ERROR)
+                    sys.exit()
+
+                comm.send(None, dest=0, tag=tags.DONE)
+            elif tag == tags.EXIT:
+                print "\033[93m%d exiting\033[0m" % rank
                 break
         comm.send(None, dest=0, tag=tags.EXIT)
 
@@ -527,4 +623,5 @@ if __name__ == '__main__':
     # alternative_MPI_dist()
     #pop = Population(correlation=0.0, input_region='basal')
     #pop.plot_LFP(['active', 'passive'])
-    plot_all_LFPs()
+    #plot_all_LFPs()
+    MPI_population_size_sum()
