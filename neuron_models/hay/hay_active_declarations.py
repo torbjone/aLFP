@@ -114,7 +114,7 @@ def biophys_generic(**kwargs):
             tau_w = tau * 10
         else:
             tau_w = tau
-        print "Ih calculated tau_w: ", tau_w
+        #print "Ih calculated tau_w: ", tau_w
     else:
         tau_w = kwargs['tau_w']
 
@@ -129,7 +129,7 @@ def biophys_generic(**kwargs):
     total_area = _get_total_area()
     total_w_conductance = kwargs['avrg_w_bar'] * total_area
     max_dist = _get_longest_distance()
-    print "Max dist: ", max_dist
+    # print "Max dist: ", max_dist
 
     if kwargs['distribution'] == 'uniform':
         for sec in neuron.h.allsec():
@@ -142,7 +142,7 @@ def biophys_generic(**kwargs):
         for sec in neuron.h.allsec():
             for seg in sec:
                 seg.g_w_bar_QA = conductance_factor * (1 + (increase_factor - 1.) * nrn.distance(seg.x) / max_dist)
-        print 'Linear increase:  %1.8f + %1.10f * x' % (conductance_factor, conductance_factor*(increase_factor - 1.) / max_dist)
+        # print 'Linear increase:  %1.8f + %1.10f * x' % (conductance_factor, conductance_factor*(increase_factor - 1.) / max_dist)
 
     elif kwargs['distribution'] == 'linear_decrease':
         decrease_factor = 60
@@ -151,7 +151,7 @@ def biophys_generic(**kwargs):
         for sec in neuron.h.allsec():
             for seg in sec:
                 seg.g_w_bar_QA = conductance_factor*(decrease_factor - (decrease_factor - 1.) * nrn.distance(seg.x) / max_dist)
-        print 'Linear decrease: %1.8f - %1.10f * x' % (conductance_factor * decrease_factor, conductance_factor * (decrease_factor - 1.) / max_dist)
+        # print 'Linear decrease: %1.8f - %1.10f * x' % (conductance_factor * decrease_factor, conductance_factor * (decrease_factor - 1.) / max_dist)
     else:
         raise RuntimeError("Unknown distribution...")
     cond_check = 0
