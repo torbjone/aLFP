@@ -35,7 +35,7 @@ class Population():
                  weight=0.0001, input_region='homogeneous', initialize=False):
 
         self.model = 'hay'
-        self.sim_name = 'stallo_10s'
+        self.sim_name = 'hay_smaller_pop' #'stallo_10s'
         self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g',
                                 -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
