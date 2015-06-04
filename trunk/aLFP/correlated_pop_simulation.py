@@ -32,7 +32,7 @@ class Population():
                  weight=0.0001, input_region='homogeneous', distribution='linear_increase', initialize=False):
 
         self.model = 'hay'
-        self.sim_name = 'hay_smaller_pop' #
+        self.sim_name = 'hay_generic' #
         self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g',
                                 -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
