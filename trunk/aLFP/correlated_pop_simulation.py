@@ -424,7 +424,7 @@ class Population():
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
         fig.savefig(join(self.fig_folder, 'center_LFP_%s.png' % self.stem))
 
-    def plot_latteral_LFP(self, conductance_list):
+    def plot_lateral_LFP(self, conductance_list):
         plt.close('all')
         fig = plt.figure(figsize=[12, 8])
         fig.subplots_adjust(left=0.08, right=0.99, top=1.0)
@@ -471,9 +471,9 @@ class Population():
         #[ax.set_ylim([-lfp_max, lfp_max]) for ax in elec_axs.values()]
         #[ax.set_yticks([-1.5, 1.5]) for ax in elec_axs.values()]
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
-        fig.savefig(join(self.fig_folder, 'latteral_LFP_%s.png' % self.stem))
+        fig.savefig(join(self.fig_folder, 'lateral_LFP_%s.png' % self.stem))
 
-def alternative_MPI_dist():
+def alternative_MPI_dist_DEPRECATED():
 
     from mpi4py import MPI
 
@@ -703,13 +703,101 @@ def MPI_population_simulation():
             if tag == tags.START:
                 # Do the work here
                 print "\033[93m%d put to work on %s cell %d\033[0m" % (rank, str(pop_dict.values()), cell_idx)
-                # try:
-                pop = Population(**pop_dict)
-                pop.run_single_cell_simulation(cell_idx)
-                # except:
-                #     print "\033[91mNode %d exiting with ERROR\033[0m" % rank
-                #     comm.send(None, dest=0, tag=tags.ERROR)
-                #     sys.exit()
+                try:
+                    pop = Population(**pop_dict)
+                    pop.run_single_cell_simulation(cell_idx)
+                except:
+                    print "\033[91mNode %d exiting with ERROR\033[0m" % rank
+                    comm.send(None, dest=0, tag=tags.ERROR)
+                    sys.exit()
+                comm.send(None, dest=0, tag=tags.DONE)
+            elif tag == tags.EXIT:
+                print "\033[93m%d exiting\033[0m" % rank
+                break
+        comm.send(None, dest=0, tag=tags.EXIT)
+
+def MPI_population_sum():
+    """ Run with
+        openmpirun -np 4 python example_mpi.py
+    """
+    from mpi4py import MPI
+
+    class Tags():
+        def __init__(self):
+            self.READY = 0
+            self.DONE = 1
+            self.EXIT = 2
+            self.START = 3
+            self.ERROR = 4
+    tags = Tags()
+    # Initializations and preliminaries
+    comm = MPI.COMM_WORLD   # get MPI communicator object
+    size = comm.size        # total number of processes
+    rank = comm.rank        # rank of this process
+    status = MPI.Status()   # get MPI status object
+    num_workers = size - 1
+
+    if size == 1:
+        sys.exit()
+
+    if rank == 0:
+        correlations = [0.0, 1.0]
+        conductance_types = [-0.5, 0.0, 2.0]
+        distributions = ['linear_increase']
+        input_regions = ['homogeneous', 'distal_tuft', 'basal']
+
+        print("\033[95m Master starting with %d workers\033[0m" % num_workers)
+        task = 0
+        num_cells = Population().num_cells
+        num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(distributions) * num_cells
+        for correlation in correlations:
+            for input_region in input_regions:
+                for distribution in distributions:
+                    for conductance in conductance_types:
+
+                        pop_dict = {'conductance_type': conductance,
+                                    'correlation': correlation,
+                                    'input_region': input_region,
+                                    'distribution': distribution
+                                    }
+                        task += 1
+                        sent = False
+                        while not sent:
+                            data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+                            source = status.Get_source()
+                            tag = status.Get_tag()
+                            if tag == tags.READY:
+                                comm.send(pop_dict, dest=source, tag=tags.START)
+                                print "\033[95m Sending task %d/%d to worker %d\033[0m" % (task, num_tasks, source)
+                                sent = True
+                            elif tag == tags.DONE:
+                                print "\033[95m Worker %d completed task %d/%d\033[0m" % (source, task, num_tasks)
+                            elif tag == tags.ERROR:
+                                print "\033[91mMaster detected ERROR at node %d. Aborting...\033[0m" % source
+                                for worker in range(1, num_workers + 1):
+                                    #print "sending"
+                                    comm.send(None, dest=worker, tag=tags.EXIT)
+                                sys.exit()
+
+        for worker in range(1, num_workers + 1):
+            comm.send(None, dest=worker, tag=tags.EXIT)
+        print("\033[95m Master finishing\033[0m")
+    else:
+        #print("I am a worker with rank %d." % rank)
+        while True:
+            comm.send(None, dest=0, tag=tags.READY)
+            pop_dict = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
+
+            tag = status.Get_tag()
+            if tag == tags.START:
+                print "\033[93m%d put to work on %s\033[0m" % (rank, str(pop_dict.values()))
+                try:
+                    pop = Population(**pop_dict)
+                    pop.sum_signals()
+                except:
+                    print "\033[91mNode %d exiting with ERROR\033[0m" % rank
+                    comm.send(None, dest=0, tag=tags.ERROR)
+                    sys.exit()
                 comm.send(None, dest=0, tag=tags.DONE)
             elif tag == tags.EXIT:
                 print "\033[93m%d exiting\033[0m" % rank
@@ -717,10 +805,7 @@ def MPI_population_simulation():
         comm.send(None, dest=0, tag=tags.EXIT)
 
 
-
-
-
-def distribute_cellsims_MPI():
+def distribute_cellsims_MPI_DEPRECATED():
     """ Run with
         openmpirun -np 4 python example_mpi.py
     """
@@ -785,7 +870,7 @@ def plot_all_center_LFPs():
             pop = Population(correlation=correlation, input_region=input_region)
             pop.plot_central_LFP(conductance_types)
 
-def plot_all_latteral_LFPs():
+def plot_all_lateral_LFPs():
 
     correlations = [0.0, 0.1, 1.0]
     conductance_types = ['active', 'passive']
@@ -793,7 +878,7 @@ def plot_all_latteral_LFPs():
     for correlation in correlations:
         for input_region in input_regions:
             pop = Population(correlation=correlation, input_region=input_region)
-            pop.plot_latteral_LFP(conductance_types)
+            pop.plot_lateral_LFP(conductance_types)
 
 
 def test_sim():
@@ -815,4 +900,5 @@ if __name__ == '__main__':
     #plot_all_LFPs()
     #MPI_population_size_sum()
     #plot_all_latteral_LFPs()
-    MPI_population_simulation()
+    #MPI_population_simulation()
+    MPI_population_sum()
