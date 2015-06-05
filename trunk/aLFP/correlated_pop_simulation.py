@@ -29,7 +29,7 @@ from hay_active_declarations import active_declarations as hay_active
 class Population():
 
     def __init__(self, holding_potential=-80, conductance_type='active', correlation=0.0,
-                 weight=0.0001, input_region='homogeneous', distribution='linear_increase', initialize=False):
+                 weight=0.0001, input_region='homogeneous', distribution=None, initialize=False):
 
         self.model = 'hay'
         self.sim_name = 'hay_generic' #
@@ -48,15 +48,17 @@ class Population():
         if not os.path.isdir(self.data_folder):
             os.mkdir(self.data_folder)
         self.distribution = distribution
-        self.generic_conductance = type(conductance_type) in [float, int]
+        self.generic_conductance = type(conductance_type) in [float, int] or not distribution is None
 
         self.timeres = 2**-4
-        self.cut_off = 500 if at_stallo else 500
-        self.end_t = 10000 if at_stallo else 1000
-        self.num_cells = 100 if at_stallo else 4
+        self.cut_off = 500
+        self.end_t = 10000
+        scale = 4
 
-        self.population_radius = 100.
-        self.dr = 25.
+        self.num_cells = 100 * scale ** 2 #if at_stallo else 4
+
+        self.population_radius = 100. * scale
+        self.dr = 50.
         self.population_sizes = np.arange(self.dr, self.population_radius + self.dr, self.dr)
 
         self.num_synapses = 1000
@@ -649,11 +651,10 @@ def MPI_population_simulation():
 
     if rank == 0:
         pop = Population(initialize=True)
-        # Master process executes code below
-        correlations = [0.0, 1.0]
+        correlations = [0.0, 0.1, 1.0]
         conductance_types = [-0.5, 0.0, 2.0]
         distributions = ['linear_increase']
-        input_regions = ['homogeneous', 'distal_tuft', 'basal']
+        input_regions = ['homogeneous']
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
@@ -749,7 +750,7 @@ def MPI_population_sum():
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
         num_cells = Population().num_cells
-        num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(distributions) * num_cells
+        num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(distributions)
         for correlation in correlations:
             for input_region in input_regions:
                 for distribution in distributions:
@@ -863,12 +864,16 @@ def distribute_cellsims_MPI_DEPRECATED():
 def plot_all_center_LFPs():
 
     correlations = [0.0, 0.1, 1.0]
-    conductance_types = ['active', 'passive']
-    input_regions = ['basal', 'homogeneous', 'distal_tuft']
+    conductance_types = [-0.5, 0.0, 2.0]#['active', 'passive']
+    distributions = ['linear_increase']
+    input_regions = ['homogeneous']
     for correlation in correlations:
         for input_region in input_regions:
-            pop = Population(correlation=correlation, input_region=input_region)
-            pop.plot_central_LFP(conductance_types)
+            for distribution in distributions:
+                pop = Population(correlation=correlation, input_region=input_region, distribution=distribution,
+                                 conductance_type=2.0)
+                pop.plot_central_LFP(conductance_types)
+                pop.plot_lateral_LFP(conductance_types)
 
 def plot_all_lateral_LFPs():
 
@@ -897,8 +902,8 @@ if __name__ == '__main__':
     # alternative_MPI_dist()
     #pop = Population(correlation=0.0, input_region='basal')
     #pop.plot_LFP(['active', 'passive'])
-    #plot_all_LFPs()
+    # plot_all_center_LFPs()
     #MPI_population_size_sum()
     #plot_all_latteral_LFPs()
-    #MPI_population_simulation()
+    MPI_population_simulation()
     MPI_population_sum()
