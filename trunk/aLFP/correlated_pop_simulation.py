@@ -742,10 +742,10 @@ def MPI_population_sum():
         sys.exit()
 
     if rank == 0:
-        correlations = [0.0, 1.0]
+        correlations = [0.0, 0.1, 1.0]
         conductance_types = [-0.5, 0.0, 2.0]
         distributions = ['linear_increase']
-        input_regions = ['homogeneous', 'distal_tuft', 'basal']
+        input_regions = ['homogeneous']
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
@@ -905,5 +905,5 @@ if __name__ == '__main__':
     # plot_all_center_LFPs()
     #MPI_population_size_sum()
     #plot_all_latteral_LFPs()
-    MPI_population_simulation()
+    # MPI_population_simulation()
     MPI_population_sum()
