@@ -32,7 +32,7 @@ class Population():
                  weight=0.0001, input_region='homogeneous', distribution=None, initialize=False):
 
         self.model = 'hay'
-        self.sim_name = 'hay_generic' #
+        self.sim_name = 'hay_generic' # 'stallo_generic_1600'
         self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g',
                                 -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
@@ -564,6 +564,9 @@ def MPI_population_size_sum():
     status = MPI.Status()   # get MPI status object
     num_workers = size - 1
 
+
+
+
     if rank == 0:
         # Master process executes code below
         correlations = [0.0, 0.1, 1.0]
@@ -650,10 +653,10 @@ def MPI_population_simulation():
         sys.exit()
 
     if rank == 0:
-        pop = Population(initialize=True)
+        # pop = Population(initialize=True)
         correlations = [0.0, 0.1, 1.0]
         conductance_types = [-0.5, 0.0, 2.0]
-        distributions = ['linear_increase']
+        distributions = ['linear_decrease', 'uniform']
         input_regions = ['homogeneous']
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
@@ -744,12 +747,12 @@ def MPI_population_sum():
     if rank == 0:
         correlations = [0.0, 0.1, 1.0]
         conductance_types = [-0.5, 0.0, 2.0]
-        distributions = ['linear_increase']
+        distributions = ['linear_decrease', 'uniform']
         input_regions = ['homogeneous']
+
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
-        num_cells = Population().num_cells
         num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(distributions)
         for correlation in correlations:
             for input_region in input_regions:
@@ -865,8 +868,9 @@ def plot_all_center_LFPs():
 
     correlations = [0.0, 0.1, 1.0]
     conductance_types = [-0.5, 0.0, 2.0]#['active', 'passive']
-    distributions = ['linear_increase']
+    distributions = ['linear_decrease', 'uniform']
     input_regions = ['homogeneous']
+
     for correlation in correlations:
         for input_region in input_regions:
             for distribution in distributions:
@@ -905,5 +909,5 @@ if __name__ == '__main__':
     # plot_all_center_LFPs()
     #MPI_population_size_sum()
     #plot_all_latteral_LFPs()
-    # MPI_population_simulation()
+    MPI_population_simulation()
     MPI_population_sum()
