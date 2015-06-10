@@ -30,7 +30,7 @@ class Population():
                  weight=0.0001, input_region='homogeneous', distribution=None, initialize=False):
 
         self.model = 'hay'
-        self.sim_name = 'hay' if at_stallo else 'hay_test'
+        self.sim_name = 'hay'
         self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g', 'Ih_frozen': 'c',
                                 -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
@@ -50,10 +50,10 @@ class Population():
 
         self.timeres = 2**-4
         self.cut_off = 500
-        self.end_t = 10000 if at_stallo else 1000
+        self.end_t = 10000
         scale = 4
 
-        self.num_cells = 100 * scale ** 2 if at_stallo else 1
+        self.num_cells = 100 * scale ** 2
 
         self.population_radius = 100. * scale
         self.dr = 50.
@@ -104,6 +104,7 @@ class Population():
         return stem
 
     def distribute_cells(self):
+        plt.seed(1234)
         x_y_z_rot = np.zeros((4, self.num_cells))
         for cell_idx in xrange(self.num_cells):
             x = 2 * self.population_radius * (np.random.random() - 0.5)
@@ -264,6 +265,7 @@ class Population():
     def make_all_input_trains(self):
         """ Makes all the input spike trains. Totally N / 0.01, since that is the
         maximum number of needed ones"""
+        plt.seed(1234)
         num_trains = int(self.num_synapses/0.01)
         all_spiketimes = {}
         for idx in xrange(num_trains):
@@ -673,7 +675,7 @@ def MPI_population_simulation():
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
         num_cells = Population().num_cells
-        num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(distributions) * num_cells
+        num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(holding_potentials) * num_cells
         for correlation in correlations:
             for input_region in input_regions:
                 for holding_potential in holding_potentials:
@@ -892,10 +894,12 @@ def plot_all_LFPs():
 
 def test_sim():
     # pop = Population(distribution='linear_increase', initialize=False, conductance_type=-0.5)
-    conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
-    input_regions = ['basal', 'homogeneous', 'tuft']
-    correlations = [0.0, 1.0]
-    holding_potentials = [-65, -80]
+    conductance_types = ['active']#, 'passive', 'Ih_linearized', 'Ih_frozen']
+    input_regions = ['basal']#, 'homogeneous', 'tuft']
+    pop = Population(initialize=True)
+
+    correlations = [1.0, 0.0]
+    holding_potentials = [-65]#, -80]
     for correlation in correlations:
         for conductance in conductance_types:
             for input_region in input_regions:
