@@ -7,7 +7,7 @@ from cell_simulation import *
 from population_sim import *
 from ring_figures import *
 from delta_synapse_simulation import *
-from correlated_pop_simulation import *
+# from correlated_pop_simulation import *
 from spike_impact_simulation import *
 from ih_reach_impact import *
 from generic_study import *

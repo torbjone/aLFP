@@ -48,7 +48,7 @@ class GenericStudy:
         # self.holding_potentials = [-80, -70, -60]
         self.plot_frequencies = [2, 10, 100]
         self.holding_potential = -80
-        self.mus = [-0.5, 0, 2]
+        self.mus = [-0.5]#, 0, 2]
         self.mu_clr = {-0.5: 'r',
                        0: 'k',
                        2: 'b'}
@@ -73,7 +73,7 @@ class GenericStudy:
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 0
-            self.repeats = 2
+            self.repeats = 5
             self.end_t = 1000 * self.repeats
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
@@ -1156,7 +1156,7 @@ class GenericStudy:
         if self.input_type == 'wn':
             input_scaling = 0.0005
             max_freq = 500
-            input_array = input_scaling * self._make_WN_input(cell, max_freq)
+            input_array = input_scaling * (self._make_WN_input(cell, max_freq) - 1)
         elif self.input_type == 'real_wn':
             tot_ntsteps = round((cell.tstopms - cell.tstartms)/cell.timeres_NEURON + 1)
             input_scaling = .1
@@ -1165,10 +1165,10 @@ class GenericStudy:
             raise RuntimeError("Unrecognized input_type!")
         noise_vec = neuron.h.Vector(input_array) if weight is None else neuron.h.Vector(input_array * weight)
 
-        print np.std(input_array) * 1000
-        plt.close('all')
-        plt.plot(input_array)
-        plt.show()
+        # print np.std(input_array) * 1000
+        # plt.close('all')
+        # plt.plot(input_array)
+        # plt.show()
 
         i = 0
         syn = None
@@ -1240,9 +1240,9 @@ class GenericStudy:
         # np.save(join(self.root_folder, 'linear_increase.npy'), [dist, gh])
 
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
-        # plt.close('all')
-        # [plt.plot(cell.vmem[idx,:]) for idx in xrange(cell.vmem.shape[0])]
-        # plt.show()
+        plt.close('all')
+        plt.plot(cell.tvec, cell.vmem[0, :])
+        plt.show()
         self.save_neural_sim_single_input_data(cell, electrode, input_idx, mu, distribution, tau_w)
 
     # def run_all_distributed_synaptic_input_simulations(self, mu, weight, input_pos):
@@ -1266,6 +1266,10 @@ class GenericStudy:
         print "Starting simulation ..."
         #import ipdb; ipdb.set_trace()
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
+
+        plt.plot(cell.tvec, cell.somav)
+        plt.show()
+
         self.save_neural_sim_single_input_data(cell, electrode, input_sec, mu, distribution, tau_w, weight)
         neuron.h('forall delete_section()')
         del cell, syn, noiseVec, electrode
@@ -1464,9 +1468,9 @@ class GenericStudy:
                     self.plot_summary(input_idx, distribution, taum)
 
     def run_all_single_simulations(self):
-        distributions = ['linear_decrease', 'linear_increase', 'uniform']
-        input_idxs = [605, 0]
-        tau_ws = ['auto', 'auto10', 'auto0.1']#, 5, 500]
+        distributions = ['linear_decrease']
+        input_idxs = [0]
+        tau_ws = ['auto']#, 5, 500]
         make_summary_plot = True
         tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
         i = 1
@@ -1477,9 +1481,9 @@ class GenericStudy:
                         print "%d / %d" % (i, tot_sims)
                         self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
                         i += 1
-                    if make_summary_plot:
-                       self.plot_summary(input_idx, distribution, tau_w)
-                       self._plot_LFP_with_distance(distribution, tau_w, input_idx)
+                    # if make_summary_plot:
+                    #    self.plot_summary(input_idx, distribution, tau_w)
+                    #    self._plot_LFP_with_distance(distribution, tau_w, input_idx)
                 # self._plot_q_value(distribution, input_idx)
 
     def LFP_with_distance_study(self, weight):
@@ -2125,8 +2129,8 @@ if __name__ == '__main__':
     # sys.exit()
     # gs.generic_q_values_colorplot()
 
-    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
+    # gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
     # if len(sys.argv) == 3:
-    #    gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
+    # gs._run_distributed_synaptic_simulation(-0.5, 'homogeneous', 'linear_decrease', 'auto', 0.0001)
     # else:
-    #    gs.LFP_with_distance_study(0.0001)
+    # gs.LFP_with_distance_study(0.0001)

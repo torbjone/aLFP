@@ -14,8 +14,6 @@ import pylab as plt
 import neuron
 import LFPy
 import aLFP
-import scipy.fftpack as ff
-import scipy.signal
 
 model = 'hay'
 if at_stallo:
@@ -32,8 +30,8 @@ class Population():
                  weight=0.0001, input_region='homogeneous', distribution=None, initialize=False):
 
         self.model = 'hay'
-        self.sim_name = 'hay_generic' # 'stallo_generic_1600'
-        self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g',
+        self.sim_name = 'hay' if at_stallo else 'hay_test'
+        self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g', 'Ih_frozen': 'c',
                                 -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
         if at_stallo:
@@ -52,10 +50,10 @@ class Population():
 
         self.timeres = 2**-4
         self.cut_off = 500
-        self.end_t = 10000
+        self.end_t = 10000 if at_stallo else 1000
         scale = 4
 
-        self.num_cells = 100 * scale ** 2 #if at_stallo else 4
+        self.num_cells = 100 * scale ** 2 if at_stallo else 1
 
         self.population_radius = 100. * scale
         self.dr = 50.
@@ -98,6 +96,7 @@ class Population():
             stem = '%s_%s_%1.1f_%s_c%1.2f_w%1.5f_R%d_N%d' % (model, input_region, conductance_type, dist,
                                                              correlation, weight, self.population_radius,
                                                              self.num_cells)
+
         else:
             stem = '%s_%s_%s_%dmV_c%1.2f_w%1.5f_R%d_N%d' % (model, input_region, conductance_type, holding_potential,
                                                             correlation, weight, self.population_radius,
@@ -297,8 +296,7 @@ class Population():
             # The spiketrain indexes are drawn from a common pool without replacement.
             # The size of the common pool descides the average correlation
             all_spike_trains = np.load(join(self.data_folder, 'all_spike_trains.npy')).item()
-            spike_train_idxs = np.array(random.sample(np.arange(int(self.spiketrain_params['n']/self.correlation)),
-                                                      self.spiketrain_params['n']))
+            spike_train_idxs = np.array(random.sample(np.arange(int(self.spiketrain_params['n']/self.correlation)), self.spiketrain_params['n']))
         else:
             # If the correlation is zero-like, we just make new spike trains
             all_spike_trains = {}
@@ -311,29 +309,30 @@ class Population():
 
     def run_single_cell_simulation(self, cell_idx):
 
-        sim_name = '%s_cell_%d' % (self.stem, cell_idx)
+        sim_name = '%s_cell_%05d' % (self.stem, cell_idx)
         # if os.path.isfile(join(self.data_folder, 'lfp_%s.npy' % sim_name)):
         #     print "Skipping", sim_name
         #     return None
 
         plt.seed(cell_idx)
+        random.seed(cell_idx)
         cell = self.return_cell(cell_idx)
         cell = self.set_synaptic_input(cell)
 
         electrode = LFPy.RecExtElectrode(**self.electrode_params)
-        cell.simulate(electrode=electrode, rec_imem=False, rec_vmem=False)
+        rec_vmem = False if at_stallo else True
+        cell.simulate(electrode=electrode, rec_imem=False, rec_vmem=rec_vmem)
 
-        if np.max(cell.somav) > -40:
-            is_spiking = True
-        else:
-            is_spiking = False
-
-        plt.close('all')
-        plt.title('%s\nMEAN: %f mV, STD: %f mV' % (sim_name, np.mean(cell.somav), np.std(cell.somav)))
-        plt.plot(cell.tvec, cell.somav)
-        plt.savefig(join(self.fig_folder, '%s.png' % sim_name))
+        if not at_stallo:
+            plt.close('all')
+            plt.title('%s\nMEAN: %f mV, STD: %f mV' % (sim_name, np.mean(cell.somav), np.std(cell.somav)))
+            [plt.plot(cell.tvec, cell.vmem[idx, :]) for idx in xrange(cell.totnsegs)]
+            plt.savefig(join(self.fig_folder, '%s.png' % sim_name))
+        # plt.show()
 
         #electrode.calc_lfp()
+        if hasattr(cell, 'vmem'):
+            del cell.vmem
         np.save(join(self.data_folder, 'somav_%s.npy' % sim_name), cell.somav)
         np.save(join(self.data_folder, 'lfp_%s.npy' % sim_name), 1000*electrode.LFP)
 
@@ -341,7 +340,7 @@ class Population():
         total_signal = np.zeros((self.num_elecs, self.num_tsteps))
         session_name = join(self.data_folder, 'lfp_%s' % self.stem)
         for cell_idx in xrange(self.num_cells):
-            total_signal += np.load('%s_cell_%d.npy' % (session_name, cell_idx))
+            total_signal += np.load('%s_cell_%05d.npy' % (session_name, cell_idx))
         np.save('%s_total.npy' % session_name, total_signal)
 
     def sum_signals_by_population_size(self):
@@ -373,6 +372,7 @@ class Population():
 
         plot_idx = np.argmin(np.abs(x_y_z_rot[0, :]))
         plt.seed(plot_idx)
+        random.seed(plot_idx)
         cell = self.return_cell(plot_idx)
         cell = self.set_synaptic_input(cell)
         [ax.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], color='k', zorder=0)
@@ -409,6 +409,8 @@ class Population():
         aLFP.simplify_axes(elec_psd_axs.values())
         #aLFP.simplify_axes(elec_axs.values())
         lfp_max = 0
+        lines = []
+        line_names = []
         for conductance_type in conductance_list:
             local_stem = self.get_simulation_stem(self.model, self.input_region, conductance_type,
                                                   self.holding_potential, self.correlation, self.weight)
@@ -416,14 +418,18 @@ class Population():
             lfp = np.load(session_name)
 
             freq, psd = aLFP.return_freq_and_psd_welch(lfp, self.welch_dict)
+            l = None
             for elec_idx in self.center_idxs:
                 lfp_max = np.max([lfp_max, np.max(np.abs(lfp[elec_idx]))])
                 #elec_axs[elec_idx].plot(self.tvec, lfp[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
-                elec_psd_axs[elec_idx].loglog(freq, psd[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+                l, = elec_psd_axs[elec_idx].loglog(freq, psd[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+            lines.append(l)
+            line_names.append(conductance_type)
 
         #[ax.set_ylim([-lfp_max, lfp_max]) for ax in elec_axs.values()]
         #[ax.set_yticks([-1.5, 1.5]) for ax in elec_axs.values()]
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
+        fig.legend(lines, line_names, frameon=False, ncol=4, loc='lower center')
         fig.savefig(join(self.fig_folder, 'center_LFP_%s.png' % self.stem))
 
     def plot_lateral_LFP(self, conductance_list):
@@ -458,6 +464,8 @@ class Population():
         aLFP.simplify_axes(elec_psd_axs.values())
         #aLFP.simplify_axes(elec_axs.values())
         lfp_max = 0
+        lines = []
+        line_names = []
         for conductance_type in conductance_list:
             local_stem = self.get_simulation_stem(self.model, self.input_region, conductance_type, self.holding_potential,
                                                   self.correlation, self.weight)
@@ -465,13 +473,16 @@ class Population():
             lfp = np.load(session_name)
 
             freq, psd = aLFP.return_freq_and_psd_welch(lfp, self.welch_dict)
+            l = None
             for elec_idx in plot_idxs:
                 lfp_max = np.max([lfp_max, np.max(np.abs(lfp[elec_idx]))])
                 #elec_axs[elec_idx].plot(self.tvec, lfp[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
-                elec_psd_axs[elec_idx].loglog(freq, psd[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
-
+                l, = elec_psd_axs[elec_idx].loglog(freq, psd[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+            lines.append(l)
+            line_names.append(conductance_type)
         #[ax.set_ylim([-lfp_max, lfp_max]) for ax in elec_axs.values()]
         #[ax.set_yticks([-1.5, 1.5]) for ax in elec_axs.values()]
+        fig.legend(lines, line_names, frameon=False, ncol=4, loc='upper center')
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
         fig.savefig(join(self.fig_folder, 'lateral_LFP_%s.png' % self.stem))
 
@@ -654,10 +665,10 @@ def MPI_population_simulation():
 
     if rank == 0:
         # pop = Population(initialize=True)
-        correlations = [0.0, 0.1, 1.0]
-        conductance_types = [-0.5, 0.0, 2.0]
-        distributions = ['linear_decrease', 'uniform']
-        input_regions = ['homogeneous']
+        conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
+        input_regions = ['basal', 'homogeneous', 'tuft']
+        correlations = [0.0, 1.0]
+        holding_potentials = [-65, -80]
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
@@ -665,13 +676,13 @@ def MPI_population_simulation():
         num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(distributions) * num_cells
         for correlation in correlations:
             for input_region in input_regions:
-                for distribution in distributions:
+                for holding_potential in holding_potentials:
                     for conductance in conductance_types:
 
                         pop_dict = {'conductance_type': conductance,
                                     'correlation': correlation,
                                     'input_region': input_region,
-                                    'distribution': distribution
+                                    'holding_potential': holding_potential
                                     }
 
                         for cell_idx in xrange(num_cells):
@@ -745,24 +756,24 @@ def MPI_population_sum():
         sys.exit()
 
     if rank == 0:
-        correlations = [0.0, 0.1, 1.0]
-        conductance_types = [-0.5, 0.0, 2.0]
-        distributions = ['linear_decrease', 'uniform']
-        input_regions = ['homogeneous']
+        conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
+        input_regions = ['basal', 'homogeneous', 'tuft']
+        correlations = [0.0, 1.0]
+        holding_potentials = [-65, -80]
 
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
-        num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(distributions)
+        num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(holding_potentials)
         for correlation in correlations:
             for input_region in input_regions:
-                for distribution in distributions:
+                for holding_potential in holding_potentials:
                     for conductance in conductance_types:
 
                         pop_dict = {'conductance_type': conductance,
                                     'correlation': correlation,
                                     'input_region': input_region,
-                                    'distribution': distribution
+                                    'holding_potential': holding_potential
                                     }
                         task += 1
                         sent = False
@@ -864,50 +875,44 @@ def distribute_cellsims_MPI_DEPRECATED():
             sim_num += 1
 
 
-def plot_all_center_LFPs():
-
-    correlations = [0.0, 0.1, 1.0]
-    conductance_types = [-0.5, 0.0, 2.0]#['active', 'passive']
-    distributions = ['linear_decrease', 'uniform']
-    input_regions = ['homogeneous']
+def plot_all_LFPs():
+    conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
+    input_regions = ['basal', 'homogeneous', 'tuft']
+    correlations = [0.0, 1.0]
+    holding_potentials = [-65, -80]
 
     for correlation in correlations:
         for input_region in input_regions:
-            for distribution in distributions:
-                pop = Population(correlation=correlation, input_region=input_region, distribution=distribution,
-                                 conductance_type=2.0)
+            for holding_potential in holding_potentials:
+                pop = Population(correlation=correlation, input_region=input_region,
+                                 holding_potential=holding_potential, conductance_type='active')
                 pop.plot_central_LFP(conductance_types)
                 pop.plot_lateral_LFP(conductance_types)
 
-def plot_all_lateral_LFPs():
-
-    correlations = [0.0, 0.1, 1.0]
-    conductance_types = ['active', 'passive']
-    input_regions = ['basal', 'homogeneous', 'distal_tuft']
-    for correlation in correlations:
-        for input_region in input_regions:
-            pop = Population(correlation=correlation, input_region=input_region)
-            pop.plot_lateral_LFP(conductance_types)
-
 
 def test_sim():
-
-    # TODO: FIND WAY TO COMPARE CONDUCTANCE TYPES
-    pop = None
-    for correlation in [0.0]:
-        for conductance in ['passive']:
-            for cell_idx in xrange(6, 36):
-                pop = Population(conductance_type=conductance, correlation=correlation)
-                pop.run_single_cell_simulation(cell_idx)
+    # pop = Population(distribution='linear_increase', initialize=False, conductance_type=-0.5)
+    conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
+    input_regions = ['basal', 'homogeneous', 'tuft']
+    correlations = [0.0, 1.0]
+    holding_potentials = [-65, -80]
+    for correlation in correlations:
+        for conductance in conductance_types:
+            for input_region in input_regions:
+                for holding_potential in holding_potentials:
+                    for cell_idx in xrange(1):
+                        print conductance, correlation, input_region, holding_potential
+                        pop = Population(conductance_type=conductance, correlation=correlation,
+                                         holding_potential=holding_potential, weight=0.0001, input_region=input_region)
+                        pop.run_single_cell_simulation(cell_idx)
 
 if __name__ == '__main__':
-    #test_sim()
+    # test_sim()
     #distribute_cellsims_MPI()
     # alternative_MPI_dist()
     #pop = Population(correlation=0.0, input_region='basal')
     #pop.plot_LFP(['active', 'passive'])
-    # plot_all_center_LFPs()
+    # plot_all_LFPs()
     #MPI_population_size_sum()
-    #plot_all_latteral_LFPs()
     MPI_population_simulation()
     MPI_population_sum()
