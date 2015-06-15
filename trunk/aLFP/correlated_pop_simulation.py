@@ -30,7 +30,7 @@ class Population():
                  weight=0.0001, input_region='homogeneous', distribution=None, initialize=False):
 
         self.model = 'hay'
-        self.sim_name = 'hay'
+        self.sim_name = 'stallo_act_span'
         self.conductance_clr = {'active': 'r', 'passive': 'k', 'Ih_linearized': 'g', 'Ih_frozen': 'c',
                                 -0.5: 'r', 0.0: 'k', 2.0: 'b'}
 
@@ -312,9 +312,9 @@ class Population():
     def run_single_cell_simulation(self, cell_idx):
 
         sim_name = '%s_cell_%05d' % (self.stem, cell_idx)
-        # if os.path.isfile(join(self.data_folder, 'lfp_%s.npy' % sim_name)):
-        #     print "Skipping", sim_name
-        #     return None
+        if os.path.isfile(join(self.data_folder, 'lfp_%s.npy' % sim_name)):
+            print "Skipping", sim_name
+            return None
 
         plt.seed(cell_idx)
         random.seed(cell_idx)
@@ -666,11 +666,16 @@ def MPI_population_simulation():
         sys.exit()
 
     if rank == 0:
-        # pop = Population(initialize=True)
+        pop = Population(initialize=True)
         conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
         input_regions = ['basal', 'homogeneous', 'tuft']
         correlations = [0.0, 1.0]
         holding_potentials = [-65, -80]
+
+
+
+        # NUM_CELL_SIMS = 3
+
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
@@ -916,7 +921,7 @@ if __name__ == '__main__':
     # alternative_MPI_dist()
     #pop = Population(correlation=0.0, input_region='basal')
     #pop.plot_LFP(['active', 'passive'])
-    # plot_all_LFPs()
+    plot_all_LFPs()
     #MPI_population_size_sum()
-    MPI_population_simulation()
-    MPI_population_sum()
+    #MPI_population_simulation()
+    # MPI_population_sum()
