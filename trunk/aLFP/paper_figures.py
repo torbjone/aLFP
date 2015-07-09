@@ -372,7 +372,19 @@ class NeuralSimulations():
 
 
 class PaperFigures():
-
+    conductance_dict = {'active': 'Active',
+                                 'Ih_linearized': r'Passive + linearized $I_{\rm h}$',
+                                 'passive': 'Passive',
+                                 'Ih_linearized_frozen': r'Passive+frozen $I_{\rm h}$',
+                                 'Ih': r'Passive+$I_{\rm h}$',
+                                 'Ih_frozen': r'Passive+frozen $I_{\rm h}$',
+                                 'SKv3_1_Ih': 'Passive+$I_H$+SKv3_1',
+                                 'SKv3_1': 'Passive+SKv3_1',
+                                 'NaP': 'Persistent sodium',
+                                 'NaP_linearized': 'Linearized persistent sodium',
+                                 'NaP_frozen': 'Frozen Persistent sodium',
+                                 'K': 'All posassium',
+                                 'reduced': 'Reduced',}
     def __init__(self):
         self.conductance_clr = {'active': 'r', 'active_frozen': 'b', 'Ih_linearized': 'g', 'passive': 'k',
                                 'Ih_linearized_frozen': 'b', 'no_INaP': 'orange', 'no_Im': 'y',
@@ -402,7 +414,7 @@ class PaperFigures():
         if type(input_pos) is int:
             ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=2, ms=10)
         elif type(input_pos) in [list, np.ndarray]:
-            ax.plot(xmid[input_pos], zmid[input_pos], 'k.', zorder=2, ms=3)
+            ax.plot(xmid[input_pos], zmid[input_pos], 'g.', zorder=2, ms=3)
 
         if distribution is None:
             clr_list = ['0.5' for idx in xrange(len(xmid))]
@@ -434,7 +446,7 @@ class PaperFigures():
         # if type(input_pos) is int:
         ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=2, ms=10)
 
-        [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1.5, color='0.5', zorder=0, alpha=1)
+        [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1.5, color='0.7', zorder=0, alpha=1)
          for idx in xrange(len(xmid))]
 
         ec_arrow_dict = {'width': 2, 'lw': 1, 'clip_on': False, 'color': 'c', 'zorder': 0}
@@ -813,6 +825,335 @@ class IntroFigures():
         fig.savefig(join(self.figure_folder, '%s.png' % self.figure_name), dpi=200)
         fig.savefig(join(self.figure_folder, '%s.pdf' % self.figure_name), dpi=200)
 
+class NewIntroFigure(PaperFigures):
+    np.random.seed(0)
+    conductance_clr = {'active': 'r', 'active_frozen': 'b', 'Ih_linearized': 'g', 'passive': 'k',
+                       'Ih_linearized_frozen': 'c', 'NaP': 'pink', 'regenerative': 'c'}
+    def __init__(self, cell_name, figure_name, weight=0.0005, do_simulations=False):
+
+        PaperFigures.__init__(self)
+        self.cell_name = cell_name
+        self.figure_name = figure_name
+        self.figure_folder = join('/home', 'torbjone', 'work', 'aLFP', 'paper_figures')
+        self.root_folder = join('/home', 'torbjone', 'work', 'aLFP')
+
+        self.type_name = '%s' % self.cell_name
+        self.timeres_NEURON = 2**-4
+        self.timeres_python = 2**-4
+        self.holding_potentials = [-80, -60]
+        self.weight = weight
+        self._set_cell_specific_properties()
+
+    def _set_white_noise_properties(self):
+        self.repeats = 2
+        self.cut_off = 0
+        self.end_t = 1000 * self.repeats
+        self.start_t = 0
+        self.sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_white_noise')
+        self.ec_ax_dict = {'frameon': True,
+                           'xticks': [1e0, 1e1, 1e2],
+                           'xticklabels': [],
+                           'yticks': [1e-7, 1e-5, 1e-3],
+                           'yticklabels': [], 'xscale': 'log', 'yscale': 'log',
+                           'ylim': [1e-7, 1e-2],
+                           'xlim': [1, 450]}
+        self.clip_on = True
+
+    def _set_synaptic_properties(self):
+
+        self.start_t = 0
+        self.end_t = 30
+        self.cut_off = 1000
+        self.sim_folder = join(self.root_folder, 'paper_simulations', 'intro_fig_synapse')
+        self.stimuli = 'synaptic'
+        self.ec_ax_dict = {'frameon': False,
+                           'xticks': [],
+                           'xticklabels': [],
+                           'yticks': [],
+                           'yticklabels': [],
+                           'ylim': [0, 0.005],
+                           'xlim': [0, 30]}
+        self.clip_on = False
+
+    def _set_cell_specific_properties(self):
+
+        elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, 7),
+                                     np.linspace(-200, 1200, 15))
+        self.elec_x = elec_x.flatten()
+        self.elec_z = elec_z.flatten()
+        self.elec_y = np.zeros(len(self.elec_x))
+        self.plot_positions = np.array([self.elec_x, self.elec_y, self.elec_z]).T
+        self.conductance_types = ['active', 'passive']
+        self.conductance_name_dict = {'active': 'Active',
+                                      'passive': 'Passive',
+                                      'NaP': 'Sodium',
+                                      'regenerative': 'Regenerative'}
+        self.soma_idx = 0
+        self.apic_idx = 852
+        self.use_elec_idxs = [8, 36, 26, 67, 85]
+        self.ax_dict = {'ylim': [-300, 1300], 'xlim': [-400, 400]}
+
+    def _draw_morph_to_axis(self, ax, input_pos):
+        xstart = np.load(join(self.sim_folder, 'xstart_%s.npy' % self.type_name))
+        zstart = np.load(join(self.sim_folder, 'zstart_%s.npy' % self.type_name))
+        xend = np.load(join(self.sim_folder, 'xend_%s.npy' % self.type_name))
+        zend = np.load(join(self.sim_folder, 'zend_%s.npy' % self.type_name))
+        xmid = np.load(join(self.sim_folder, 'xmid_%s.npy' % self.type_name))
+        zmid = np.load(join(self.sim_folder, 'zmid_%s.npy' % self.type_name))
+        if type(input_pos) is int:
+            ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=1, ms=10)
+
+        [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1, color='0.7', zorder=0, alpha=1)
+         for idx in xrange(len(xmid))]
+
+    @staticmethod
+    def _find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z):
+        return np.argmin(np.sum(np.array([(elec_x - pos[0])**2, (elec_y - pos[1])**2, (elec_z - pos[2])**2]), axis=0))
+
+    @classmethod
+    def _return_idxs_from_positions(cls, position_list, elec_x, elec_y, elec_z):
+        return [cls._find_closest_idx_to_pos(pos, elec_x, elec_y, elec_z) for pos in position_list]
+
+    def _plot_EC_signal_to_ax(self, fig, ax, idx, signal, elec_x_pos, elec_z_pos, x_vec, conductance_type, input_type):
+
+        ec_plot_dict = {'color': self.conductance_clr[conductance_type],
+                        'lw': 1,
+                        'clip_on': self.clip_on}
+        ax_ = fig.add_axes(self.return_ax_coors(fig, ax, (elec_x_pos, elec_z_pos), input_type), **self.ec_ax_dict)
+
+        ax_.minorticks_off()
+        simplify_axes(ax_)
+        ax_.patch.set_alpha(0.0)
+        if input_type is 'synaptic':
+            ax_.plot(x_vec, signal[idx, :] - signal[idx, 0], **ec_plot_dict)
+        else:
+            ax_.plot(x_vec, signal[idx, :], **ec_plot_dict)
+        if input_type is 'white_noise':
+            ax_.grid(True)
+            if conductance_type == 'passive' and idx == 8 and len(fig.axes) == 39: # Ugly hack to only get these labels once
+                # ax_.set_xticks([10, 100])
+                ax_.set_xticklabels(['$10^0$', '$10^1$', '$10^2$'], size=7)
+                ax_.set_yticklabels(['$10^{-7}$', '', '$10^{-2}$'], size=7)
+                ax_.set_xlabel('Hz', size=7)
+                ax_.set_ylabel('PSD [$\mu$V$^2$/Hz]', size=7)
+
+    def return_ax_coors(self, fig, mother_ax, pos, input_type):
+        if input_type is "synaptic":
+            ax_w = 0.1 / 3
+            ax_h = 0.03
+        else:
+            ax_w = 0.12 / 3
+            ax_h = 0.06
+        xstart, ystart = fig.transFigure.inverted().transform(mother_ax.transData.transform(pos))
+        return [xstart, ystart, ax_w, ax_h]
+
+    def _plot_one_signal(self, input_idx, conductance_type, holding_potential, start_idx, end_idx,
+                        ax, fig, elec_x, elec_z, tvec, input_type):
+        sim_name = '%s_%d_%s_%+d_%1.4f' % (self.cell_name, input_idx, conductance_type, holding_potential, self.weight)
+        LFP = 1e3*np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
+
+        ax.scatter(elec_x[self.use_elec_idxs], elec_z[self.use_elec_idxs], c='cyan', s=25, edgecolor='none')
+        if input_type is 'synaptic':
+            x_vec, y_vec = tvec, LFP
+        elif input_type is 'white_noise':
+            x_vec, y_vec = aLFP.return_freq_and_psd(tvec, LFP)
+        else:
+            raise RuntimeError("Unknown figure name: %s" % self.figure_name)
+
+        for idx in self.use_elec_idxs:
+            self._plot_EC_signal_to_ax(fig, ax, idx, y_vec, elec_x[idx], elec_z[idx], x_vec, conductance_type, input_type)
+
+    def make_figure(self):
+
+        plt.close('all')
+        self.fig = plt.figure(figsize=[10, 5])
+        self.fig.subplots_adjust(hspace=0.15, wspace=0.15, top=0.9, bottom=0.1, left=0.0, right=0.95)
+
+        # ax1.text(190, -300, '200 $\mu$m', verticalalignment='center', horizontalalignment='right')
+        self.fig.text(0.01, 0.75, 'Apical input', rotation='vertical', va='center', size=15)
+        self.fig.text(0.01, 0.25, 'Somatic input', rotation='vertical', va='center', size=15)
+        self.fig.text(0.08, .95, '%d mV' % self.holding_potentials[0], rotation='horizontal', ha='center', size=15)
+        self.fig.text(0.23, .95, '%d mV' % self.holding_potentials[1], rotation='horizontal', ha='center', size=15)
+
+        self.fig.text(0.37, 0.75, 'Apical input', rotation='vertical', va='center', size=15)
+        self.fig.text(0.37, 0.25, 'Somatic input', rotation='vertical', va='center', size=15)
+        self.fig.text(0.43, .95, '%d mV' % self.holding_potentials[0], rotation='horizontal', ha='center', size=15)
+        self.fig.text(0.58, .95, '%d mV' % self.holding_potentials[1], rotation='horizontal', ha='center', size=15)
+
+
+        self.make_panel_AB('synaptic')
+        self.make_panel_AB('white_noise')
+        self.make_panel_C()
+
+        # self.fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
+        self.fig.savefig(join(self.figure_folder, '%s.png' % self.figure_name), dpi=200)
+        self.fig.savefig(join(self.figure_folder, '%s.pdf' % self.figure_name), dpi=200)
+
+    def make_panel_C(self):
+        self.sim_folder = join(self.root_folder, 'paper_simulations', self.cell_name)
+        self.conductance_types = ['active', 'passive', 'Ih', 'Ih_frozen']
+
+        elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, 7), np.linspace(-200, 1200, 15))
+        self.elec_x = elec_x.flatten()
+        self.elec_z = elec_z.flatten()
+        self.elec_y = np.zeros(len(self.elec_x))
+        self.plot_positions = np.array([self.elec_x, self.elec_y, self.elec_z]).T
+        self.soma_idx = 0
+        self.apic_idx = 852
+        self.elec_apic_idx = 88
+        self.elec_soma_idx = 18
+
+
+        input_idx = self.apic_idx
+        holding_potential = -80
+        weight = self.weight
+        tvec = np.load(join(self.sim_folder, 'tvec_%s.npy' % self.cell_name))
+        elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
+        elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
+        ax_dict = {'xlim': [1e0, 450], 'xlabel': 'Hz',}
+        # print input_idx, holding_potential
+
+        ax_morph = plt.axes([0.69, 0.05, 0.12, 0.6])
+        ax_morph.axis('off')
+        self.fig.text(0.7, 0.67, '%d mV' % holding_potential)
+
+        self._draw_set_up_to_axis(ax_morph, input_idx, elec_x, elec_z, ic_plot=False)
+
+        ec_ax_a = self.fig.add_axes([0.88, 0.45, 0.1, 0.2], ylim=[1e-5, 1e-1], **ax_dict)
+        ec_ax_s = self.fig.add_axes([0.88, 0.05, 0.1, 0.2], ylim=[1e-7, 1e-3], **ax_dict)
+        ec_ax_a.set_ylabel('PSD [$\mu$V$^2$/Hz]', size=9)
+        ec_ax_s.set_ylabel('PSD [$\mu$V$^2$/Hz]', size=9)
+        sig_ax_list = [ec_ax_s, ec_ax_a]
+        [ax.grid(True) for ax in sig_ax_list]
+
+        mark_subplots(ax_morph, 'C', xpos=0, ypos=1.1)
+
+        for conductance_type in self.conductance_types:
+            self._plot_sigs_C(input_idx, conductance_type, holding_potential,
+                            sig_ax_list, tvec, elec_x, elec_z, weight)
+        simplify_axes(self.fig.axes)
+        lines = []
+        line_names = []
+        for conductance_type in self.conductance_types:
+            l, = plt.plot(0, 0, color=self.conductance_clr[conductance_type], lw=2,
+                          linestyle=self.conductance_style[conductance_type])
+            lines.append(l)
+            line_names.append(self.conductance_dict[conductance_type])
+        [ax.set_yticks([ax.get_yticks()[1], ax.get_yticks()[-2]]) for ax in sig_ax_list]
+        self.fig.legend(lines, line_names, frameon=False, loc='upper right', ncol=1, fontsize=12)
+
+        #self.fig2.savefig(join(self.figure_folder, 'test_LFP_%d_%d.png' % (input_idx, holding_potential)), dpi=300)
+
+    def _plot_sigs_C(self, input_idx, conductance_type, holding_potential, axes, tvec, elec_x, elec_z, weight):
+
+        LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s_%d_%s_%+d_%1.4f.npy' %
+                                  (self.cell_name, input_idx, conductance_type, holding_potential, weight)))
+
+        line_dict = {'c': self.conductance_clr[conductance_type],
+                     'linestyle': self.conductance_style[conductance_type],
+                     'lw': 2}
+
+        if 0:
+            num_rows = 15
+            num_cols = 7
+            for numb in xrange(len(elec_x)):
+                ax = self.fig2.add_subplot(num_rows, num_cols, numb + 1, title='x=%d, z=%d' % (elec_x[numb], elec_z[numb]),
+                                      xlim=[1e0, 5e2], ylim=[1e-5, 1e-2])
+
+                simplify_axes(ax)
+                freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP[numb, :])
+                ax.loglog(freqs, LFP_psd[0], **line_dict)
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+
+        freqs, LFP_psd_soma = aLFP.return_freq_and_psd(tvec, LFP[self.elec_soma_idx, :])
+        freqs, LFP_psd_apic = aLFP.return_freq_and_psd(tvec, LFP[self.elec_apic_idx, :])
+
+        axes[0].loglog(freqs, LFP_psd_soma[0], **line_dict)
+        axes[1].loglog(freqs, LFP_psd_apic[0], **line_dict)
+
+    def make_panel_AB(self, input_type):
+
+        if input_type is 'synaptic':
+            ax_shift = 0
+            self._set_synaptic_properties()
+            ax_name = 'A'
+        else:
+            ax_shift = 0.35
+            self._set_white_noise_properties()
+            ax_name = 'B'
+
+        tvec = np.load(join(self.sim_folder, 'tvec_%s.npy' % self.type_name))
+        elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.type_name))
+        elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.type_name))
+
+        if not elec_x.shape == self.plot_positions[:, 0].shape:
+            raise RuntimeError('Loaded elec_x shape: %s, Current elec_x shape: %s' %
+                               (elec_x.shape, self.plot_positions[:, 0].shape))
+
+        start_idx = 0#np.argmin(np.abs(tvec - self.start_t))
+        end_idx = len(tvec)# np.argmin(np.abs(tvec - self.end_t))
+        #tvec = tvec[start_idx:end_idx]
+
+
+        ax1 = plt.axes([0.01 + ax_shift, 0.55, 0.15, 0.37], **self.ax_dict)
+        ax2 = plt.axes([0.15 + ax_shift, 0.55, 0.15, 0.37], **self.ax_dict)
+        ax3 = plt.axes([0.01 + ax_shift, 0.05, 0.15, 0.37], **self.ax_dict)
+        ax4 = plt.axes([0.15 + ax_shift, 0.05, 0.15, 0.37], **self.ax_dict)
+
+        # ax1 = plt.subplot(2, 6, 1 + ax_shift, **self.ax_dict)
+        # ax2 = plt.subplot(2, 6, 2 + ax_shift, **self.ax_dict)
+        # ax3 = plt.subplot(2, 6, 7 + ax_shift, **self.ax_dict)
+        # ax4 = plt.subplot(2, 6, 8 + ax_shift, **self.ax_dict)
+
+        mark_subplots(ax1, ax_name, xpos=0.1)
+
+        ax_list = [ax1, ax2, ax3, ax4]
+
+        [self._draw_morph_to_axis(ax, self.apic_idx) for ax in [ax1, ax2]]
+        [self._draw_morph_to_axis(ax, self.soma_idx) for ax in [ax3, ax4]]
+
+
+        ax_numb = 0
+        for input_idx in [self.apic_idx, self.soma_idx]:
+            for holding_potential in self.holding_potentials:
+                for conductance_type in self.conductance_types:
+                    # name = 'Soma' if input_idx == 0 else 'Apic'
+                    # ax_list[ax_numb].text(0, self.ax_dict['ylim'][1], '%s %d mV' % (name, holding_potential),
+                    #                       horizontalalignment='center')
+                    # if not ax_numb in [1,3]:
+                    #     continue
+                    self._plot_one_signal(input_idx, conductance_type, holding_potential, start_idx, end_idx,
+                                         ax_list[ax_numb], self.fig, elec_x, elec_z, tvec, input_type)
+                ax_numb += 1
+
+        lines = []
+        line_names = []
+        for conductance_type in self.conductance_types:
+            l, = plt.plot(0, 0, color=self.conductance_clr[conductance_type], lw=2)
+            lines.append(l)
+            line_names.append(self.conductance_name_dict[conductance_type])
+
+        if input_type is 'synaptic':
+            ax1.plot([100, 300], [-300, -300], lw=2, clip_on=False, c='k')
+            ax1.text(200, -350, '200 $\mu$m', va='top', ha='center', size=10)
+
+            ax1.arrow(450, -100, 70, 0, lw=1, head_width=20, head_length=17, color='k', clip_on=False)
+            ax1.arrow(450, -100, 0, 100, lw=1, head_width=15, head_length=25, color='k', clip_on=False)
+            ax1.text(400, -50, 'z', size=10, ha='center', va='center', clip_on=False)
+            ax1.text(480, -150, 'x', size=10, ha='center', va='center', clip_on=False)
+
+            bar_ax = self.fig.add_axes(self.return_ax_coors(self.fig, ax4, (-600, -300), input_type), **self.ec_ax_dict)
+            bar_ax.axis('off')
+            bar_ax.plot([0, 0], [0, bar_ax.axis()[3]*2], lw=2, color='k', clip_on=False)
+            bar_ax.plot(bar_ax.axis()[:2], [0, 0], lw=2, color='k', clip_on=False)
+            bar_ax.text(2, bar_ax.axis()[2] + (bar_ax.axis()[3] - bar_ax.axis()[2])/2, '%1.2f $\mu$V'
+                                            % (bar_ax.axis()[3] * 2), verticalalignment='bottom', size=10)
+            bar_ax.text(2, bar_ax.axis()[2] - 0.0007, '%d ms' % (bar_ax.axis()[1] - bar_ax.axis()[0]),
+                        verticalalignment='top', size=10)
+
+        # mark_subplots(ax_list, xpos=0.12, ypos=0.9)
+        [ax.axis('off') for ax in ax_list]
 
 class Figure3(PaperFigures):
 
@@ -894,7 +1235,7 @@ class Figure3(PaperFigures):
 
         if do_simulations:
             self._do_all_simulations(weight)
-        self.conductance_types = ['active', 'passive', 'Ih', 'Ih_frozen', 'SKv3_1_Ih']
+        self.conductance_types = ['active', 'passive', 'Ih', 'Ih_frozen']
         #self.make_figure(self.apic_idx, -60, weight)
         #self.make_figure(self.soma_idx, -60, weight)
         self.make_figure(self.apic_idx, -80, weight)
@@ -913,24 +1254,24 @@ class Figure3(PaperFigures):
         elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
         elec_z = np.load(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name))
         ax_dict = {'xlim': [1e0, 450], 'xlabel': 'Hz',}
-        print input_idx, holding_potential
+        # print input_idx, holding_potential
         plt.close('all')
         #self.fig2 = plt.figure(figsize=[12, 16])
-        fig = plt.figure(figsize=[10, 5])
+        fig = plt.figure(figsize=[3, 5])
         fig.subplots_adjust(hspace=0.55, wspace=0.55, bottom=0.2)
-        ax_morph = plt.subplot(143)
+        ax_morph = plt.subplot(121, aspect=1)
         ax_morph.axis('off')
         fig.text(0.58, 0.93, '%d mV' % holding_potential)
-        fig.text(0.005, 0.8, 'Apical', rotation='vertical')
-        fig.text(0.005, 0.4, 'Somatic', rotation='vertical')
-        self._draw_set_up_to_axis(ax_morph, input_idx, elec_x, elec_z)
+        # fig.text(0.005, 0.8, 'Apical', rotation='vertical')
+        # fig.text(0.005, 0.4, 'Somatic', rotation='vertical')
+        self._draw_set_up_to_axis(ax_morph, input_idx, elec_x, elec_z, ic_plot=False)
 
-        vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-2, 1e4], title='$V_m$', ylabel='PSD',  **ax_dict)
-        vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-5, 1e1], title='$V_m$', **ax_dict)
-        im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-5, 1e-1], title='$I_m$', **ax_dict)
-        im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-10, 1e-6], title='$I_m$', **ax_dict)
-        ec_ax_a = fig.add_subplot(2, 4, 4, ylim=[1e-5, 1e-1], title='$\Phi$', **ax_dict)
-        ec_ax_s = fig.add_subplot(2, 4, 8, ylim=[1e-7, 1e-3], title='$\Phi$', **ax_dict)
+        # vm_ax_a = fig.add_subplot(2, 4, 1, ylim=[1e-2, 1e4], title='$V_m$', ylabel='PSD',  **ax_dict)
+        # vm_ax_s = fig.add_subplot(2, 4, 5, ylim=[1e-5, 1e1], title='$V_m$', **ax_dict)
+        # im_ax_a = fig.add_subplot(2, 4, 2, ylim=[1e-5, 1e-1], title='$I_m$', **ax_dict)
+        # im_ax_s = fig.add_subplot(2, 4, 6, ylim=[1e-10, 1e-6], title='$I_m$', **ax_dict)
+        ec_ax_a = fig.add_subplot(2, 2, 2, ylim=[1e-5, 1e-1], title='$\Phi$', **ax_dict)
+        ec_ax_s = fig.add_subplot(2, 2, 4, ylim=[1e-7, 1e-3], title='$\Phi$', **ax_dict)
 
         # vm_ax_a = fig.add_subplot(2, 4, 1, title='$V_m$', ylabel='mV',  **ax_dict)
         # vm_ax_s = fig.add_subplot(2, 4, 5, title='$V_m$', ylabel='mV', **ax_dict)
@@ -939,11 +1280,11 @@ class Figure3(PaperFigures):
         # ec_ax_a = fig.add_subplot(2, 4, 4, title='$\Phi$', ylabel='$\mu$V', **ax_dict)
         # ec_ax_s = fig.add_subplot(2, 4, 8, title='$\Phi$', ylabel='$\mu$V', **ax_dict)
 
-        sig_ax_list = [vm_ax_s, vm_ax_a, im_ax_s, im_ax_a, ec_ax_s, ec_ax_a]
+        sig_ax_list = [ec_ax_s, ec_ax_a]
         [ax.grid(True) for ax in sig_ax_list]
-        mark_subplots([vm_ax_a, im_ax_a, vm_ax_s, im_ax_s])
-        mark_subplots([ec_ax_a, ec_ax_s], 'FG')
-        mark_subplots(ax_morph, 'E', xpos=0, ypos=1)
+        # mark_subplots([vm_ax_a, im_ax_a, vm_ax_s, im_ax_s])
+        # mark_subplots([ec_ax_a, ec_ax_s], 'FG')
+        mark_subplots(ax_morph, 'C', xpos=0, ypos=1)
 
         for conductance_type in self.conductance_types:
             self._plot_sigs(input_idx, conductance_type, holding_potential,
@@ -959,17 +1300,15 @@ class Figure3(PaperFigures):
         [ax.set_yticks([ax.get_yticks()[1], ax.get_yticks()[-2]]) for ax in fig.axes]
         fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
         #self.fig2.legend(lines, line_names, frameon=False, loc='lower center', ncol=5)
-        fig.savefig(join(self.figure_folder, '%s_%s_%d_%d_%1.4f.png' % (self.figure_name, self.cell_name,
-                                                                  holding_potential, input_idx, weight)), dpi=150)
-        fig.savefig(join(self.figure_folder, '%s_%s_%d_%d_%1.4f.pdf' % (self.figure_name, self.cell_name,
-                                                                  holding_potential, input_idx, weight)), dpi=150)
+        fig.savefig(join(self.figure_folder, '%s.png' % (self.figure_name)), dpi=150)
+        fig.savefig(join(self.figure_folder, '%s.pdf' % (self.figure_name)), dpi=150)
         #self.fig2.savefig(join(self.figure_folder, 'test_LFP_%d_%d.png' % (input_idx, holding_potential)), dpi=300)
 
     def _plot_sigs(self, input_idx, conductance_type, holding_potential, axes, tvec, elec_x, elec_z, weight):
-        vmem = np.load(join(self.sim_folder, 'vmem_%s_%d_%s_%+d_%1.4f.npy' %
-                            (self.cell_name, input_idx, conductance_type, holding_potential, weight)))
-        imem = np.load(join(self.sim_folder, 'imem_%s_%d_%s_%+d_%1.4f.npy' %
-                            (self.cell_name, input_idx, conductance_type, holding_potential, weight)))
+        # vmem = np.load(join(self.sim_folder, 'vmem_%s_%d_%s_%+d_%1.4f.npy' %
+        #                     (self.cell_name, input_idx, conductance_type, holding_potential, weight)))
+        # imem = np.load(join(self.sim_folder, 'imem_%s_%d_%s_%+d_%1.4f.npy' %
+        #                     (self.cell_name, input_idx, conductance_type, holding_potential, weight)))
         LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s_%d_%s_%+d_%1.4f.npy' %
                                   (self.cell_name, input_idx, conductance_type, holding_potential, weight)))
 
@@ -1000,22 +1339,22 @@ class Figure3(PaperFigures):
         #                                                 np.std(vmem[self.soma_idx, -cut_off_idx:])))
         # axes[1].set_title('Vm %1.2f (%1.2f)' % (np.mean(vmem[self.apic_idx, -cut_off_idx:]),
         #                                                 np.std(vmem[self.apic_idx, -cut_off_idx:])))
-        freqs, vmem_psd_soma = aLFP.return_freq_and_psd(tvec, vmem[self.soma_idx, :])
-        freqs, vmem_psd_apic = aLFP.return_freq_and_psd(tvec, vmem[self.apic_idx, :])
-        freqs, imem_psd_soma = aLFP.return_freq_and_psd(tvec, imem[self.soma_idx, :])
-        freqs, imem_psd_apic = aLFP.return_freq_and_psd(tvec, imem[self.apic_idx, :])
+        # freqs, vmem_psd_soma = aLFP.return_freq_and_psd(tvec, vmem[self.soma_idx, :])
+        # freqs, vmem_psd_apic = aLFP.return_freq_and_psd(tvec, vmem[self.apic_idx, :])
+        # freqs, imem_psd_soma = aLFP.return_freq_and_psd(tvec, imem[self.soma_idx, :])
+        # freqs, imem_psd_apic = aLFP.return_freq_and_psd(tvec, imem[self.apic_idx, :])
         freqs, LFP_psd_soma = aLFP.return_freq_and_psd(tvec, LFP[self.elec_soma_idx, :])
         freqs, LFP_psd_apic = aLFP.return_freq_and_psd(tvec, LFP[self.elec_apic_idx, :])
 
 
-        axes[0].loglog(freqs, vmem_psd_soma[0], **line_dict)
-        axes[1].loglog(freqs, vmem_psd_apic[0], **line_dict)
-        axes[2].loglog(freqs, imem_psd_soma[0], **line_dict)
-        axes[3].loglog(freqs, imem_psd_apic[0], **line_dict)
-        axes[2].loglog(freqs, imem_psd_soma[0], **line_dict)
-        axes[3].loglog(freqs, imem_psd_apic[0], **line_dict)
-        axes[4].loglog(freqs, LFP_psd_soma[0], **line_dict)
-        axes[5].loglog(freqs, LFP_psd_apic[0], **line_dict)
+        # axes[0].loglog(freqs, vmem_psd_soma[0], **line_dict)
+        # axes[1].loglog(freqs, vmem_psd_apic[0], **line_dict)
+        # axes[2].loglog(freqs, imem_psd_soma[0], **line_dict)
+        # axes[3].loglog(freqs, imem_psd_apic[0], **line_dict)
+        # axes[2].loglog(freqs, imem_psd_soma[0], **line_dict)
+        # axes[3].loglog(freqs, imem_psd_apic[0], **line_dict)
+        axes[0].loglog(freqs, LFP_psd_soma[0], **line_dict)
+        axes[1].loglog(freqs, LFP_psd_apic[0], **line_dict)
 
 
 class Figure4(PaperFigures):
@@ -1026,8 +1365,8 @@ class Figure4(PaperFigures):
         self.figure_name = 'figure_4'
         self.sim_folder = join(self.root_folder, 'paper_simulations', self.cell_name)
         # self.timeres = 2**-5
-        self.conductance_dict = {'Ih_linearized': 'Passive+linearized $I_H$',
-                                 'Ih': 'Passive+$I_H$',
+        self.conductance_dict = {'Ih_linearized': r'Passive+linearized $I_{\rm h}$',
+                                 'Ih': r'Passive+$I_{\rm h}$',
                                  'passive': 'Passive',
                                  'NaP': r'Passive+Na$_{\rm P}$',
                                  'NaP_linearized': r'Passive+linearized Na$_{\rm P}$',
@@ -1134,10 +1473,12 @@ class Figure4(PaperFigures):
         self._draw_set_up_to_axis(ax_morph_1, self.apic_idx, elec_x, elec_z, ic_plot=False)
         self._draw_set_up_to_axis(ax_morph_2, self.soma_idx, elec_x, elec_z, ic_plot=False)
 
-        ec_ax_a_1 = fig.add_subplot(2, 4, 2, ylim=[1e-5, 1e-1], title='$\Phi$', ylabel='PSD', xlabel='Hz', **ax_dict)
+        ec_ax_a_1 = fig.add_subplot(2, 4, 2, ylim=[1e-5, 1e-1], xlabel='Hz', **ax_dict)
         ec_ax_s_1 = fig.add_subplot(2, 4, 6, ylim=[1e-7, 1e-3], **ax_dict)
         ec_ax_a_2 = fig.add_subplot(2, 4, 4, ylim=[1e-6, 1e-2], **ax_dict)
         ec_ax_s_2 = fig.add_subplot(2, 4, 8, ylim=[1e-6, 1e-2], **ax_dict)
+
+        ec_ax_a_1.set_ylabel('PSD [$\mu$V$^2$/Hz]', fontsize=10)
 
         sig_ax_list = [ec_ax_a_1, ec_ax_s_1, ec_ax_a_2, ec_ax_s_2]
         [ax.grid(True) for ax in sig_ax_list]
@@ -1561,7 +1902,7 @@ class FigureNeurite2(PaperFigures):
     def __init__(self, do_simulations=False):
         PaperFigures.__init__(self)
         self.cell_name = 'infinite_neurite'
-        self.figure_name = 'infinite_neurite5'
+        self.figure_name = 'infinite_neurite'
         self.sim_folder = join(self.root_folder, 'paper_simulations', 'infinite_neurite')
         self.holding_potential = -80
         self.timeres_NEURON = 2**-4
@@ -1601,7 +1942,7 @@ class FigureNeurite2(PaperFigures):
         self.zmid = np.load(join(self.sim_folder, 'zmid_%s.npy' % self.cell_name))
         self.xlim = [self.xmid[self.input_idx] - 50, self.xmid[self.input_idx] + 1050]
         self.plot_comps = self.input_idx + np.array([0, 10, 30, 55])
-        print self.xmid[self.plot_comps]
+        # print self.xmid[self.plot_comps]
 
         self.num_cols = len(self.plot_comps)
         self.num_LFP_rows = 2
@@ -1645,7 +1986,7 @@ class FigureNeurite2(PaperFigures):
     def _initialize_figure(self):
         plt.close('all')
         self.fig = plt.figure(figsize=[5, 7])
-        self.fig.subplots_adjust(hspace=0.9, wspace=0.55, bottom=0.23, top=0.95, left=0.17, right=0.96)
+        self.fig.subplots_adjust(hspace=0.9, wspace=0.55, bottom=0.23, top=0.95, left=0.19, right=0.98)
         self._draw_neurite()
 
         ax_dict = {'xlim': [1, 450], 'xscale': 'log', 'yscale': 'log'}
@@ -1668,9 +2009,11 @@ class FigureNeurite2(PaperFigures):
         mark_subplots(self.LFP_ax_list_1, 'JKLMNOPQ', ypos=1.2, xpos=0.1)
 
 
-        [ax.set_ylabel('$I_m$') for ax in [self.imem_ax_list_1[0]]]
-        [ax.set_ylabel('$V_m$') for ax in [self.vmem_ax_list_1[0]]]
-        [ax.set_ylabel('$\Phi$') for ax in [self.LFP_ax_list_1[0], self.LFP_ax_list_1[4]]]
+        [ax.set_ylabel('$I_m$\n[nA$^2$/Hz]') for ax in [self.imem_ax_list_1[0]]]
+        [ax.set_ylabel('$V_m$\n[mV$^2$/Hz]') for ax in [self.vmem_ax_list_1[0]]]
+        self.LFP_ax_list_1[0].set_ylabel('LFP\n[$\mu$V$^2$/Hz]')
+        self.LFP_ax_list_1[4].set_ylabel('LFP\n[$\mu$V$^2$/Hz]')
+        # [ax.set_ylabel('LFP [$\mu$V$^2$/Hz]') for ax in [self.LFP_ax_list_1[0], self.LFP_ax_list_1[4]]]
 
 
         [ax.set_xlabel('Hz') for ax in [self.imem_ax_list_1[0]]]
@@ -1871,7 +2214,7 @@ class FigureDistributedSynaptic(PaperFigures):
     def __init__(self):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_distributed_synaptic_linear_increase_2'
+        self.figure_name = 'figure_distributed_synaptic'
         self.conductance = 'generic'
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
@@ -1986,7 +2329,7 @@ class FigureDistanceStudy(PaperFigures):
     def __init__(self):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_distance_study_4'
+        self.figure_name = 'figure_distance_study'
         self.conductance = 'generic'
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
@@ -2016,7 +2359,7 @@ class FigureDistanceStudy(PaperFigures):
         self.fig.subplots_adjust(hspace=0.5, wspace=0.4, top=0.94, bottom=0.05, left=0.03, right=0.96)
         ax_dict = {'frame_on': False, 'xticks': [], 'yticks': []}
         lfp_ax_dict = {'xlim': [1, 450], 'xscale': 'log', 'yscale': 'log', 'xlabel': 'Hz',
-                       'ylabel': 'LFP'}
+                       'ylabel': 'LFP PSD [$\mu$V$^2$/Hz]'}
         self.amp_ax = self.fig.add_subplot(321, **ax_dict)#[0., 0.3, 0.8, 0.6]
         self.sig_ax = self.fig.add_subplot(323, xlim=[240, 290], xlabel='ms', xticks=[])
         self.freq_ax = self.fig.add_subplot(325, **ax_dict)
@@ -2028,7 +2371,7 @@ class FigureDistanceStudy(PaperFigures):
         self.sig_ax.axis('off')
 
         self.sig_ax.plot([280, 290], [-1, -1], 'k', lw=4, clip_on=False)
-        self.sig_ax.text(282, -1.3, '10 $ms$')
+        self.sig_ax.text(282, -1.3, '10 ms')
 
         #self.sig_ax
 
@@ -2119,9 +2462,9 @@ class FigureDistanceStudy(PaperFigures):
             row, col = np.array(np.where(elec_idxs == elec))[:, 0]
             res_amp[row, col] = LFP_psd[elec, res_idx]
 
-        self.amp_ax.set_title('Max amplitude')
-        self.freq_ax.set_title('Frequency at max amplitude\n(Mode: %1.1f Hz)' % res_freq)
-        self.q_ax.set_title('q-value\nMax amp / amp[%1.1f Hz]' % freqs[1])
+        # self.amp_ax.set_title('Max PSD')
+        self.freq_ax.set_title('Frequency at max PSD')
+        self.q_ax.set_title('PSD Q-value')
 
         q = max_value / dc
 
@@ -2181,7 +2524,7 @@ class FigureDistanceStudy(PaperFigures):
              for idx in xrange(len(xstart))]
         self.amp_ax.plot(xmid[self.input_idx], zmid[self.input_idx], 'y*', ms=10)
         self.amp_ax.plot([np.min(distances), np.min(distances)], [100, 600], lw=5, c='k', clip_on=False)
-        self.amp_ax.text(np.min(distances) + 170, 400, '500 $\mu m$')
+        self.amp_ax.text(np.min(distances) + 170, 400, '500 $\mu$m')
 
         clbar_args = {'orientation': 'vertical', 'shrink': 0.7,}
 
@@ -2189,7 +2532,7 @@ class FigureDistanceStudy(PaperFigures):
         cax_2 = self.fig.add_axes([0.45, 0.06, 0.01, 0.2])
         cax_3 = self.fig.add_axes([0.97, 0.06, 0.01, 0.2])
 
-        cl1 = plt.colorbar(img_amp, cax=cax_1, label='PSD')
+        cl1 = plt.colorbar(img_amp, cax=cax_1, label='Max LFP PSD')
         cl2 = plt.colorbar(img_freq, cax=cax_2, label='Hz', extend='max', ticks=[0, 10, 20., 30., 40])
         cl3 = plt.colorbar(img_q, cax=cax_3, ticks=[1, 10, 20], extend='max')
 
@@ -2416,7 +2759,7 @@ class FigureDistanceStudyInfiniteNeurite(PaperFigures):
 
 if __name__ == '__main__':
 
-    IntroFigures('hay', 'figure_1', 0.001, False).make_figure()
+    NewIntroFigure('hay', 'figure_1', 0.001, False).make_figure()
     # IntroFigures('hay', 'figure_2', 0.0005, True).make_figure()
     # Figure3(0.0005, False)
     # Figure4(0.0005, False)
