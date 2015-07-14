@@ -1381,7 +1381,7 @@ class Figure4(PaperFigures):
         self.end_t = 1000 * self.repeats
         self.stimuli = 'white_noise'
         self.conductance_types_1 = ['Ih_linearized', 'passive', 'Ih']#'Ih',
-        self.conductance_types_2 = ['NaP_linearized', 'passive', 'NaP']
+        self.conductance_types_2 = ['NaP_linearized', 'passive', 'NaP', 'active']
         # self.holding_potential = -80
         if self.cell_name == 'hay':
             elec_x, elec_z = np.meshgrid(np.linspace(-200, 200, 7),
@@ -1439,15 +1439,15 @@ class Figure4(PaperFigures):
 
     def _do_all_simulations(self, weight):
         neural_sim = NeuralSimulations(self)
-        for holding_potential in [-80.]:
-            for input_idx in [self.apic_idx]:
-                for conductance_type in self.conductance_types_1:
-                    neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
-                                                            self.elec_x, self.elec_y, self.elec_z, weight)
+        # for holding_potential in [-80.]:
+        #     for input_idx in [self.apic_idx]:
+        #         for conductance_type in self.conductance_types_1:
+        #             neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
+        #                                                     self.elec_x, self.elec_y, self.elec_z, weight)
 
         for holding_potential in [-60.]:
             for input_idx in [self.soma_idx]:
-                for conductance_type in self.conductance_types_2:
+                for conductance_type in self.conductance_types_2[-1:]:
                     neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
                                                             self.elec_x, self.elec_y, self.elec_z, weight)
 
@@ -1476,7 +1476,7 @@ class Figure4(PaperFigures):
         ec_ax_a_1 = fig.add_subplot(2, 4, 2, ylim=[1e-5, 1e-1], xlabel='Hz', **ax_dict)
         ec_ax_s_1 = fig.add_subplot(2, 4, 6, ylim=[1e-7, 1e-3], **ax_dict)
         ec_ax_a_2 = fig.add_subplot(2, 4, 4, ylim=[1e-6, 1e-2], **ax_dict)
-        ec_ax_s_2 = fig.add_subplot(2, 4, 8, ylim=[1e-6, 1e-2], **ax_dict)
+        ec_ax_s_2 = fig.add_subplot(2, 4, 8, ylim=[1e-5, 1e-1], **ax_dict)
 
         ec_ax_a_1.set_ylabel('PSD [$\mu$V$^2$/Hz]', fontsize=10)
 
@@ -2756,14 +2756,13 @@ class FigureDistanceStudyInfiniteNeurite(PaperFigures):
         cl3 = plt.colorbar(img_q, cax=cax_3, ticks=[1, 5, 9], extend='max')
 
 
-
 if __name__ == '__main__':
 
     NewIntroFigure('hay', 'figure_1', 0.001, False).make_figure()
     # IntroFigures('hay', 'figure_2', 0.0005, True).make_figure()
     # Figure3(0.0005, False)
     # Figure4(0.0005, False)
-    # Figure4b(0.001, False)
+
     # FigureSystematic()
     # FigureTimeConstant()
     # FigureNeurite2(do_simulations=False).make_figure()

@@ -903,6 +903,9 @@ def test_steady_state():
     tstartms = -cut_off
     model_path = join('lfpy_version')
     neuron.load_mechanisms('mod')
+    neuron.load_mechanisms('..')
+
+
     cell_params = {
         'morphology': join(model_path, 'morphologies', 'cell1.hoc'),
         #'rm' : 30000,               # membrane resistance
@@ -918,10 +921,20 @@ def test_steady_state():
         'tstopms': tstopms,
         'custom_code': [join(model_path, 'custom_codes.hoc')],
         'custom_fun': [active_declarations],  # will execute this function
-        'custom_fun_args': [{'conductance_type': 'active',
-                             'hold_potential': -60}],
+        'custom_fun_args': [{'conductance_type': 'Ih_linearized',
+                             'hold_potential': -80}],
     }
     cell = LFPy.Cell(**cell_params)
+    dist = []
+    mu_star = []
+    for sec in cell.allseclist:
+        for seg in sec:
+            if hasattr(seg, 'ehcn_Ih_linearized_v2'):
+                dist.append(nrn.distance(seg.x, sec=sec))
+                mu_star.append(seg.dwinf_Ih_linearized_v2 * (-80 - seg.ehcn_Ih_linearized_v2) * seg.gIhbar_Ih_linearized_v2 / seg.g_pas)
+
+    plt.plot(dist, mu_star)
+    plt.show()
     cell.simulate(rec_vmem=True, rec_imem=True)
     plt.plot(cell.tvec, cell.somav)
     plt.ylim([-60.1, -59.9])
@@ -1042,10 +1055,10 @@ def test_ca_initiation():
     plt.show()
 
 if __name__ == '__main__':
-    #test_steady_state()
+    test_steady_state()
     #simulate_synaptic_input(0, -65, 'active')
     # plt.savefig('Ca_initiation_testing.png')
-    test_ca_initiation()
+    # test_ca_initiation()
     #plot_frozen_gh()
     # test_frozen_currents(0, -80)
     # test_frozen_currents(0, -70)

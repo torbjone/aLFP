@@ -4,7 +4,7 @@
 NEURON	{
 	SUFFIX Ih_linearized_v2
 	NONSPECIFIC_CURRENT ihcn
-	RANGE gIhbar, V_R, ihcn, wInf, ehcn, mu, wTau
+	RANGE gIhbar, V_R, ihcn, wInf, ehcn, mu, wTau, dwinf
 }
 
 UNITS	{
