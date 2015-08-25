@@ -553,7 +553,7 @@ class point_neuron_network_params(general_params):
         ####################################  
        
         # scaling parameter for population sizes
-        self.area = .25 # 1
+        self.area = 1
         
         # preserve indegrees when downscaling
         self.preserve_K = False         
@@ -798,7 +798,7 @@ class multicompartment_params(point_neuron_network_params):
 
         # list of morphology files with default location, testing = True
         # will point to simplified morphologies
-        testing = False
+        testing = True
         if testing:
             self.PATH_m_y = os.path.join('morphologies', 'ballnsticks')
             self.m_y = [Y + '_' + y + '.hoc' for Y, y in self.mapping_Yy]

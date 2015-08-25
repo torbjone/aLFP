@@ -72,26 +72,26 @@ tic = time()
 
 ##initiate nest simulation with only the point neuron network parameter class
 networkParams = point_neuron_network_params()
-# nest_simulation.sli_run(parameters=networkParams,
-#                         fname='microcircuit.sli',
-#                         verbosity='M_WARNING')
+nest_simulation.sli_run(parameters=networkParams,
+                        fname='microcircuit.sli',
+                        verbosity='M_WARNING')
 
 #preprocess the gdf files containing spiking output, voltages, weighted and
 #spatial input spikes and currents:
-# nest_output_processing.merge_gdf(networkParams,
-#                             raw_label=networkParams.spike_detector_label,
-#                             file_type='gdf',
-#                             fileprefix=params.networkSimParams['label'])
-# nest_output_processing.merge_gdf(networkParams,
-#                             raw_label=networkParams.voltmeter_label,
-#                             file_type='dat',
-#                             fileprefix='voltages')
-# nest_output_processing.merge_gdf(networkParams,
-#                             raw_label=networkParams.weighted_input_spikes_label,
-#                             file_type='dat',
-#                             fileprefix='population_input_spikes')
+nest_output_processing.merge_gdf(networkParams,
+                            raw_label=networkParams.spike_detector_label,
+                            file_type='gdf',
+                            fileprefix=params.networkSimParams['label'])
+nest_output_processing.merge_gdf(networkParams,
+                            raw_label=networkParams.voltmeter_label,
+                            file_type='dat',
+                            fileprefix='voltages')
+nest_output_processing.merge_gdf(networkParams,
+                            raw_label=networkParams.weighted_input_spikes_label,
+                            file_type='dat',
+                            fileprefix='population_input_spikes')
 ##spatial input currents
-### nest_output_processing.create_spatial_input_spikes_hdf5(networkParams,
+# nest_output_processing.create_spatial_input_spikes_hdf5(networkParams,
 ###                                        fileprefix='depth_res_input_spikes-')
 #
 
@@ -139,8 +139,6 @@ for i, y in enumerate(params.y):
 
     #object no longer needed
     del pop
-
-sys.exit()
 
 ####### Postprocess the simulation output ######################################
 
