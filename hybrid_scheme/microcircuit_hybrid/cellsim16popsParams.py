@@ -10,7 +10,7 @@ doi: 10.1093/cercor/bhs358
 
 
 '''
-
+import os
 if not 'DISPLAY' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
@@ -19,7 +19,7 @@ else:
     at_stallo = False
 
 import numpy as np
-import os
+
 import json
 from mpi4py import MPI #this is needed to initialize other classes correctly
 import pylab as plt

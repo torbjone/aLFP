@@ -32,7 +32,15 @@ predictions using the present scheme, running the model on nothing but a large-
 scale compute facility is strongly discouraged.
 
 '''
-import os, sys
+import os
+if not 'DISPLAY' in os.environ:
+    import matplotlib
+    matplotlib.use('Agg')
+    at_stallo = True
+else:
+    at_stallo = False
+
+import sys
 import numpy as np
 from time import time
 import hybridLFPy
