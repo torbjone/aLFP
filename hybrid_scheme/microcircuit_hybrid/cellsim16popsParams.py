@@ -10,6 +10,14 @@ doi: 10.1093/cercor/bhs358
 
 
 '''
+
+if not 'DISPLAY' in os.environ:
+    import matplotlib
+    matplotlib.use('Agg')
+    at_stallo = True
+else:
+    at_stallo = False
+
 import numpy as np
 import os
 import json
