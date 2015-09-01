@@ -16,7 +16,7 @@ import aLFP
 from matplotlib.colors import LogNorm
 from scipy import stats
 from hay_active_declarations import active_declarations as hay_active
-from ca1_sub_declarations import active_declarations as ca1_active
+# from ca1_sub_declarations import active_declarations as ca1_active
 from plotting_convention import *
 nrn = neuron.h
 
@@ -1586,26 +1586,23 @@ class GenericStudy:
         if self.conductance is 'active':
             sim_name = '%s_%s_%d_%+d_active' % (self.cell_name, self.input_type, input_idx, self.holding_potential)
         else:
-            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, str(input_idx), 2.0,
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_0.0001' % (self.cell_name, self.input_type, str(input_idx), 2.0,
                                                      self.holding_potential, distribution, tau)
-        distances = np.linspace(-2500, 2500, 100)
-        heights = np.linspace(1850, -650, 50)
+        distances = np.linspace(-2500, 2500, 50)#100)
+        heights = np.linspace(1850, -650, 25)#50)
         elec_x, elec_z = np.meshgrid(distances, heights)
         elec_x = elec_x.flatten()
         elec_z = elec_z.flatten()
         elec_y = np.zeros(len(elec_z))
-
+                                                                                                                                                                                                                                                                                                                                                            
         electrode_parameters = {
                 'sigma': 0.3,
                 'x': elec_x,
                 'y': elec_y,
                 'z': elec_z
         }
-
         lfp_trace_positions = np.array([[200, 0], [200, 475], [200, 950], [200, 1425]])
-
         lfp_trace_elec_idxs = [np.argmin((elec_x - dist)**2 + (elec_z - height)**2) for dist, height in lfp_trace_positions]
-
         if 1:
             print "Recalculating extracellular potential"
             cell = self._return_cell(self.holding_potential, 'generic', 2.0, distribution, tau_w)
@@ -1617,10 +1614,14 @@ class GenericStudy:
             electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
             print "Calculating"
             electrode.calc_lfp()
+            del cell.imem
+            del cell.tvec
             LFP = 1000 * electrode.LFP
             np.save(join(self.sim_folder, 'LFP_%s.npy' % sim_name), LFP)
+            del electrode
             print "Saved LFP: ", 'LFP_%s.npy' % sim_name
-            print "Calculated"
+            # print "Loading LFP."
+            # LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
             if self.input_type is 'distributed_synaptic':
                 print "Starting PSD calc"
                 freqs, LFP_psd = aLFP.return_freq_and_psd_welch(LFP, self.welch_dict)
@@ -1744,7 +1745,7 @@ class GenericStudy:
     def generic_q_values_colorplot(self):
         for tau_w in ['auto']:
             for distribution in ['linear_increase']:#, 'linear_decrease', 'uniform']:
-                for input_idx in [605]:#, 0]:
+                for input_idx in ['tuft']:#, 0]:
                     print distribution, input_idx, tau_w
                     self._q_value_study_colorplot(input_idx, distribution, tau_w)
                     #sys.exit()
@@ -2124,10 +2125,10 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'wn', conductance='generic', extended_electrode=True)
-    gs.run_all_single_simulations()
+    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
+    # gs.run_all_single_simulations()
     # sys.exit()
-    # gs.generic_q_values_colorplot()
+    gs.generic_q_values_colorplot()
 
     # gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
     # if len(sys.argv) == 3:

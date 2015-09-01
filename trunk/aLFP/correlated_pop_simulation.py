@@ -68,10 +68,12 @@ class Population():
         self.num_tsteps = round((self.end_t - 0) / self.timeres + 1)
         self.tvec = np.linspace(0, self.end_t, self.num_tsteps)
 
+
         self.stem = self.get_simulation_stem(model, input_region, conductance_type, holding_potential,
                                              correlation, weight)
 
-        self.divide_into_welch = 4.
+        
+        self.divide_into_welch = 8.
         self.welch_dict = {'Fs': 1000 / self.timeres,
                            'NFFT': int(self.num_tsteps/self.divide_into_welch),
                            'noverlap': int(self.num_tsteps/self.divide_into_welch/2.),
@@ -312,9 +314,9 @@ class Population():
     def run_single_cell_simulation(self, cell_idx):
 
         sim_name = '%s_cell_%05d' % (self.stem, cell_idx)
-        if os.path.isfile(join(self.data_folder, 'lfp_%s.npy' % sim_name)):
-            print "Skipping", sim_name
-            return None
+        # if os.path.isfile(join(self.data_folder, 'lfp_%s.npy' % sim_name)):
+        #     print "Skipping", sim_name
+        #     return None
 
         plt.seed(cell_idx)
         random.seed(cell_idx)
@@ -323,7 +325,7 @@ class Population():
 
         electrode = LFPy.RecExtElectrode(**self.electrode_params)
         rec_vmem = False if at_stallo else True
-        cell.simulate(electrode=electrode, rec_imem=False, rec_vmem=rec_vmem)
+        cell.simulate(electrode=electrode, rec_imem=True, rec_vmem=rec_vmem)
 
         if not at_stallo:
             plt.close('all')
@@ -333,17 +335,48 @@ class Population():
         # plt.show()
 
         #electrode.calc_lfp()
-        if hasattr(cell, 'vmem'):
-            del cell.vmem
+        # if hasattr(cell, 'vmem'):
+        #     del cell.vmem
+
+        #### TOOO MUCCCH SAVING
+        #### TOOO MUCCCH SAVING
+        #### TOOO MUCCCH SAVING
+        #### TOOO MUCCCH SAVING
+        
+        np.save(join(self.data_folder, 'xstart_hay_generic.npy'), cell.xstart)
+        np.save(join(self.data_folder, 'ystart_hay_generic.npy'), cell.ystart)
+        np.save(join(self.data_folder, 'zstart_hay_generic.npy'), cell.zstart)
+        np.save(join(self.data_folder, 'xend_hay_generic.npy'), cell.xend)
+        np.save(join(self.data_folder, 'yend_hay_generic.npy'), cell.yend)
+        np.save(join(self.data_folder, 'zend_hay_generic.npy'), cell.zend)
+        np.save(join(self.data_folder, 'xmid_hay_generic.npy'), cell.xmid)
+        np.save(join(self.data_folder, 'ymid_hay_generic.npy'), cell.ymid)
+        np.save(join(self.data_folder, 'zmid_hay_generic.npy'), cell.zmid)
+        np.save(join(self.data_folder, 'diam_hay_generic.npy'), cell.diam)
+
+        np.save(join(self.data_folder, 'tvec_hay_distributed_synaptic.npy'), self.tvec)
+        
+        np.save(join(self.data_folder, 'imem_%s.npy' % sim_name), cell.imem)
+        np.save(join(self.data_folder, 'vmem_%s.npy' % sim_name), cell.vmem)
+
         np.save(join(self.data_folder, 'somav_%s.npy' % sim_name), cell.somav)
         np.save(join(self.data_folder, 'lfp_%s.npy' % sim_name), 1000*electrode.LFP)
 
     def sum_signals(self):
+
+
+
+        ####
+        #### SUBPOP SUBPOP
+        ####
+
+
+
         total_signal = np.zeros((self.num_elecs, self.num_tsteps))
         session_name = join(self.data_folder, 'lfp_%s' % self.stem)
-        for cell_idx in xrange(self.num_cells):
+        for cell_idx in range(1000, 1100):# xrange(self.num_cells):
             total_signal += np.load('%s_cell_%05d.npy' % (session_name, cell_idx))
-        np.save('%s_total.npy' % session_name, total_signal)
+        np.save('%s_subpop.npy' % session_name, total_signal)
 
     def sum_signals_by_population_size(self):
         x_y_z_rot = np.load(join(self.data_folder, 'x_y_z_rot_%d_%d.npy' % (self.num_cells, self.population_radius)))
@@ -366,13 +399,14 @@ class Population():
             s.set_spike_times(all_spike_trains[spiketrain_idx])
 
 
-    def plot_cell_population_to_ax(self, ax):
+    def plot_cell_population_to_ax(self, ax, plot_idx=None):
         x_y_z_rot = np.load(join(self.data_folder, 'x_y_z_rot_%d_%d.npy' %
                                 (self.num_cells, self.population_radius)))
 
         ax.scatter(x_y_z_rot[0, :], x_y_z_rot[2, :], c='gray', edgecolor='none', s=10, zorder=1)
+        if plot_idx is None:
+            plot_idx = np.argmin(np.abs(x_y_z_rot[0, :]))
 
-        plot_idx = np.argmin(np.abs(x_y_z_rot[0, :]))
         plt.seed(plot_idx)
         random.seed(plot_idx)
         cell = self.return_cell(plot_idx)
@@ -433,6 +467,69 @@ class Population():
         [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
         fig.legend(lines, line_names, frameon=False, ncol=4, loc='lower center')
         fig.savefig(join(self.fig_folder, 'center_LFP_%s.png' % self.stem))
+
+
+    def plot_central_LFP_single_cell(self, conductance_list, cell_number=None):
+        plt.close('all')
+        fig = plt.figure(figsize=[8, 12])
+        fig.subplots_adjust(left=0, right=0.95)
+        elec_axs = {}
+        elec_psd_axs = {}
+        elec_ax_dict = {'xticks': []}
+        elec_psd_ax_dict = {'ylim': [1e-10, 1e-3], 'xlim': [1e0, 1e2]}
+
+        ax0 = fig.add_subplot(131, aspect=1, frameon=False, xticks=[], yticks=[], xlim=[-450, 450], ylim=[-600, 1500])
+        ax0.scatter(self.elec_x[self.center_idxs], self.elec_z[self.center_idxs], zorder=2, s=50)
+        self.plot_cell_population_to_ax(ax0, cell_number)
+
+        for numb, elec_idx in enumerate(self.center_idxs):
+            # title = 'x: %d$\mu$m, z: %d$\mu$m' % (self.elec_x[elec_idx], self.elec_z[elec_idx])
+            #elec_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 3, 3*(len(self.center_idxs) - numb) - 1,
+            #                                     title=title, **elec_ax_dict)
+            elec_psd_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 2, 2*(len(self.center_idxs) - numb),
+                                                     **elec_psd_ax_dict)
+            elec_psd_axs[elec_idx].grid(True)
+            if self.elec_z[elec_idx] == np.min(self.elec_z):
+                #elec_axs[elec_idx].set_xticks([0, self.end_t])
+                #elec_axs[elec_idx].set_xlabel('Time [ms]')
+                #elec_axs[elec_idx].set_ylabel('$\mu$V')
+                elec_psd_axs[elec_idx].set_ylabel('$\mu$V$^2$/Hz')
+                elec_psd_axs[elec_idx].set_xlabel('Frequency [Hz]')
+
+        aLFP.simplify_axes(elec_psd_axs.values())
+        #aLFP.simplify_axes(elec_axs.values())
+        lfp_max = 0
+        lines = []
+        line_names = []
+        for conductance_type in conductance_list:
+            local_stem = self.get_simulation_stem(self.model, self.input_region, conductance_type,
+                                                  self.holding_potential, self.correlation, self.weight)
+            if cell_number is None:
+                session_name = join(self.data_folder, 'lfp_%s_total.npy' % local_stem)
+            else:
+                session_name = join(self.data_folder, 'lfp_%s_cell_%05d.npy' % (local_stem, cell_number))
+            lfp = np.load(session_name)
+
+            freq, psd = aLFP.return_freq_and_psd_welch(lfp, self.welch_dict)
+            l = None
+            for elec_idx in self.center_idxs:
+                lfp_max = np.max([lfp_max, np.max(np.abs(lfp[elec_idx]))])
+                if conductance_type is 'active':
+                    q_value = np.max(psd[elec_idx, 1:]) / psd[elec_idx, 1]
+                    res_freq = freq[np.argmax(psd[elec_idx])]
+                    print "Max frequency: ", res_freq
+                    print "Q-value: ", q_value
+                    elec_psd_axs[elec_idx].set_title('Q-value: %1.2f, (%1.2f Hz)' % (q_value, res_freq))
+                #elec_axs[elec_idx].plot(self.tvec, lfp[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+                l, = elec_psd_axs[elec_idx].loglog(freq, psd[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+            lines.append(l)
+            line_names.append(conductance_type)
+
+        #[ax.set_ylim([-lfp_max, lfp_max]) for ax in elec_axs.values()]
+        #[ax.set_yticks([-1.5, 1.5]) for ax in elec_axs.values()]
+        # [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
+        fig.legend(lines, line_names, frameon=False, ncol=4, loc='lower center')
+        fig.savefig(join(self.fig_folder, 'center_LFP_%s_%05d.png' % (self.stem, cell_number)))
 
     def plot_lateral_LFP(self, conductance_list):
         plt.close('all')
@@ -643,7 +740,7 @@ def MPI_population_size_sum():
 
 def MPI_population_simulation():
     """ Run with
-        openmpirun -np 4 python example_mpi.py
+        mpirun -np 4 python example_mpi.py
     """
     from mpi4py import MPI
 
@@ -667,10 +764,10 @@ def MPI_population_simulation():
 
     if rank == 0:
         pop = Population(initialize=True)
-        conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
-        input_regions = ['basal', 'homogeneous', 'tuft']
+        conductance_types = ['active', 'passive']#, 'Ih_linearized', 'Ih_frozen']
+        input_regions = ['tuft']#, 'basal', 'homogeneous', ]
         correlations = [0.0, 1.0]
-        holding_potentials = [-65, -80]
+        holding_potentials = [-80]#, -65]
 
 
 
@@ -679,7 +776,7 @@ def MPI_population_simulation():
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
         task = 0
-        num_cells = Population().num_cells
+        num_cells = 1#Population().num_cells
         num_tasks = len(correlations) * len(conductance_types) * len(input_regions) * len(holding_potentials) * num_cells
         for correlation in correlations:
             for input_region in input_regions:
@@ -763,10 +860,10 @@ def MPI_population_sum():
         sys.exit()
 
     if rank == 0:
-        conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
-        input_regions = ['basal', 'homogeneous', 'tuft']
+        conductance_types = ['active', 'passive']#, 'Ih_linearized', 'Ih_frozen']
+        input_regions = ['tuft']#'basal', 'homogeneous']
         correlations = [0.0, 1.0]
-        holding_potentials = [-65, -80]
+        holding_potentials = [-80]#, -65]
 
 
         print("\033[95m Master starting with %d workers\033[0m" % num_workers)
@@ -881,20 +978,74 @@ def distribute_cellsims_MPI_DEPRECATED():
                 pop.plot_central_LFP(conductance_types)
             sim_num += 1
 
+    def plot_central_LFP(self, conductance_list):
+        plt.close('all')
+        fig = plt.figure(figsize=[8, 12])
+        fig.subplots_adjust(left=0, right=0.95)
+        elec_axs = {}
+        elec_psd_axs = {}
+        elec_ax_dict = {'xticks': []}
+        elec_psd_ax_dict = {'ylim': [1e-7, 1e-0], 'xlim': [1e0, 1e3]}
+
+        ax0 = fig.add_subplot(131, aspect=1, frameon=False, xticks=[], yticks=[])
+        ax0.scatter(self.elec_x[self.center_idxs], self.elec_z[self.center_idxs], zorder=2, s=50)
+        self.plot_cell_population_to_ax(ax0)
+
+        for numb, elec_idx in enumerate(self.center_idxs):
+            title = 'x: %d$\mu$m, z: %d$\mu$m' % (self.elec_x[elec_idx], self.elec_z[elec_idx])
+            #elec_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 3, 3*(len(self.center_idxs) - numb) - 1,
+            #                                     title=title, **elec_ax_dict)
+            elec_psd_axs[elec_idx] = fig.add_subplot(len(self.center_idxs), 2, 2*(len(self.center_idxs) - numb),
+                                                     title=title, **elec_psd_ax_dict)
+            elec_psd_axs[elec_idx].grid(True)
+            if self.elec_z[elec_idx] == np.min(self.elec_z):
+                #elec_axs[elec_idx].set_xticks([0, self.end_t])
+                #elec_axs[elec_idx].set_xlabel('Time [ms]')
+                #elec_axs[elec_idx].set_ylabel('$\mu$V')
+                elec_psd_axs[elec_idx].set_ylabel('$\mu$V$^2$/Hz')
+                elec_psd_axs[elec_idx].set_xlabel('Frequency [Hz]')
+
+        aLFP.simplify_axes(elec_psd_axs.values())
+        #aLFP.simplify_axes(elec_axs.values())
+        lfp_max = 0
+        lines = []
+        line_names = []
+        for conductance_type in conductance_list:
+            local_stem = self.get_simulation_stem(self.model, self.input_region, conductance_type,
+                                                  self.holding_potential, self.correlation, self.weight)
+            session_name = join(self.data_folder, 'lfp_%s_total.npy' % local_stem)
+            lfp = np.load(session_name)
+
+            freq, psd = aLFP.return_freq_and_psd_welch(lfp, self.welch_dict)
+            l = None
+            for elec_idx in self.center_idxs:
+                lfp_max = np.max([lfp_max, np.max(np.abs(lfp[elec_idx]))])
+                #elec_axs[elec_idx].plot(self.tvec, lfp[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+                l, = elec_psd_axs[elec_idx].loglog(freq, psd[elec_idx], c=self.conductance_clr[conductance_type], lw=1)
+            lines.append(l)
+            line_names.append(conductance_type)
+
+        #[ax.set_ylim([-lfp_max, lfp_max]) for ax in elec_axs.values()]
+        #[ax.set_yticks([-1.5, 1.5]) for ax in elec_axs.values()]
+        [ax.set_yticks(ax.get_yticks()[::2]) for ax in elec_psd_axs.values()]
+        fig.legend(lines, line_names, frameon=False, ncol=4, loc='lower center')
+        fig.savefig(join(self.fig_folder, 'center_LFP_%s.png' % self.stem))
 
 def plot_all_LFPs():
-    conductance_types = ['active', 'passive', 'Ih_linearized', 'Ih_frozen']
-    input_regions = ['basal', 'homogeneous', 'tuft']
+    conductance_types = ['active', 'passive']#, 'Ih_linearized', 'Ih_frozen']
+    input_regions = ['tuft']#, 'basal', 'homogeneous' ]
     correlations = [0.0, 1.0]
-    holding_potentials = [-65, -80]
+    holding_potentials = [-80]
+    cell_numbers = np.arange(1000, 1010)
 
     for correlation in correlations:
         for input_region in input_regions:
             for holding_potential in holding_potentials:
                 pop = Population(correlation=correlation, input_region=input_region,
                                  holding_potential=holding_potential, conductance_type='active')
-                pop.plot_central_LFP(conductance_types)
-                pop.plot_lateral_LFP(conductance_types)
+                for cell_number in cell_numbers:
+                    pop.plot_central_LFP_single_cell(conductance_types, cell_number)
+                # pop.plot_lateral_LFP(conductance_types)
 
 
 def test_sim():
@@ -923,5 +1074,5 @@ if __name__ == '__main__':
     #pop.plot_LFP(['active', 'passive'])
     plot_all_LFPs()
     #MPI_population_size_sum()
-    #MPI_population_simulation()
-    # MPI_population_sum()
+    # MPI_population_simulation()
+    #MPI_population_sum()

@@ -223,9 +223,14 @@ class general_params(object):
         # folder for all simulation output and scripts
         # HAMBACH and STALLO have scratch areas for saving
         if os.path.isdir(os.path.join('/', 'scratch', os.environ['USER'])):
+            os.mkdir(os.path.join('/', 'scratch', os.environ['USER'],
+                                           'hybrid_model'))
+            os.mkdir(os.path.join('/', 'scratch', os.environ['USER'],
+                                           'hybrid_model','simulation_output_default'))
             self.savefolder = os.path.join('/', 'scratch', os.environ['USER'],
                                            'hybrid_model',
                                            'simulation_output_default')
+
         # LOCALLY
         else:
             self.savefolder = 'simulation_output_default'
