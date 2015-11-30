@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/neuron_models/shah" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/neuron_models/infinite_neurite" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 2.7.5+ (/usr/bin/python)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 2.7.10 (C:\Anaconda\python.exe)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">
@@ -16,4 +16,3 @@
     <option name="PROJECT_TEST_RUNNER" value="Nosetests" />
   </component>
 </module>
-

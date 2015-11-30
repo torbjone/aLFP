@@ -1267,8 +1267,8 @@ class GenericStudy:
         #import ipdb; ipdb.set_trace()
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
 
-        plt.plot(cell.tvec, cell.somav)
-        plt.show()
+        # plt.plot(cell.tvec, cell.somav)
+        # plt.show()
 
         self.save_neural_sim_single_input_data(cell, electrode, input_sec, mu, distribution, tau_w, weight)
         neuron.h('forall delete_section()')
@@ -1309,6 +1309,52 @@ class GenericStudy:
         #self.input_plot(cell, cell_input_idxs, spike_trains)
 
         return cell, synapses, None
+
+    def _make_distributed_synaptic_stimuli_equal_density(self, cell, input_sec, weight=0.001, **kwargs):
+
+        # Define synapse parameters
+        synapse_params = {
+            'e': 0.,                   # reversal potential
+            'syntype': 'ExpSyn',       # synapse type
+            'tau': 2.,                # syn. time constant
+            'weight': weight,            # syn. weight
+            'record_current': False,
+        }
+        if input_sec == 'distal_tuft':
+            input_pos = ['apic']
+            maxpos = 10000
+            minpos = 900
+        elif input_sec == 'tuft':
+            input_pos = ['apic']
+            maxpos = 10000
+            minpos = 600
+        elif input_sec == 'homogeneous':
+            input_pos = ['apic', 'dend']
+            maxpos = 10000
+            minpos = -10000
+        else:
+            raise RuntimeError("Use other input section")
+        num_synapses = 1000
+        # cell_input_idxs = cell.get_rand_idx_area_norm(section=input_pos, nidx=num_synapses,  z_min=minpos, z_max=maxpos)
+        homogeneous_idxs = cell.get_rand_idx_area_norm(section=['apic', 'dend'], nidx=num_synapses,  z_min=-10000, z_max=10000)
+        in_range_list = []
+        for inp in homogeneous_idxs:
+            if minpos <= cell.zmid[inp] <= maxpos:
+                in_range_list.append(inp)
+
+        num_synapses = len(in_range_list)
+        input_idxs = np.array(in_range_list)
+        if input_sec == 'homogeneous':
+            if not (input_idxs == homogeneous_idxs).all():
+                raise RuntimeError("Wrong input indexes!")
+
+        spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
+        synapses = self.set_input_spiketrain(cell, input_idxs, spike_trains, synapse_params)
+        # self.input_plot(cell, cell_input_idxs, spike_trains)
+
+        return cell, synapses, None
+
+
 
     def input_plot(self, cell, cell_input_idxs, spike_trains):
 
