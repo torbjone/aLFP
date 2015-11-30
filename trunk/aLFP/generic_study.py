@@ -48,7 +48,7 @@ class GenericStudy:
         # self.holding_potentials = [-80, -70, -60]
         self.plot_frequencies = [2, 10, 100]
         self.holding_potential = -80
-        self.mus = [-0.5]#, 0, 2]
+        self.mus = [-0.5, 0, 2]
         self.mu_clr = {-0.5: 'r',
                        0: 'k',
                        2: 'b'}
@@ -2147,7 +2147,7 @@ class GenericStudy:
         COMM = MPI.COMM_WORLD
         SIZE = COMM.Get_size()
         RANK = COMM.Get_rank()
-        weights = np.array([0.0001, 0.0005])
+        weights = np.array([0.0001])
         sim_num = 0
         for weight in weights:
             for input_sec in ['homogeneous', 'tuft', 'distal_tuft']:
@@ -2177,7 +2177,8 @@ if __name__ == '__main__':
     #gs.generic_q_values_colorplot()
 
     gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic', extended_electrode=True)
-    if len(sys.argv) == 3:
-        gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
-    else:
-        gs.LFP_with_distance_study(0.0001)
+    gs.distribute_cellsims_MPI()
+    # if len(sys.argv) == 3:
+    #     gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
+    # else:
+    #     gs.LFP_with_distance_study(0.0001)
