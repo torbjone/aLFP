@@ -25,9 +25,7 @@ nrn = neuron.h
 class GenericStudy:
 
     def __init__(self, cell_name, input_type, conductance='generic', extended_electrode=False):
-        # self.mu_name_dict = {-1: 'Regenerative ($\mu^* =\ -1$)',
-        #                      0: 'Passive ($\mu^* =\ 0$)',
-        #                      4: 'Restorative ($\mu^* =\ 4$)'}
+
         self.mu_name_dict = {-0.5: 'Regenerative ($\mu^* =\ -0.5$)',
                              0: 'Passive ($\mu^* =\ 0$)',
                              2: 'Restorative ($\mu^* =\ 2$)'}
@@ -1352,8 +1350,7 @@ class GenericStudy:
 
         spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
         synapses = self.set_input_spiketrain(cell, input_idxs, spike_trains, synapse_params)
-        self.input_plot(cell, input_idxs, spike_trains)
-        sys.exit()
+        # self.input_plot(cell, input_idxs, spike_trains)
 
         return cell, synapses, None
 
