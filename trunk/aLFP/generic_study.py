@@ -12,9 +12,11 @@ import numpy as np
 import pylab as plt
 import neuron
 import LFPy
-import aLFP
+# import aLFP
+import tools
 from matplotlib.colors import LogNorm
 from scipy import stats
+sys.path.append(join('..', '..', 'neuron_models', 'hay'))
 from hay_active_declarations import active_declarations as hay_active
 # from ca1_sub_declarations import active_declarations as ca1_active
 from plotting_convention import *
@@ -369,7 +371,7 @@ class GenericStudy:
                 ax.set_xlabel('Hz')
                 ax.set_ylabel('PSD')
             ax.grid(True)
-            aLFP.simplify_axes(ax)
+            simplify_axes(ax)
             all_elec_ax.append(ax)
 
         # freq_ax = []
@@ -381,7 +383,7 @@ class GenericStudy:
         #                          title='Norm Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
         #     ax.grid(True)
         #     ax_norm.grid(True)
-        #     aLFP.simplify_axes([ax, ax_norm])
+        #     simplify_axes([ax, ax_norm])
         #     freq_ax.append(ax)
         #     freq_ax_norm.append(ax_norm)
 
@@ -407,9 +409,9 @@ class GenericStudy:
 
             # freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
             if self.input_type is 'distributed_synaptic':
-                freqs, sig_psd = aLFP.return_freq_and_psd_welch(LFP, self.welch_dict)
+                freqs, sig_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
             else:
-                freqs, sig_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+                freqs, sig_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
 
             # idxs = [np.argmin(np.abs(freqs - freq)) for freq in self.plot_frequencies]
             for elec in xrange(len(self.elec_z)):
@@ -438,7 +440,7 @@ class GenericStudy:
         for elec in xrange(len(self.elec_z)):
             # row, col = self._return_elec_row_col(elec)
             # dist_idx = self._return_elec_dist_idx(elec)
-            aLFP.mark_subplots(all_elec_ax[elec], letter_list[elec])
+            mark_subplots(all_elec_ax[elec], letter_list[elec])
 
     def _draw_all_elecs_with_distance_active(self, fig, input_idx):
 
@@ -455,7 +457,7 @@ class GenericStudy:
                                  title='$x=%d\mu m$' % self.elec_x[elec],
                                  xlim=[1, 510])
             ax.grid(True)
-            aLFP.simplify_axes(ax)
+            simplify_axes(ax)
             all_elec_ax.append(ax)
 
         freq_ax = []
@@ -468,7 +470,7 @@ class GenericStudy:
 
             ax.grid(True)
             ax_norm.grid(True)
-            aLFP.simplify_axes([ax, ax_norm])
+            simplify_axes([ax, ax_norm])
             freq_ax.append(ax)
             freq_ax_norm.append(ax_norm)
 
@@ -479,7 +481,7 @@ class GenericStudy:
                                         self.holding_potential, self.conductance)
         LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
         freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
-        freqs, LFP_psd = aLFP.return_freq_and_psd(tvec, LFP)
+        freqs, LFP_psd = tools.return_freq_and_psd(tvec, LFP)
 
         for elec in xrange(len(self.elec_z)):
             row, col = self._return_elec_row_col(elec)
@@ -530,8 +532,8 @@ class GenericStudy:
         ax_imem_2 = fig.add_subplot(num_plot_rows, num_plot_cols, 2 + num_plot_cols)
         ax_imem_3 = fig.add_subplot(num_plot_rows, num_plot_cols, 2 + 2*num_plot_cols)
 
-        aLFP.mark_subplots([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
-        aLFP.simplify_axes([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
+        mark_subplots([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
+        simplify_axes([ax_vmem_1, ax_imem_1, ax_vmem_2, ax_imem_2, ax_vmem_3, ax_imem_3])
 
         [ax.set_ylabel('PSD') for ax in [ax_imem_3, ax_imem_2, ax_imem_1]]
         [ax.set_xlabel('$Hz$') for ax in [ax_imem_3, ax_imem_2, ax_imem_1, ax_vmem_3, ax_vmem_2, ax_vmem_1]]
@@ -681,8 +683,8 @@ class GenericStudy:
                 imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
 
                 for numb, idx in enumerate(self.cell_plot_idxs):
-                    freqs, vmem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., vmem[idx, :])
-                    freqs, imem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., imem[idx, :])
+                    freqs, vmem_psd = tools.return_freq_and_psd(self.timeres_python/1000., vmem[idx, :])
+                    freqs, imem_psd = tools.return_freq_and_psd(self.timeres_python/1000., imem[idx, :])
 
                     vmem_psd = vmem_psd[0]
                     imem_psd = imem_psd[0]
@@ -711,7 +713,7 @@ class GenericStudy:
             ax.grid(True)
             # ax.set_yscale('log')
             ax.set_xlabel(r'$\tau_w$')
-            aLFP.simplify_axes(ax)
+            simplify_axes(ax)
 
     def _draw_all_elecs_q_value(self, fig, distribution, input_idx, weight):
 
@@ -729,7 +731,7 @@ class GenericStudy:
                                  title='$x=%d\mu m$' % self.elec_x[elec],
                                  xlim=[0.1, 100])
             ax.grid(True)
-            aLFP.simplify_axes(ax)
+            simplify_axes(ax)
             all_elec_ax.append(ax)
 
         lines = []
@@ -747,7 +749,7 @@ class GenericStudy:
                                                                 self.holding_potential, distribution, tau_w)
                 # LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.use_elec_idxs, :]
                 LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
-                freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+                freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
 
                 for elec in xrange(len(self.elec_z)):
                     # sig_psd_welch, freqs_welch = mlab.psd(LFP[elec], **self.welch_dict)
@@ -891,8 +893,8 @@ class GenericStudy:
                               xlabel='$\mu m$', xticks=[0, 400, 800, 1200])
         ax2 = fig.add_subplot(3, 5, 11, title=r'$\tau_w$', ylim=[0, 100],
                               xlabel='$\mu m$', xticks=[0, 400, 800, 1200])
-        aLFP.mark_subplots([ax0, ax1, ax2], 'abc')
-        aLFP.simplify_axes([ax0, ax1, ax2])
+        mark_subplots([ax0, ax1, ax2], 'abc')
+        simplify_axes([ax0, ax1, ax2])
 
         for mu in self.mus:
             sim_name = '%s_%s_%d_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, input_idx, mu,
@@ -922,9 +924,9 @@ class GenericStudy:
         for idx, ax in enumerate(ax_list):
             if self.plot_psd:
                 if self.input_type is 'distributed_synaptic':
-                    xvec, yvec = aLFP.return_freq_and_psd_welch(sig[idx, :], self.welch_dict)
+                    xvec, yvec = tools.return_freq_and_psd_welch(sig[idx, :], self.welch_dict)
                 else:
-                    xvec, yvec = aLFP.return_freq_and_psd(tvec, sig[idx, :])
+                    xvec, yvec = tools.return_freq_and_psd(tvec, sig[idx, :])
                 yvec = yvec[0]
             else:
                 xvec = tvec
@@ -954,7 +956,7 @@ class GenericStudy:
             raise RuntimeError("Something wrong with number of electrodes!")
         for idx, ax in enumerate(ax_list):
             if self.plot_psd:
-                xvec, yvec = aLFP.return_freq_and_psd(tvec, sig[idx, :])
+                xvec, yvec = tools.return_freq_and_psd(tvec, sig[idx, :])
                 yvec = yvec[0]
                 # yvec_w, xvec_w = mlab.psd(sig[idx, :], **self.welch_dict)
                 # yvec_w = np.sqrt(yvec_w)
@@ -1043,8 +1045,8 @@ class GenericStudy:
 
         # color_axes([ax_sig_3, ax_sig_2, ax_sig_1], 'g')
         # color_axes([ax_imem_3, ax_imem_2, ax_imem_1, ax_vmem_3, ax_vmem_2, ax_vmem_1], 'b')
-        aLFP.simplify_axes(ax_list)
-        aLFP.mark_subplots(ax_list, 'efghijklmn')
+        simplify_axes(ax_list)
+        mark_subplots(ax_list, 'efghijklmn')
         fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower right')
 
     def plot_summary(self, input_idx, distribution, tau_w):
@@ -1080,10 +1082,10 @@ class GenericStudy:
         zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
 
         if distribution is None:
-            aLFP.mark_subplots(ax, 'G', xpos=0, ypos=1)
+            mark_subplots(ax, 'G', xpos=0, ypos=1)
             sec_clrs = ['0.7'] * len(xmid)
         else:
-            # aLFP.mark_subplots(ax, 'd', xpos=0, ypos=1)
+            # mark_subplots(ax, 'd', xpos=0, ypos=1)
             # example_name = '%s_%s_%d_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, input_idx, 0,
             #                                    self.holding_potential, distribution, 'auto')
             # dist_dict = np.load(join(self.sim_folder, 'dist_dict_%s.npy' % example_name)).item()
@@ -1306,7 +1308,7 @@ class GenericStudy:
                                                       z_min=minpos, z_max=maxpos)
         spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
         synapses = self.set_input_spiketrain(cell, cell_input_idxs, spike_trains, synapse_params)
-        #self.input_plot(cell, cell_input_idxs, spike_trains)
+        self.input_plot(cell, cell_input_idxs, spike_trains)
 
         return cell, synapses, None
 
@@ -1432,8 +1434,8 @@ class GenericStudy:
                 ax.set_yscale('log')
                 ax.grid(True)
 
-            aLFP.simplify_axes([ax_1, ax_2, ax_3])
-        aLFP.mark_subplots(fig.axes)
+            simplify_axes([ax_1, ax_2, ax_3])
+        mark_subplots(fig.axes)
         fig.legend(lines[:3], line_names[:3], frameon=False, ncol=3, loc='lower right')
 
     def _plot_multiple_input_EC_signals(self, fig, input_idxs, distributions, tau_w):
@@ -1461,8 +1463,8 @@ class GenericStudy:
                 ax.set_yscale('log')
                 ax.grid(True)
 
-            aLFP.simplify_axes([ax_1, ax_2, ax_3])
-        aLFP.mark_subplots(fig.axes)
+            simplify_axes([ax_1, ax_2, ax_3])
+        mark_subplots(fig.axes)
         fig.legend(lines[:3], line_names[:3], frameon=False, ncol=3, loc='lower right')
 
     def combine_extracellular_traces(self, input_idx):
@@ -1582,10 +1584,10 @@ class GenericStudy:
 
         vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
         imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
-        freqs, vmem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., vmem[:, :])
-        freqs, imem_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., imem[:, :])
-        #freqs, vmem_psd = aLFP.return_freq_and_psd_welch(vmem[:, :], self.welch_dict)
-        #freqs, imem_psd = aLFP.return_freq_and_psd_welch(imem[:, :], self.welch_dict)
+        freqs, vmem_psd = tools.return_freq_and_psd(self.timeres_python/1000., vmem[:, :])
+        freqs, imem_psd = tools.return_freq_and_psd(self.timeres_python/1000., imem[:, :])
+        #freqs, vmem_psd = tools.return_freq_and_psd_welch(vmem[:, :], self.welch_dict)
+        #freqs, imem_psd = tools.return_freq_and_psd_welch(imem[:, :], self.welch_dict)
 
         dc_vmem = vmem_psd[:, 1]
         dc_imem = imem_psd[:, 1]
@@ -1626,7 +1628,7 @@ class GenericStudy:
         q_ax = fig.add_subplot(326, **ax_dict)
         # q_res_ax = fig.add_subplot(3, 3, 9, **ax_dict)
 
-        aLFP.mark_subplots(fig.axes)
+        mark_subplots(fig.axes)
 
         tau = '%1.2f' % tau_w if type(tau_w) in [float, int] else tau_w
         if self.conductance is 'active':
@@ -1670,9 +1672,9 @@ class GenericStudy:
             # LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
             if self.input_type is 'distributed_synaptic':
                 print "Starting PSD calc"
-                freqs, LFP_psd = aLFP.return_freq_and_psd_welch(LFP, self.welch_dict)
+                freqs, LFP_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
             else:
-                freqs, LFP_psd = aLFP.return_freq_and_psd(self.timeres_python/1000., LFP)
+                freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
             np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
             np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
         else:
@@ -2082,7 +2084,7 @@ class GenericStudy:
         electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
         electrode.calc_lfp()
         LFP = 1000 * electrode.LFP
-        return aLFP.return_freq_and_psd(cell.tvec[1] / 1000., LFP)
+        return tools.return_freq_and_psd(cell.tvec[1] / 1000., LFP)
 
     def one_resonance_plot(self, rotation):
         distribution = 'uniform'
@@ -2129,7 +2131,7 @@ class GenericStudy:
             ax = fig.add_subplot(len(heights), len(distances) + 1, plotnum, xticklabels=[], yticklabels=[],
                                  xlim=[1, 500], ylim=[1e-8, 1e-6])
             # ax.set_title('%d %d' % (elec_x[elec], elec_z[elec]))
-            aLFP.simplify_axes(ax)
+            simplify_axes(ax)
             ax.grid(True)
             ax.loglog(freqs, LFP_restor[elec], 'r', lw=2)
             ax.loglog(freqs, LFP_passive[elec], 'b', lw=2)
