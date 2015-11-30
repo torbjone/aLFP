@@ -1264,7 +1264,7 @@ class GenericStudy:
 
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
-        cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_sec, weight)
+        cell, syn, noiseVec = self._make_distributed_synaptic_stimuli_equal_density(cell, input_sec, weight)
         print "Starting simulation ..."
         #import ipdb; ipdb.set_trace()
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
@@ -1308,7 +1308,7 @@ class GenericStudy:
                                                       z_min=minpos, z_max=maxpos)
         spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
         synapses = self.set_input_spiketrain(cell, cell_input_idxs, spike_trains, synapse_params)
-        self.input_plot(cell, cell_input_idxs, spike_trains)
+        #self.input_plot(cell, cell_input_idxs, spike_trains)
 
         return cell, synapses, None
 
@@ -1352,7 +1352,8 @@ class GenericStudy:
 
         spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
         synapses = self.set_input_spiketrain(cell, input_idxs, spike_trains, synapse_params)
-        # self.input_plot(cell, cell_input_idxs, spike_trains)
+        self.input_plot(cell, input_idxs, spike_trains)
+        sys.exit()
 
         return cell, synapses, None
 
@@ -1367,7 +1368,7 @@ class GenericStudy:
         plt.axis('equal')
         plt.subplot(122)
         [plt.plot(spike_trains[idx], np.ones(len(spike_trains[idx])) * idx, 'k.') for idx in xrange(len(spike_trains))]
-        plt.show()
+        plt.savefig('input_dist_test_%d.png' % len(cell_input_idxs))
 
     def set_input_spiketrain(self, cell, cell_input_idxs, spike_trains, synapse_params):
         synapse_list = []
