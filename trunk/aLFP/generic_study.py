@@ -12,8 +12,8 @@ import numpy as np
 import pylab as plt
 import neuron
 import LFPy
-# import aLFP
-import tools
+import aLFP
+tools = aLFP.tools
 from matplotlib.colors import LogNorm
 from scipy import stats
 sys.path.append(join('..', '..', 'neuron_models', 'hay'))
