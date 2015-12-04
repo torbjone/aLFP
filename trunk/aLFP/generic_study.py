@@ -19,7 +19,7 @@ from scipy import stats
 sys.path.append(join('..', '..', 'neuron_models', 'hay'))
 from hay_active_declarations import active_declarations as hay_active
 # from ca1_sub_declarations import active_declarations as ca1_active
-from plotting_convention import *
+from aLFP.plotting_convention import *
 nrn = neuron.h
 
 class GenericStudy:
