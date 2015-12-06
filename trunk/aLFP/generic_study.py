@@ -1256,9 +1256,9 @@ class GenericStudy:
         sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_sec, mu,
                                                        self.holding_potential, distribution, tau, weight)
 
-        # if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
-        #     print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
-        #     return
+        if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
+            print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
+            return
 
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
@@ -2150,8 +2150,8 @@ class GenericStudy:
         weights = np.array([0.0001])
         sim_num = 0
         for weight in weights:
-            for input_sec in ['homogeneous', 'tuft', 'distal_tuft']:
-                for mu in self.mus:
+            for input_sec in ['homogeneous']:#, 'tuft', 'distal_tuft']:
+                for mu in self.mus[1:]:
                     if divmod(sim_num, SIZE)[1] == RANK:
                         print RANK, "simulating ", weight, mu
                         self._run_distributed_synaptic_simulation(mu, input_sec, 'linear_increase', 'auto', weight)
