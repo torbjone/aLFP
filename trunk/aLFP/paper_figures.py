@@ -3061,8 +3061,8 @@ class FigureDistanceStudyDistributedSynaptic(PaperFigures):
 
 if __name__ == '__main__':
 
-    NewIntroFigure('hay', 'figure_1').make_figure()
-    # IntroFigures('hay', 'figure_2', 0.0005, True)#.make_figure()
+    # NewIntroFigure('hay', 'figure_1').make_figure()
+    IntroFigures('hay', 'figure_2', 0.0005, True)#.make_figure()
     # Figure3(0.0005, False)
     # Figure4(0.0005, False)
 
