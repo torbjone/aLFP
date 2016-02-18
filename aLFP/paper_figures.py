@@ -1257,7 +1257,20 @@ class Figure3(PaperFigures):
         if do_simulations:
             from generic_study import GenericStudy
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
-            gs.run_all_single_simulations()
+            distributions = ['linear_decrease', 'linear_increase', 'uniform']
+
+            input_idxs = [self.soma_idx, self.apic_idx]
+            tau_ws = ['auto']
+            tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
+            i = 1
+            for tau_w in tau_ws:
+                for distribution in distributions:
+                    for input_idx in input_idxs:
+                        for mu in self.mus:
+                            print "%d / %d" % (i, tot_sims)
+                            gs.single_neural_sim_function(mu, input_idx, distribution, tau_w)
+                            i += 1
+
 
         self._initialize_figure()
         self._draw_channels_distribution()
@@ -1804,7 +1817,7 @@ class FigureNeurite2(PaperFigures):
 
 class Figure4(PaperFigures):
 
-    def __init__(self):
+    def __init__(self, do_simulations=True):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
         self.figure_name = 'figure_4'
@@ -1818,25 +1831,33 @@ class Figure4(PaperFigures):
         self.elec_idx = 13
         self.distribution = 'linear_increase'
         self.mus = [-0.5, 0, 2]
-        # self.mu_name_dict = {-0.5: 'Regenerative ($\mu_{factor} = -0.5$)',
-        #                      0: 'Passive ($\mu_{factor} = 0$)',
-        #                      2: 'Restorative ($\mu_{factor} = 2$)'}
+
         self.input_type = 'white_noise'
         self.tau_ws = ['auto0.1', 'auto', 'auto10']
-
-        # self.mu_clr = {-0.5: 'r',
-        #                0: 'k',
-        #                2: 'b'}
 
         self.mu_name_dict = {-0.5: 'Regenerative ($\mu^* =\ -0.5$)',
                              0: 'Passive ($\mu^* =\ 0$)',
                              2: 'Restorative ($\mu^* =\ 2$)'}
-        # self.mu_clr = {'-0.5': 'r',
-        #                '0.0': 'k',
-        #                '2.0': 'b'}
+
         self.mu_clr = {-0.5: 'r',
                        0: 'k',
                        2: 'b'}
+        if do_simulations:
+            from generic_study import GenericStudy
+            gs = GenericStudy('hay', 'white_noise', conductance='generic')
+            distributions = ['linear_increase']
+            input_idxs = [self.apic_idx]
+            tau_ws = ['auto10', 'auto0.1', 'auto']
+
+            tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
+            i = 1
+            for tau_w in tau_ws:
+                for distribution in distributions:
+                    for input_idx in input_idxs:
+                        for mu in self.mus:
+                            print "%d / %d" % (i, tot_sims)
+                            gs.single_neural_sim_function(mu, input_idx, distribution, tau_w)
+                            i += 1
 
         self._initialize_figure()
         self.make_figure()
@@ -2673,8 +2694,8 @@ if __name__ == '__main__':
 
     # Figure1('hay', 'figure_1', False)
     # Figure2(0.0005, False)
-    Figure3()
-    # Figure4()
+    # Figure3(False)
+    Figure4(False)
     # FigureNeurite(do_simulations=True)#.make_figure()
     # FigureDistributedSynaptic()
     # FigureDistanceStudyDistributedSynaptic()

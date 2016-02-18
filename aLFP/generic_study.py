@@ -68,7 +68,7 @@ class GenericStudy:
         if self.input_type == 'white_noise':
             print "white noise input"
             self.plot_psd = True
-            self._single_neural_sim_function = self._run_single_wn_simulation
+            self.single_neural_sim_function = self._run_single_wn_simulation
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 0
@@ -79,7 +79,7 @@ class GenericStudy:
         elif self.input_type == 'distributed_synaptic':
             print "Distributed synaptic input"
             self.plot_psd = True
-            self._single_neural_sim_function = self._run_distributed_synaptic_simulation
+            self.single_neural_sim_function = self._run_distributed_synaptic_simulation
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 100
@@ -92,7 +92,7 @@ class GenericStudy:
             self.plot_psd = True
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
-            self._single_neural_sim_function = self._run_single_wn_simulation
+            self.single_neural_sim_function = self._run_single_wn_simulation
             self.cut_off = 0
             self.end_t = 5000
             self.max_freq = 500
@@ -100,7 +100,7 @@ class GenericStudy:
         elif self.input_type == 'synaptic':
             print "synaptic input"
             self.plot_psd = False
-            self._single_neural_sim_function = self._run_single_synaptic_simulation
+            self.single_neural_sim_function = self._run_single_synaptic_simulation
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 0
@@ -1471,20 +1471,20 @@ class GenericStudy:
     #             for input_idx in input_idxs:
     #                 self.plot_summary(input_idx, distribution, taum)
     #
-    def run_all_single_simulations(self):
-        distributions = ['linear_decrease', 'linear_increase', 'uniform']
-        input_idxs = [self.soma_idx, self.apic_idx]
-        tau_ws = ['auto10', 'auto0.1', 'auto'][:2]#, 5, 500]
-        make_summary_plot = True
-        tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
-        i = 1
-        for tau_w in tau_ws:
-            for distribution in distributions:
-                for input_idx in input_idxs:
-                    for mu in self.mus:
-                        print "%d / %d" % (i, tot_sims)
-                        self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
-                        i += 1
+    # def run_all_single_simulations(self):
+    #     distributions = ['linear_decrease', 'linear_increase', 'uniform']
+    #     input_idxs = [self.soma_idx, self.apic_idx]
+    #     tau_ws = ['auto10', 'auto0.1', 'auto']
+    #     make_summary_plot = True
+    #     tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
+    #     i = 1
+    #     for tau_w in tau_ws:
+    #         for distribution in distributions:
+    #             for input_idx in input_idxs:
+    #                 for mu in self.mus:
+    #                     print "%d / %d" % (i, tot_sims)
+    #                     self._single_neural_sim_function(mu, input_idx, distribution, tau_w)
+    #                     i += 1
                     # if make_summary_plot:
                     #    self.plot_summary(input_idx, distribution, tau_w)
                     #    self._plot_LFP_with_distance(distribution, tau_w, input_idx)
