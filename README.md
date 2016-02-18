@@ -1,15 +1,10 @@
 # README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
-
-### What is this repository for? ###
-
-A modeling study of the contribution of active conductances to the Local Field Potential
+A modeling study of the contribution of active conductances to the Local Field Potential for single cells
 
 ### How do I get set up? ###
+In all folders containing .mod files the command "nrnivmodl" (Linux and Mac) must be excuted in a terminal
 No attempts has been made for this to work at other peoples computers
-
-### Contribution guidelines ###
 
 
 ### Who do I talk to? ###

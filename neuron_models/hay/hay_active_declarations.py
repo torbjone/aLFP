@@ -34,8 +34,6 @@ def make_cell_uniform(Vrest=-80):
                 seg.e_pas += seg.ih_Ih_z/seg.g_pas
             if neuron.h.ismembrane("Ih_frozen"):
                 seg.e_pas += seg.ihcn_Ih_frozen/seg.g_pas
-            if neuron.h.ismembrane("Ih_linearized_mod"):
-                seg.e_pas += seg.ihcn_Ih_linearized_mod/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_v2"):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2/seg.g_pas
             if neuron.h.ismembrane("Ih_linearized_v2_frozen"):

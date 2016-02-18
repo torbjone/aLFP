@@ -1,9 +1,0 @@
-
--80 mV, input in soma:
- Only Ih identical to full model.
-
-
--60 mV, input in soma:
- Only Ih has no ressonance, INaP makes the weak Im resonance somewhat stronger.
-
-Full model, -60, input in soma has small resonance while model with only Ih hasn't.
