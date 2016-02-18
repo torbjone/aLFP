@@ -4,4 +4,3 @@
 from tools import *
 from generic_study import *
 from plotting_convention import *
-import hay_active_declarations

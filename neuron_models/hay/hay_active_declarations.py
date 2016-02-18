@@ -16,27 +16,27 @@ def make_cell_uniform(Vrest=-80):
     #     for seg in sec:
     #         if nrn.ismembrane("ca_ion"):
     #             print "Cai: ", sec.name(), seg.cai, seg.ica
-    neuron.h.t = 0
-    neuron.h.finitialize(Vrest)
-    neuron.h.fcurrent()
-    for sec in neuron.h.allsec():
+    nrn.t = 0
+    nrn.finitialize(Vrest)
+    nrn.fcurrent()
+    for sec in nrn.allsec():
         for seg in sec:
             seg.e_pas = seg.v
-            if neuron.h.ismembrane("na_ion"):
+            if nrn.ismembrane("na_ion"):
                 seg.e_pas += seg.ina/seg.g_pas
-            if neuron.h.ismembrane("k_ion"):
+            if nrn.ismembrane("k_ion"):
                 seg.e_pas += seg.ik/seg.g_pas
-            if neuron.h.ismembrane("ca_ion"):
+            if nrn.ismembrane("ca_ion"):
                 seg.e_pas = seg.e_pas + seg.ica/seg.g_pas
-            if neuron.h.ismembrane("Ih"):
+            if nrn.ismembrane("Ih"):
                 seg.e_pas += seg.ihcn_Ih/seg.g_pas
-            if neuron.h.ismembrane("Ih_z"):
+            if nrn.ismembrane("Ih_z"):
                 seg.e_pas += seg.ih_Ih_z/seg.g_pas
-            if neuron.h.ismembrane("Ih_frozen"):
+            if nrn.ismembrane("Ih_frozen"):
                 seg.e_pas += seg.ihcn_Ih_frozen/seg.g_pas
-            if neuron.h.ismembrane("Ih_linearized_v2"):
+            if nrn.ismembrane("Ih_linearized_v2"):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2/seg.g_pas
-            if neuron.h.ismembrane("Ih_linearized_v2_frozen"):
+            if nrn.ismembrane("Ih_linearized_v2_frozen"):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
     # print
     # e = []
@@ -69,14 +69,14 @@ def _get_total_area():
 
 def _get_linear_increase_factor(increase_factor, max_dist, total_conductance):
     normalization = 0
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         for seg in sec:
             normalization += nrn.area(seg.x) * (1 + (increase_factor - 1) * nrn.distance(seg.x)/max_dist)
     return total_conductance / normalization
 
 def _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance):
     normalization = 0
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         for seg in sec:
             normalization += nrn.area(seg.x) * (decrease_factor - (decrease_factor - 1) * nrn.distance(seg.x)/max_dist)
     return total_conductance / normalization
@@ -84,7 +84,7 @@ def _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance):
 
 def biophys_zuchkova(**kwargs):
     nrn.distance(0, 0.5)
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.e_pas = kwargs['hold_potential']
         sec.Ra = 200
@@ -116,7 +116,7 @@ def biophys_generic(**kwargs):
     else:
         tau_w = kwargs['tau_w']
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert("QA")
         sec.V_r_QA = kwargs['hold_potential']
         sec.tau_w_QA = tau_w
@@ -130,14 +130,14 @@ def biophys_generic(**kwargs):
     # print "Max dist: ", max_dist
 
     if kwargs['distribution'] == 'uniform':
-        for sec in neuron.h.allsec():
+        for sec in nrn.allsec():
             for seg in sec:
                 seg.g_w_bar_QA = total_w_conductance / total_area
     elif kwargs['distribution'] == 'linear_increase':
         increase_factor = 60
         conductance_factor = _get_linear_increase_factor(increase_factor, max_dist, total_w_conductance)
         nrn.distance(0, 0.5)
-        for sec in neuron.h.allsec():
+        for sec in nrn.allsec():
             for seg in sec:
                 seg.g_w_bar_QA = conductance_factor * (1 + (increase_factor - 1.) * nrn.distance(seg.x) / max_dist)
         # print 'Linear increase:  %1.8f + %1.10f * x' % (conductance_factor, conductance_factor*(increase_factor - 1.) / max_dist)
@@ -146,14 +146,14 @@ def biophys_generic(**kwargs):
         decrease_factor = 60
         conductance_factor = _get_linear_decrease_factor(decrease_factor, max_dist, total_w_conductance)
         nrn.distance(0, 0.5)
-        for sec in neuron.h.allsec():
+        for sec in nrn.allsec():
             for seg in sec:
                 seg.g_w_bar_QA = conductance_factor*(decrease_factor - (decrease_factor - 1.) * nrn.distance(seg.x) / max_dist)
         # print 'Linear decrease: %1.8f - %1.10f * x' % (conductance_factor * decrease_factor, conductance_factor * (decrease_factor - 1.) / max_dist)
     else:
         raise RuntimeError("Unknown distribution...")
     cond_check = 0
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         for seg in sec:
             cond_check += seg.g_w_bar_QA * nrn.area(seg.x)
             seg.mu_QA = seg.g_w_bar_QA / seg.g_pas_QA * kwargs['mu_factor']
@@ -166,24 +166,24 @@ def biophys_generic(**kwargs):
 
 def biophys_passive(**kwargs):
     Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = Vrest
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.g_pas = 0.0000338
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.g_pas = 0.0000589
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -196,17 +196,17 @@ def biophys_Ih_linearized_frozen(**kwargs):
 
     Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = Vrest
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert("Ih_linearized_v2_frozen")
         sec.gIhbar_Ih_linearized_v2_frozen = 0.0002
         sec.g_pas = 0.0000338
         sec.V_R_Ih_linearized_v2_frozen = Vrest
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.insert("Ih_linearized_v2_frozen")
         sec.cm = 2
         sec.g_pas = 0.0000589
@@ -214,13 +214,13 @@ def biophys_Ih_linearized_frozen(**kwargs):
 
     nrn.distribute_channels("apic", "gIhbar_Ih_linearized_v2_frozen",
                             2, -0.8696, 3.6161, 0.0, 2.0870, 0.0002)
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.insert("Ih_linearized_v2_frozen")
         sec.cm = 2
         sec.g_pas = 0.0000467
         sec.gIhbar_Ih_linearized_v2_frozen = 0.0002
         sec.V_R_Ih_linearized_v2_frozen = Vrest
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
@@ -231,18 +231,18 @@ def biophys_Ih_linearized(**kwargs):
 
     Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = Vrest
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert("Ih_linearized_v2")
         sec.gIhbar_Ih_linearized_v2 = 0.0002
         sec.g_pas = 0.0000338
         # sec.vss_Ih_linearized_mod = Vrest
         sec.V_R_Ih_linearized_v2 = Vrest
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.insert("Ih_linearized_v2")
         sec.cm = 2
         sec.g_pas = 0.0000589
@@ -251,14 +251,14 @@ def biophys_Ih_linearized(**kwargs):
 
     nrn.distribute_channels("apic", "gIhbar_Ih_linearized_v2",
                             2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.insert("Ih_linearized_v2")
         sec.cm = 2
         sec.g_pas = 0.0000467
         sec.gIhbar_Ih_linearized_v2 = 0.0002
         # sec.vss_Ih_linearized_v2 = Vrest
         sec.V_R_Ih_linearized_v2 = Vrest
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
@@ -269,28 +269,28 @@ def biophys_Ih(**kwargs):
 
     Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = Vrest
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert("Ih")
         sec.gIhbar_Ih = 0.0002
         sec.g_pas = 0.0000338
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.insert("Ih")
         sec.cm = 2
         sec.g_pas = 0.0000589
 
     nrn.distribute_channels("apic", "gIhbar_Ih",
                             2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.insert("Ih")
         sec.cm = 2
         sec.g_pas = 0.0000467
         sec.gIhbar_Ih = 0.0002
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
@@ -301,28 +301,28 @@ def biophys_Ih_frozen(**kwargs):
 
     Vrest = kwargs['hold_potential'] if 'hold_potential' in kwargs else -70
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = Vrest
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert("Ih_frozen")
         sec.gIhbar_Ih_frozen = 0.0002
         sec.g_pas = 0.0000338
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.insert("Ih_frozen")
         sec.cm = 2
         sec.g_pas = 0.0000589
 
     nrn.distribute_channels("apic", "gIhbar_Ih_frozen",
                             2, -0.8696, 3.6161, 0.0, 2.0870, 0.00020000000)
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.insert("Ih_frozen")
         sec.cm = 2
         sec.g_pas = 0.0000467
         sec.gIhbar_Ih_frozen = 0.0002
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
@@ -331,30 +331,30 @@ def biophys_Ih_frozen(**kwargs):
 
 def biophys_SKv3_1(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('SKv3_1')
         sec.ek = -85
         sec.g_pas = 0.0000338
         sec.gSKv3_1bar_SKv3_1 = 0.693
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.insert('SKv3_1')
         sec.ek = -85
         sec.gSKv3_1bar_SKv3_1 = 0.000261
         sec.g_pas = 0.0000589
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -364,13 +364,13 @@ def biophys_SKv3_1(**kwargs):
 
 def biophys_SKv3_1_Ih(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('SKv3_1')
         sec.insert('Ih')
         sec.ek = -85
@@ -378,7 +378,7 @@ def biophys_SKv3_1_Ih(**kwargs):
         sec.g_pas = 0.0000338
         sec.gSKv3_1bar_SKv3_1 = 0.693
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.insert('Ih')
         sec.insert('SKv3_1')
@@ -387,13 +387,13 @@ def biophys_SKv3_1_Ih(**kwargs):
         sec.g_pas = 0.0000589
     nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.087, 0.0002)
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.insert('Ih')
         sec.gIhbar_Ih = 0.0002
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -403,13 +403,13 @@ def biophys_SKv3_1_Ih(**kwargs):
 
 def biophys_active(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('Ca_LVAst')
         sec.insert('Ca_HVA')
         sec.insert('SKv3_1')
@@ -435,7 +435,7 @@ def biophys_active(**kwargs):
         sec.gNap_Et2bar_Nap_Et2 = 0.00172
         sec.gNaTa_tbar_NaTa_t = 2.04
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.insert('Ih')
         sec.insert('SK_E2')
@@ -459,13 +459,13 @@ def biophys_active(**kwargs):
     nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.0, 0.010, 685.0, 885.0, 0.0187)
     nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.0, 0.10, 685.00, 885.0, 0.000555)
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.insert('Ih')
         sec.gIhbar_Ih = 0.0002
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -475,13 +475,13 @@ def biophys_active(**kwargs):
 
 def biophys_reduced(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('Ca_LVAst')
         # sec.insert('Ca_HVA')
         # sec.insert('SKv3_1')
@@ -507,7 +507,7 @@ def biophys_reduced(**kwargs):
         # sec.gNap_Et2bar_Nap_Et2 = 0.00172
         # sec.gNaTa_tbar_NaTa_t = 2.04
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         # sec.insert('Ih')
         # sec.insert('SK_E2')
@@ -532,13 +532,13 @@ def biophys_reduced(**kwargs):
     nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.0, 0.010, 685.0, 885.0, 0.0187)
     # nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.0, 0.10, 685.00, 885.0, 0.000555)
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         # sec.insert('Ih')
         # sec.gIhbar_Ih = 0.0002
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -548,13 +548,13 @@ def biophys_reduced(**kwargs):
 
 def biophys_regenerative(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         # sec.insert('Ca_LVAst')
         # sec.insert('Ca_HVA')
         sec.insert('SKv3_1')
@@ -580,7 +580,7 @@ def biophys_regenerative(**kwargs):
         sec.gNap_Et2bar_Nap_Et2 = 0.00172
         sec.gNaTa_tbar_NaTa_t = 2.04
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         # sec.insert('Ih')
         # sec.insert('SK_E2')
@@ -605,13 +605,13 @@ def biophys_regenerative(**kwargs):
     # nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.0, 0.010, 685.0, 885.0, 0.0187)
     # nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.0, 0.10, 685.00, 885.0, 0.000555)
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         # sec.insert('Ih')
         # sec.gIhbar_Ih = 0.0002
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -621,13 +621,13 @@ def biophys_regenerative(**kwargs):
 
 def biophys_K(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('SKv3_1')
         # sec.insert('SK_E2')
         # sec.insert('K_Tst')
@@ -639,7 +639,7 @@ def biophys_K(**kwargs):
         # sec.gK_Tstbar_K_Tst = 0.0812
         # sec.gK_Pstbar_K_Pst = 0.00223
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         # sec.insert('SK_E2')
         sec.insert('SKv3_1')
@@ -648,11 +648,11 @@ def biophys_K(**kwargs):
         sec.gSKv3_1bar_SKv3_1 = 0.000261
         sec.g_pas = 0.0000589
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -662,27 +662,27 @@ def biophys_K(**kwargs):
 
 def biophys_NaP(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('Nap_Et2')
         sec.ena = 50
         sec.g_pas = 0.0000338
         sec.gNap_Et2bar_Nap_Et2 = 0.00172
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.g_pas = 0.0000589
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -692,27 +692,27 @@ def biophys_NaP(**kwargs):
 
 def biophys_NaP_linearized(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('Nap_Et2_linearized')
         sec.ena = 50
         sec.g_pas = 0.0000338
         sec.gNap_Et2bar_Nap_Et2_linearized = 0.00172
         sec.V_R_Nap_Et2_linearized = kwargs['hold_potential']
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.g_pas = 0.0000589
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
@@ -721,23 +721,23 @@ def biophys_NaP_linearized(**kwargs):
 
 def biophys_NaP_frozen(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('Nap_Et2_frozen')
         sec.ena = 50
         sec.g_pas = 0.0000338
         sec.gNap_Et2bar_Nap_Et2_frozen = 0.00172
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.g_pas = 0.0000589
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.g_pas = 0.0000467
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
@@ -746,13 +746,13 @@ def biophys_NaP_frozen(**kwargs):
 
 def biophys_active_frozen(**kwargs):
 
-    for sec in neuron.h.allsec():
+    for sec in nrn.allsec():
         sec.insert('pas')
         sec.cm = 1.0
         sec.Ra = 100.
         sec.e_pas = -90.
 
-    for sec in neuron.h.soma:
+    for sec in nrn.soma:
         sec.insert('Ca_LVAst_frozen')
         sec.insert('Ca_HVA_frozen')
         sec.insert('SKv3_1_frozen')
@@ -778,7 +778,7 @@ def biophys_active_frozen(**kwargs):
         sec.gNap_Et2bar_Nap_Et2_frozen = 0.00172
         sec.gNaTa_tbar_NaTa_t_frozen = 2.04
 
-    for sec in neuron.h.apic:
+    for sec in nrn.apic:
         sec.cm = 2
         sec.insert('Ih_frozen')
         sec.insert('SK_E2_frozen')
@@ -802,13 +802,13 @@ def biophys_active_frozen(**kwargs):
     nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst_frozen", 3, 1.000000, 0.010000, 685.000000, 885.000000, 0.0187000000)
     nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA_frozen", 3, 1.000000, 0.100000, 685.000000, 885.000000, 0.0005550000)
 
-    for sec in neuron.h.dend:
+    for sec in nrn.dend:
         sec.cm = 2
         sec.insert('Ih_frozen')
         sec.gIhbar_Ih_frozen = 0.0002
         sec.g_pas = 0.0000467
 
-    for sec in neuron.h.axon:
+    for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
     if 'hold_potential' in kwargs:
