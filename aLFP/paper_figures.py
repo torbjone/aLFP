@@ -2042,24 +2042,70 @@ class Figure5(PaperFigures):
             ax0.loglog(freqs, sig[0] / normalize, c=self.mu_clr[key], lw=2)
 
 
-class FigureDistanceStudy(PaperFigures):
-    def __init__(self):
+class Figure6(PaperFigures):
+    def __init__(self, recalculate_LFP=True):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_distance_study'
+        self.figure_name = 'figure_6'
         self.conductance = 'generic'
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
         self.holding_potential = -80
         self.soma_idx = 0
+        self.timeres_python = self.timeres
         self.apic_idx = 605
         self.input_idx = self.apic_idx
         self.distribution = 'linear_increase'
-        self.input_type = 'wn'
+        self.input_type = 'white_noise'
         self.tau_w = 'auto'
         self.weight = 0.0001
         self.mu = 2.0
+        self.tau = 'auto'
 
+        if recalculate_LFP:
+
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, str(self.input_idx), 2.0,
+                                                            self.holding_potential, self.distribution, self.tau)
+            distances = np.linspace(-2500, 2500, 100)#100)
+            heights = np.linspace(1850, -650, 50)#50)
+            elec_x, elec_z = np.meshgrid(distances, heights)
+            elec_x = elec_x.flatten()
+            elec_z = elec_z.flatten()
+            elec_y = np.zeros(len(elec_z))
+
+            electrode_parameters = {
+                    'sigma': 0.3,
+                    'x': elec_x,
+                    'y': elec_y,
+                    'z': elec_z
+            }
+            lfp_trace_positions = np.array([[200, 0], [200, 475], [200, 950], [200, 1425]])
+            gs = GenericStudy('hay', 'white_noise', conductance='generic')
+            cell = gs._return_cell(self.holding_potential, 'generic', 2.0, 'linear_increase', 'auto')
+            cell.tstartms = 0
+            cell.tstopms = 1
+            cell.simulate(rec_imem=True)
+            cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
+            cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
+            electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
+            print "Calculating"
+            electrode.calc_lfp()
+            del cell.imem
+            del cell.tvec
+            LFP = 1000 * electrode.LFP
+            np.save(join(self.sim_folder, 'LFP_%s.npy' % sim_name), LFP)
+            del electrode
+            print "Saved LFP: ", 'LFP_%s.npy' % sim_name
+            # print "Loading LFP."
+            # LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
+            if self.input_type is 'distributed_synaptic':
+                print "Starting PSD calc"
+                freqs, LFP_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
+            else:
+                freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
+            np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
+            np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
+            print "Done recalculating LFP"
         self._initialize_figure()
         self.make_figure()
         self._finitialize_figure()
@@ -2125,32 +2171,9 @@ class FigureDistanceStudy(PaperFigures):
         lfp2_trace_positions = np.array([[600, 0], [600, 500], [600, 1000], [600, 1500]])
         lfp2_trace_elec_idxs = [np.argmin((elec_x - dist)**2 + (elec_z - height)**2) for dist, height in lfp2_trace_positions]
 
-        if 0:
-            print "Recalculating extracellular potential"
-            cell = self._return_cell(self.holding_potential, 'generic', 2.0, self.distribution, self.tau_w)
-            cell.tstartms = 0
-            cell.tstopms = 1
-            cell.simulate(rec_imem=True)
-            cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
-            cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
-            electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
-            print "Calculating"
-            electrode.calc_lfp()
-            LFP = 1000 * electrode.LFP
-            np.save(join(self.sim_folder, 'LFP_%s.npy' % sim_name), LFP)
-            print "Saved LFP: ", 'LFP_%s.npy' % sim_name
-            print "Calculated"
-            if self.input_type is 'distributed_synaptic':
-                print "Starting PSD calc"
-                freqs, LFP_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
-            else:
-                freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
-            np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
-            np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
-        else:
-            LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
-            LFP_psd = np.load(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name))
-            freqs = np.load(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name))
+        LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
+        LFP_psd = np.load(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name))
+        freqs = np.load(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name))
 
         upper_idx_limit = np.argmin(np.abs(freqs - 500))
 
@@ -2692,7 +2715,7 @@ if __name__ == '__main__':
     # Figure2(0.0005, False)
     # Figure3(False)
     # Figure4(False)
-    Figure5(False)
+    # Figure5(False)
     # FigureNeurite(do_simulations=True)#.make_figure()
-    # FigureDistanceStudyDistributedSynaptic()
+    Figure6(False)
     # FigureDistanceStudyInfiniteNeurite()

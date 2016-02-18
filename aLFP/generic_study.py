@@ -343,73 +343,73 @@ class GenericStudy:
     #         simplify_axes(ax)
     #         all_elec_ax.append(ax)
     #
-    #     # freq_ax = []
-    #     # freq_ax_norm = []
-    #     # for row in xrange(num_elec_rows):
-    #     #     ax = fig.add_subplot(num_plot_rows, num_plot_cols, (row + 1) * num_plot_cols - 1, aspect='equal',
-    #     #                          title='Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
-    #     #     ax_norm = fig.add_subplot(num_plot_rows, num_plot_cols, (row + 1) * num_plot_cols, aspect='equal',
-    #     #                          title='Norm Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
-    #     #     ax.grid(True)
-    #     #     ax_norm.grid(True)
-    #     #     simplify_axes([ax, ax_norm])
-    #     #     freq_ax.append(ax)
-    #     #     freq_ax_norm.append(ax_norm)
-    #
-    #     lines = []
-    #     line_names = []
-    #     # freq_line_styles = ['-', '--', ':']
-    #     tau = '%1.2f' % tau_w if type(tau_w) in [float, int] else tau_w
-    #     for mu in self.mus:
-    #         if type(input_idx) in [list, np.ndarray]:
-    #             sim_name = '%s_%s_multiple_%1.2f_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, weight, mu,
-    #                                                               self.holding_potential, distribution,
-    #                                                               tau, weight)
-    #         elif type(input_idx) is str:
-    #             sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
-    #                                                               self.holding_potential, distribution,
-    #                                                               tau, weight)
-    #         else:
-    #             sim_name = '%s_%s_%d_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, input_idx, mu,
-    #                                                         self.holding_potential, distribution,
-    #                                                         tau)
-    #         # LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.use_elec_idxs, :]
-    #         LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
-    #
-    #         # freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
-    #         if self.input_type is 'distributed_synaptic':
-    #             freqs, sig_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
-    #         else:
-    #             freqs, sig_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
-    #
-    #         # idxs = [np.argmin(np.abs(freqs - freq)) for freq in self.plot_frequencies]
-    #         for elec in xrange(len(self.elec_z)):
-    #             # row, col = self._return_elec_row_col(elec)
-    #             # dist_idx = self._return_elec_dist_idx(elec)
-    #             # freq_with_dist[row, dist_idx, :] = sig_psd[elec, idxs]
-    #             all_elec_ax[elec].loglog(freqs, sig_psd[elec, :], color=self.mu_clr[mu], lw=2)
-    #
-    #         # for row in xrange(num_elec_rows):
-    #         #     for freq_idx, freq in enumerate(self.plot_frequencies):
-    #         #         freq_ax[row].loglog(self.distances, freq_with_dist[row, :, freq_idx],
-    #         #                             freq_line_styles[freq_idx], color=self.mu_clr[mu], lw=3, alpha=0.7)
-    #         #         freq_ax_norm[row].loglog(self.distances,
-    #         #                                  freq_with_dist[row, :, freq_idx] / freq_with_dist[row, 0, freq_idx],
-    #         #                                  freq_line_styles[freq_idx], color=self.mu_clr[mu], lw=3, alpha=0.7)
-    #
-    #         lines.append(plt.plot(0, 0, color=self.mu_clr[mu], lw=2)[0])
-    #         line_names.append(self.mu_name_dict[mu])
-    #
-    #     for ax in all_elec_ax:# + freq_ax:
-    #         ax.set_ylim([1e-10, 1e-2])
-    #     # for ax in freq_ax_norm:
-    #     #     ax.set_ylim([1e-4, 2e0])
-    #     fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower center')
-    #     letter_list = 'HIJKLMMNOPQRRSTUVWXYZ'
-    #     for elec in xrange(len(self.elec_z)):
-    #         # row, col = self._return_elec_row_col(elec)
-    #         # dist_idx = self._return_elec_dist_idx(elec)
-    #         mark_subplots(all_elec_ax[elec], letter_list[elec])
+    #     freq_ax = []
+    #     freq_ax_norm = []
+    #     for row in xrange(num_elec_rows):
+    #         ax = fig.add_subplot(num_plot_rows, num_plot_cols, (row + 1) * num_plot_cols - 1, aspect='equal',
+    #                              title='Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
+    #         ax_norm = fig.add_subplot(num_plot_rows, num_plot_cols, (row + 1) * num_plot_cols, aspect='equal',
+    #                              title='Norm Amp vs dist', xlim=[10, 10000], xlabel='$\mu m$')
+    #         ax.grid(True)
+    #         ax_norm.grid(True)
+    #         simplify_axes([ax, ax_norm])
+    #         freq_ax.append(ax)
+    #         freq_ax_norm.append(ax_norm)
+        #
+        # lines = []
+        # line_names = []
+        # freq_line_styles = ['-', '--', ':']
+        # tau = '%1.2f' % tau_w if type(tau_w) in [float, int] else tau_w
+        # for mu in self.mus:
+        #     if type(input_idx) in [list, np.ndarray]:
+        #         sim_name = '%s_%s_multiple_%1.2f_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, weight, mu,
+        #                                                           self.holding_potential, distribution,
+        #                                                           tau, weight)
+        #     elif type(input_idx) is str:
+        #         sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
+        #                                                           self.holding_potential, distribution,
+        #                                                           tau, weight)
+        #     else:
+        #         sim_name = '%s_%s_%d_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, input_idx, mu,
+        #                                                     self.holding_potential, distribution,
+        #                                                     tau)
+            # LFP = np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[self.use_elec_idxs, :]
+            # LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))[:, :]
+            #
+            # freq_with_dist = np.zeros((num_elec_rows, num_elec_cols, len(self.plot_frequencies)))
+            # if self.input_type is 'distributed_synaptic':
+            #     freqs, sig_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
+            # else:
+            #     freqs, sig_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
+
+            # idxs = [np.argmin(np.abs(freqs - freq)) for freq in self.plot_frequencies]
+            # for elec in xrange(len(self.elec_z)):
+                # row, col = self._return_elec_row_col(elec)
+                # dist_idx = self._return_elec_dist_idx(elec)
+                # freq_with_dist[row, dist_idx, :] = sig_psd[elec, idxs]
+                # all_elec_ax[elec].loglog(freqs, sig_psd[elec, :], color=self.mu_clr[mu], lw=2)
+
+            # for row in xrange(num_elec_rows):
+            #     for freq_idx, freq in enumerate(self.plot_frequencies):
+            #         freq_ax[row].loglog(self.distances, freq_with_dist[row, :, freq_idx],
+            #                             freq_line_styles[freq_idx], color=self.mu_clr[mu], lw=3, alpha=0.7)
+            #         freq_ax_norm[row].loglog(self.distances,
+            #                                  freq_with_dist[row, :, freq_idx] / freq_with_dist[row, 0, freq_idx],
+            #                                  freq_line_styles[freq_idx], color=self.mu_clr[mu], lw=3, alpha=0.7)
+
+            # lines.append(plt.plot(0, 0, color=self.mu_clr[mu], lw=2)[0])
+            # line_names.append(self.mu_name_dict[mu])
+
+        # for ax in all_elec_ax:# + freq_ax:
+        #     ax.set_ylim([1e-10, 1e-2])
+        # for ax in freq_ax_norm:
+        #     ax.set_ylim([1e-4, 2e0])
+        # fig.legend(lines, line_names, frameon=False, ncol=3, loc='lower center')
+        # letter_list = 'HIJKLMMNOPQRRSTUVWXYZ'
+        # for elec in xrange(len(self.elec_z)):
+            # row, col = self._return_elec_row_col(elec)
+            # dist_idx = self._return_elec_dist_idx(elec)
+            # mark_subplots(all_elec_ax[elec], letter_list[elec])
     #
     # def _draw_all_elecs_with_distance_active(self, fig, input_idx):
     #
@@ -753,21 +753,20 @@ class GenericStudy:
     #     self._draw_setup_to_axis(fig, input_idx, weight, distribution=distribution, plotpos=(1, 9, 3))
     #     self._draw_all_elecs_with_distance(fig, distribution, tau_w, input_idx, weight)
     #     self._draw_membrane_signals_to_axes_distance_study(fig, distribution, tau_w, input_idx, weight)
-    #
-    #     fig.text(0.075, 0.95, 'Membrane\npotential', ha='center')
-    #     fig.text(0.175, 0.95, 'Transmembrane\ncurrents', ha='center')
-    #     fig.text(0.450, 0.95, 'Extracellular potential', ha='center')
-    #     tau = '%1.2f' % tau_w if type(tau_w) in [float, int] else tau_w
-    #     if type(input_idx) in [list, np.ndarray]:
-    #         filename = ('LFP_with_distance_%s_multiple_%1.2f_%s_%s' % (self.cell_name, weight, distribution, tau))
-    #     elif type(input_idx) is str:
-    #         filename = ('dist_syn_LFP_with_distance_%s_%s_%s_%s_%1.4f' % (self.cell_name, input_idx, distribution, tau, weight))
-    #     else:
-    #         filename = ('aLFP_with_distance_%s_%d_%s_%s' % (self.cell_name, input_idx, distribution, tau))
-    #     fig.savefig(join(self.figure_folder, '%s.pdf' % filename), dpi=150)
-    #
-    #     # sys.exit()
-    #
+
+        # fig.text(0.075, 0.95, 'Membrane\npotential', ha='center')
+        # fig.text(0.175, 0.95, 'Transmembrane\ncurrents', ha='center')
+        # fig.text(0.450, 0.95, 'Extracellular potential', ha='center')
+        # tau = '%1.2f' % tau_w if type(tau_w) in [float, int] else tau_w
+        # if type(input_idx) in [list, np.ndarray]:
+        #     filename = ('LFP_with_distance_%s_multiple_%1.2f_%s_%s' % (self.cell_name, weight, distribution, tau))
+        # elif type(input_idx) is str:
+        #     filename = ('dist_syn_LFP_with_distance_%s_%s_%s_%s_%1.4f' % (self.cell_name, input_idx, distribution, tau, weight))
+        # else:
+        #     filename = ('aLFP_with_distance_%s_%d_%s_%s' % (self.cell_name, input_idx, distribution, tau))
+        # fig.savefig(join(self.figure_folder, '%s.pdf' % filename), dpi=150)
+
+
     # def _plot_LFP_with_distance_active(self, input_idx):
     #     plt.close('all')
     #     fig = plt.figure(figsize=[24, 12])
@@ -1492,12 +1491,11 @@ class GenericStudy:
     #
     # def LFP_with_distance_study(self, weight):
     #     self._set_extended_electrode()
-    #
     #     for tau_w in ['auto']:
-    #         for distribution in ['linear_increase']:
-    #             for input_idx in ['homogeneous', 'tuft', 'distal_tuft']:
-    #                 print tau_w, distribution, input_idx
-    #                 self._plot_LFP_with_distance(distribution, tau_w, input_idx, weight)
+    #          for distribution in ['linear_increase']:
+    #              for input_idx in ['homogeneous', 'tuft', 'distal_tuft']:
+    #                  print tau_w, distribution, input_idx
+    #                  self._plot_LFP_with_distance(distribution, tau_w, input_idx, weight)
     #
     # def q_value_study(self):
     #     #self._set_extended_electrode()
@@ -2133,4 +2131,4 @@ if __name__ == '__main__':
     # if len(sys.argv) == 3:
     gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
     # else:
-    #     gs.LFP_with_distance_study(0.0001)
+    #gs.LFP_with_distance_study(0.0001)
