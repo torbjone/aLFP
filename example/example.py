@@ -45,7 +45,7 @@ def example_synapse(synaptic_y_pos=0, conductance_type='active', weight=0.001):
     model_path = join('hay_model')
     neuron.load_mechanisms(join(model_path, 'mod'))
 
-    sim_time = 100
+    sim_time = 60
 
     cell_parameters = {
         'morphology': join(model_path, 'cell1.hoc'),
@@ -55,7 +55,7 @@ def example_synapse(synaptic_y_pos=0, conductance_type='active', weight=0.001):
         'lambda_f': 100,
         'timeres_NEURON': 2**-4,  # Should be a power of 2
         'timeres_python': 2**-4,
-        'tstartms': -200,
+        'tstartms': 0,
         'tstopms': sim_time,
         'custom_code': [join(model_path, 'custom_codes.hoc')],
         'custom_fun': [active_declarations],
@@ -120,7 +120,7 @@ def example_white_noise(synaptic_y_pos=0, conductance_type='active', weight=0.00
 
 def make_synapse(cell, weight, input_idx):
 
-    input_spike_train = np.array([20.])
+    input_spike_train = np.array([10.])
     synapse_parameters = {
         'idx': input_idx,
         'e': 0.,
@@ -164,7 +164,7 @@ def make_white_noise(cell, weight, input_idx):
 
 def plot_electrode_signal(cell, input_idx, psd=False):
     #  Making extracellular electrode
-    elec_x = np.array([25.])
+    elec_x = np.array(np.linspace(10, 1000, 10))
     elec_y = np.zeros(len(elec_x))
     elec_z = np.zeros(len(elec_x))
 
@@ -178,8 +178,8 @@ def plot_electrode_signal(cell, input_idx, psd=False):
     electrode.calc_lfp()
 
     cell_plot_idx = 0
-    plt.subplots_adjust(hspace=0.3)  # Adjusts the vertical distance between panels.
-    plt.subplot(132, aspect='equal')
+    plt.subplots_adjust(hspace=0.6, wspace=0.6, left=0.)  # Adjusts the vertical distance between panels.
+    plt.subplot(131, aspect='equal')
     plt.axis('off')
     [plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.ystart[idx], cell.yend[idx]], c='k') for idx in xrange(cell.totnsegs)]
     [plt.plot(electrode.x[idx], electrode.y[idx], 'bD') for idx in range(len(electrode.x))]
@@ -207,14 +207,28 @@ def plot_electrode_signal(cell, input_idx, psd=False):
                      'xlim': [0, cell.tvec[-1]],
         }
 
-    plt.subplot(231, title='Membrane potential', ylabel='mV', **plot_dict)
-    plt.plot(x, y_v[cell_plot_idx, :], color='k', lw=2)
-    plt.subplot(234, title='Transmembrane currents', ylabel='nA', **plot_dict)
-    plt.plot(x, y_i[cell_plot_idx, :], color='k', lw=2)
-    plt.subplot(133, title='Extracellular potential', ylabel='$\mu V$', **plot_dict)
-    [plt.plot(x, y_lfp[idx, :], c='b', lw=2) for idx in range(len(electrode.x))]
-    plt.savefig('example_fig.png')
+    peak_times = x[np.argmax(np.abs(y_lfp), axis=1)]
+    delays = peak_times - peak_times[0]
+    propagation_speed = (elec_x - elec_x[0]) * 1e-6 / (delays) / 1e-3
+    #print peak_times, propagation_speed
+
+
+    #plt.subplot(231, title='Membrane potential', ylabel='mV', **plot_dict)
+    #plt.plot(x, y_v[cell_plot_idx, :], color='k', lw=2)
+    #plt.subplot(234, title='Transmembrane currents', ylabel='nA', **plot_dict)
+    #plt.plot(x, y_i[cell_plot_idx, :], color='k', lw=2)
+    plt.subplot(232, title='Extracellular potential', ylabel='$\mu V$', **plot_dict)
+    [plt.plot(x, y_lfp[idx, :], c='b', lw=1) for idx in range(len(electrode.x))]
+    plt.subplot(233, title='Normalized extracellular\npotentials', ylabel='$\mu V$', **plot_dict)
+    [plt.plot(x, y_lfp[idx, :] / np.max(y_lfp[idx, :]), c='b', lw=1) for idx in range(len(electrode.x))]
+    plt.subplot(235, title='Peak times', ylabel='ms', xlabel='Distance')
+    plt.plot(elec_x, peak_times, 'ko')
+    plt.subplot(236, title='Apparent\npropagation speed', ylabel='m/s', xlabel='Distance')
+    plt.plot(elec_x, propagation_speed, 'ko')
+
+
+    plt.savefig('example_fig_LFP_spread.png')
 
 if __name__ == '__main__':
-    example_synapse(synaptic_y_pos=1000, conductance_type='active', weight=0.01)
+    example_synapse(synaptic_y_pos=0, conductance_type='passive', weight=-0.001)
     # example_white_noise(synaptic_y_pos=0, conductance_type='passive', weight=0.01)

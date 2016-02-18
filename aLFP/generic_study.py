@@ -2128,14 +2128,9 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    # gs = GenericStudy('hay', 'white_noise', conductance='generic')
-    # gs.run_all_single_simulations()
-    # sys.exit()
-    #gs.generic_q_values_colorplot()
-
     gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic')
-    gs.distribute_cellsims_MPI()
+    # gs.distribute_cellsims_MPI()
     # if len(sys.argv) == 3:
-    #     gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
+    gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)
     # else:
     #     gs.LFP_with_distance_study(0.0001)

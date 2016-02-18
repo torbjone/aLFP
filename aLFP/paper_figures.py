@@ -13,7 +13,7 @@ import LFPy
 import matplotlib.patches as mpatches
 from scipy import stats
 nrn = neuron.h
-
+from generic_study import GenericStudy
 
 class NeuralSimulations:
 
@@ -1255,7 +1255,7 @@ class Figure3(PaperFigures):
                        0: 'k',
                        2: 'b'}
         if do_simulations:
-            from generic_study import GenericStudy
+
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
             distributions = ['linear_decrease', 'linear_increase', 'uniform']
 
@@ -1806,13 +1806,6 @@ class FigureNeurite2(PaperFigures):
         [i_ax_list[idx].loglog(freqs, imem_psd[idx], c=clr) for idx in xrange(len(self.plot_comps))]
         [v_ax_list[idx].loglog(freqs, vmem_psd[idx], c=clr) for idx in xrange(len(self.plot_comps))]
         [lfp_ax_list[idx].loglog(freqs, lfp_psd[idx], c=clr) for idx in xrange(len(self.elec_x))]
-        # [lfp_ax_list_2[idx].loglog(freqs, lfp_psd[idx], c=clr) for idx in xrange(len(self.elec_x)/2)]
-        # plt.close('all')
-        # plt.plot(tvec, lfp[0] / max(np.abs(lfp[0])), lw=2)
-        # plt.plot(tvec, lfp[2] / max(np.abs(lfp[2])), lw=2)
-        # plt.plot([tvec[0], tvec[-1]], [0, 0], '--', lw=1, c='k')
-        # plt.xlim([230, 270])
-        # plt.show()
 
 
 class Figure4(PaperFigures):
@@ -1930,12 +1923,12 @@ class Figure4(PaperFigures):
         ax2.loglog(freqs, vmem_psd[0], c=self.mu_clr[mu], lw=2)
 
 
-class FigureDistributedSynaptic(PaperFigures):
+class Figure5(PaperFigures):
 
-    def __init__(self):
+    def __init__(self, do_simulations=True):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_distributed_synaptic'
+        self.figure_name = 'figure_5'
         self.conductance = 'generic'
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
@@ -1950,21 +1943,24 @@ class FigureDistributedSynaptic(PaperFigures):
         self.mu_name_dict = {-0.5: 'Regenerative ($\mu^* =\ -0.5$)',
                              0: 'Passive ($\mu^*\ = 0$)',
                              2: 'Restorative ($\mu^* =\ 2$)',
-                             -1: 'Regenerative ($\mu^* =\ -1$)',
-                             4: 'Restorative ($\mu^* =\ 4$)',
                              }
 
         self.input_type = 'distributed_synaptic'
         self.tau_w = 'auto'
         self.weight = 0.0001
 
-
         self.mu_clr = {-0.5: 'r',
                        0: 'k',
                        2: 'b',
-                       -1: 'r',
-                       4: 'b',
         }
+        if do_simulations:
+            i = 0
+            for mu in self.mus:
+                for input_region in ['distal_tuft', 'tuft', 'homogeneous']:
+                    i += 1
+                    print i, mu, input_region
+                    os.system("python generic_study.py %1.1f %s" % (mu, input_region))
+
         self._initialize_figure()
         self.make_figure()
         self._finitialize_figure()
@@ -2695,8 +2691,8 @@ if __name__ == '__main__':
     # Figure1('hay', 'figure_1', False)
     # Figure2(0.0005, False)
     # Figure3(False)
-    Figure4(False)
+    # Figure4(False)
+    Figure5(False)
     # FigureNeurite(do_simulations=True)#.make_figure()
-    # FigureDistributedSynaptic()
     # FigureDistanceStudyDistributedSynaptic()
     # FigureDistanceStudyInfiniteNeurite()
