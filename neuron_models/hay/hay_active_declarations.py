@@ -81,7 +81,6 @@ def _get_linear_decrease_factor(decrease_factor, max_dist, total_conductance):
             normalization += nrn.area(seg.x) * (decrease_factor - (decrease_factor - 1) * nrn.distance(seg.x)/max_dist)
     return total_conductance / normalization
 
-
 def biophys_zuchkova(**kwargs):
     nrn.distance(0, 0.5)
     for sec in nrn.allsec():
@@ -190,7 +189,6 @@ def biophys_passive(**kwargs):
         make_cell_uniform(Vrest=kwargs['hold_potential'])
 
     #print("Passive dynamics inserted.")
-
 
 def biophys_Ih_linearized_frozen(**kwargs):
 
@@ -361,7 +359,6 @@ def biophys_SKv3_1(**kwargs):
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("SKv3_1 ion-channels inserted.")
 
-
 def biophys_SKv3_1_Ih(**kwargs):
 
     for sec in nrn.allsec():
@@ -399,7 +396,6 @@ def biophys_SKv3_1_Ih(**kwargs):
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("Ih and SKv3_1 ion-channels inserted.")
-
 
 def biophys_active(**kwargs):
 
@@ -471,7 +467,6 @@ def biophys_active(**kwargs):
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     #print("active ion-channels inserted.")
-
 
 def biophys_reduced(**kwargs):
 
@@ -545,7 +540,6 @@ def biophys_reduced(**kwargs):
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("reduced ion-channels inserted.")
 
-
 def biophys_regenerative(**kwargs):
 
     for sec in nrn.allsec():
@@ -618,7 +612,6 @@ def biophys_regenerative(**kwargs):
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("Regenerative ion-channels inserted.")
 
-
 def biophys_K(**kwargs):
 
     for sec in nrn.allsec():
@@ -659,7 +652,6 @@ def biophys_K(**kwargs):
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("K ion-channels inserted.")
 
-
 def biophys_NaP(**kwargs):
 
     for sec in nrn.allsec():
@@ -688,7 +680,6 @@ def biophys_NaP(**kwargs):
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("Persistent Na ion-channels inserted.")
-
 
 def biophys_NaP_linearized(**kwargs):
 
@@ -742,7 +733,6 @@ def biophys_NaP_frozen(**kwargs):
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("Frozen persistent Na ion-channels inserted.")
-
 
 def biophys_active_frozen(**kwargs):
 
@@ -815,7 +805,6 @@ def biophys_active_frozen(**kwargs):
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     print("Frozen active ion-channels inserted.")
 
-
 def make_syaptic_stimuli(cell, input_idx):
     # Define synapse parameters
     synapse_parameters = {
@@ -830,14 +819,12 @@ def make_syaptic_stimuli(cell, input_idx):
     synapse.set_spike_times(np.array([5.]))
     return cell, synapse
 
-
 def active_declarations(**kwargs):
     ''' set active conductances for Hay model 2011 '''
     nrn.delete_axon()
     nrn.geom_nseg()
     nrn.define_shape()
     exec('biophys_%s(**kwargs)' % kwargs['conductance_type'])
-
 
 def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
 
@@ -891,7 +878,6 @@ def test_frozen_currents(input_idx, holding_potential):
 
     plt.legend(frameon=False)
     plt.savefig('frozen_test_%d_%d.png' % (input_idx, holding_potential))
-
 
 def test_steady_state():
 

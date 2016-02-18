@@ -349,7 +349,7 @@ class PaperFigures:
 
     def _draw_morph_to_axis(self, ax, input_pos, ic_comp=None, distribution=None):
 
-        print 125234
+        # used
         xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
@@ -417,7 +417,7 @@ class PaperFigures:
 
 
     def _draw_simplified_morph_to_axis(self, ax, input_pos=None, grading=None):
-        print 223423523
+        # used
         xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
         xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
@@ -1223,14 +1223,13 @@ class Figure2(PaperFigures):
         axes[1].loglog(freqs, LFP_psd_soma[0], **line_dict)
 
 
-class FigureSystematic(PaperFigures):
+class Figure3(PaperFigures):
 
-    def __init__(self):
+    def __init__(self, do_simulations=False):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_5_3'
+        self.figure_name = 'figure_3'
         self.conductance = 'generic'
-        # self.sim_folder = join(self.root_folder, 'paper_simulations', 'generic_study')
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
         self.holding_potential = -80
@@ -1246,7 +1245,7 @@ class FigureSystematic(PaperFigures):
         self.mu_name_dict = {-0.5: 'Regenerative ($\mu^* =\ -0.5$)',
                              0: 'Passive ($\mu^* =\ 0$)',
                              2: 'Restorative ($\mu^* =\ 2$)'}
-        self.input_type = 'wn'
+        self.input_type = 'white_noise'
         self.input_idxs = [self.apic_idx, self.soma_idx]
         self.elec_idxs = [self.elec_apic_idx, self.elec_soma_idx]
         self.distributions = ['uniform', 'linear_increase', 'linear_decrease']
@@ -1255,12 +1254,15 @@ class FigureSystematic(PaperFigures):
         self.mu_clr = {-0.5: 'r',
                        0: 'k',
                        2: 'b'}
+        if do_simulations:
+            from generic_study import GenericStudy
+            gs = GenericStudy('hay', 'white_noise', conductance='generic')
+            gs.run_all_single_simulations()
 
         self._initialize_figure()
         self._draw_channels_distribution()
         self.make_figure()
         self._finitialize_figure()
-
 
     def _initialize_figure(self):
         elec_x = np.load(join(self.sim_folder, 'elec_x_%s.npy' % self.cell_name))
@@ -1269,8 +1271,8 @@ class FigureSystematic(PaperFigures):
         plt.close('all')
         self.fig = plt.figure(figsize=[10, 10])
         self.fig.subplots_adjust(hspace=0.6, wspace=0.45, bottom=0.1, left=0)
-        self.ax_morph_apic = self.fig.add_axes([0.05, 0.5, 0.1, 0.25])
-        self.ax_morph_soma = self.fig.add_axes([0.05, 0.075, 0.1, 0.25])
+        self.ax_morph_apic = self.fig.add_axes([0.05, 0.5, 0.1, 0.25], aspect=1)
+        self.ax_morph_soma = self.fig.add_axes([0.05, 0.075, 0.1, 0.25], aspect=1)
         self.ax_morph_apic.axis('off')
         self.ax_morph_soma.axis('off')
 
@@ -1301,6 +1303,7 @@ class FigureSystematic(PaperFigures):
         self.ax_morph_soma.arrow(elec_x[self.elec_soma_idx] + 80, elec_z[self.elec_soma_idx] + 10,
                                  arrow_dx, -arrow_dz, **arrow_dict)
 
+
     def _draw_channels_distribution(self):
 
         for dist_num, distribution in enumerate(self.distributions):
@@ -1311,7 +1314,7 @@ class FigureSystematic(PaperFigures):
             ax_line = self.fig.add_axes([0.25 + self.axis_w_shift*dist_num, 0.83, 0.15, 0.1],
                                       xticks=[], yticks=[], ylim=[0, 0.0004])
             mark_subplots(ax_line, 'ABC'[dist_num])
-            ax_morph = self.fig.add_axes([0.17 + self.axis_w_shift*dist_num, 0.83, 0.1, 0.1])
+            ax_morph = self.fig.add_axes([0.17 + self.axis_w_shift*dist_num, 0.83, 0.1, 0.1], aspect=1)
             ax_morph.axis('off')
             self._draw_simplified_morph_to_axis(ax_morph, grading=distribution)
             if dist_num == 1:
@@ -1357,7 +1360,6 @@ class FigureSystematic(PaperFigures):
                 ax.set_yticklabels(['', '', ''])
                 ax.set_xticks([1e0, 1e1, 1e2])
                 ax.set_xticklabels(['', '', ''])
-
 
         self.fig.savefig(join(self.figure_folder, '%s_%s.png' % (self.figure_name, self.cell_name)), dpi=150)
         self.fig.savefig(join(self.figure_folder, '%s_%s.pdf' % (self.figure_name, self.cell_name)), dpi=150)
@@ -1800,12 +1802,12 @@ class FigureNeurite2(PaperFigures):
         # plt.show()
 
 
-class FigureTimeConstant(PaperFigures):
+class Figure4(PaperFigures):
 
     def __init__(self):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_time_constant_2'
+        self.figure_name = 'figure_4'
         self.conductance = 'generic'
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
@@ -1819,7 +1821,7 @@ class FigureTimeConstant(PaperFigures):
         # self.mu_name_dict = {-0.5: 'Regenerative ($\mu_{factor} = -0.5$)',
         #                      0: 'Passive ($\mu_{factor} = 0$)',
         #                      2: 'Restorative ($\mu_{factor} = 2$)'}
-        self.input_type = 'wn'
+        self.input_type = 'white_noise'
         self.tau_ws = ['auto0.1', 'auto', 'auto10']
 
         # self.mu_clr = {-0.5: 'r',
@@ -1853,7 +1855,6 @@ class FigureTimeConstant(PaperFigures):
 
         self._draw_morph_to_axis(self.ax_morph, self.apic_idx, ic_comp=0, distribution=self.distribution)
         self.ax_morph.scatter(elec_x[self.elec_idx], elec_z[self.elec_idx], c='cyan', edgecolor='none', s=50)
-
 
     def _finitialize_figure(self):
         lines = []
@@ -2671,12 +2672,9 @@ class FigureDistanceStudyDistributedSynaptic(PaperFigures):
 if __name__ == '__main__':
 
     # Figure1('hay', 'figure_1', False)
-    Figure2(0.0005, False)
-    # IntroFigures('hay', 'figure_2', 0.0005, True)#.make_figure()
-    # Figure3(0.0005, False)
-    # Figure4(0.0005, False)
-    # FigureSystematic()
-    # FigureTimeConstant()
+    # Figure2(0.0005, False)
+    Figure3()
+    # Figure4()
     # FigureNeurite(do_simulations=True)#.make_figure()
     # FigureDistributedSynaptic()
     # FigureDistanceStudyDistributedSynaptic()
