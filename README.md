@@ -20,5 +20,7 @@ get started.
 ### Who do I talk to? ###
 
 Torbjørn V Ness - torbness@gmail.com
+
 Michiel Remme
+
 Gaute T Einevol - gaute.einevoll@nmbu.no
