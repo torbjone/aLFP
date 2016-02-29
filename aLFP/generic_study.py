@@ -80,6 +80,17 @@ class GenericStudy:
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
             self.cut_off = 100
+            self.end_t = 2000
+            self.repeats = None
+            self.max_freq = 500
+            self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
+        elif self.input_type == 'distributed_synaptic_cs':
+            print "Distributed synaptic input with current synapses"
+            self.plot_psd = True
+            self.single_neural_sim_function = self._run_distributed_synaptic_simulation
+            self.timeres_NEURON = 2**-4
+            self.timeres_python = 2**-4
+            self.cut_off = 100
             self.end_t = 20000
             self.repeats = None
             self.max_freq = 500
@@ -207,16 +218,16 @@ class GenericStudy:
         np.save(join(self.sim_folder, 'elec_y_%s.npy' % self.cell_name), electrode.y)
         np.save(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name), electrode.z)
 
-        np.save(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xstart)
-        np.save(join(self.sim_folder, 'ystart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ystart)
-        np.save(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zstart)
-        np.save(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xend)
-        np.save(join(self.sim_folder, 'yend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.yend)
-        np.save(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zend)
-        np.save(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.xmid)
-        np.save(join(self.sim_folder, 'ymid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.ymid)
-        np.save(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)), cell.zmid)
-        np.save(join(self.sim_folder, 'diam_%s_%s.npy' % (self.cell_name, self.conductance)), cell.diam)
+        np.save(join(self.sim_folder, 'xstart_%s.npy' % (self.cell_name)), cell.xstart)
+        np.save(join(self.sim_folder, 'ystart_%s.npy' % (self.cell_name)), cell.ystart)
+        np.save(join(self.sim_folder, 'zstart_%s.npy' % (self.cell_name)), cell.zstart)
+        np.save(join(self.sim_folder, 'xend_%s.npy' % (self.cell_name)), cell.xend)
+        np.save(join(self.sim_folder, 'yend_%s.npy' % (self.cell_name)), cell.yend)
+        np.save(join(self.sim_folder, 'zend_%s.npy' % (self.cell_name)), cell.zend)
+        np.save(join(self.sim_folder, 'xmid_%s.npy' % (self.cell_name)), cell.xmid)
+        np.save(join(self.sim_folder, 'ymid_%s.npy' % (self.cell_name)), cell.ymid)
+        np.save(join(self.sim_folder, 'zmid_%s.npy' % (self.cell_name)), cell.zmid)
+        np.save(join(self.sim_folder, 'diam_%s.npy' % (self.cell_name)), cell.diam)
 
     def _get_distribution(self, dist_dict, cell):
         nrn.distance()
@@ -296,9 +307,9 @@ class GenericStudy:
         sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_sec, mu,
                                                        self.holding_potential, distribution, tau, weight)
 
-        if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
-            print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
-            return
+        # if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
+        #     print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
+        #     return
 
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
@@ -316,10 +327,12 @@ class GenericStudy:
 
     def _make_distributed_synaptic_stimuli(self, cell, input_sec, weight=0.001, **kwargs):
 
+
+        print "USING CURRENT BASED SYNAPSE!!!!"
         # Define synapse parameters
         synapse_params = {
             'e': 0.,                   # reversal potential
-            'syntype': 'ExpSyn',       # synapse type
+            'syntype': 'ExpSynI',       # synapse type
             'tau': 2.,                # syn. time constant
             'weight': weight,            # syn. weight
             'record_current': False,
@@ -434,7 +447,7 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic')
+    gs = GenericStudy('hay', 'distributed_synaptic_cs', conductance='generic')
     # gs.distribute_cellsims_MPI()
     # if len(sys.argv) == 3:
     gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)

@@ -5,6 +5,7 @@ import numpy as np
 
 def active_declarations(**kwargs):
     neuron.h.distance(0, 0)
+    print "Infinite neurite"
     for sec in neuron.h.allsec():
         sec.nseg = 101
         sec.insert("QA")

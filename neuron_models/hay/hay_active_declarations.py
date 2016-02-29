@@ -38,7 +38,7 @@ def make_cell_uniform(Vrest=-80):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2/seg.g_pas
             if nrn.ismembrane("Ih_linearized_v2_frozen"):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
-    # print
+
     # e = []
     # for sec in nrn.allsec():
     #     for seg in sec:
@@ -184,7 +184,6 @@ def biophys_passive(**kwargs):
 
     for sec in nrn.axon:
         sec.g_pas = 0.0000325
-
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
 

@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.fftpack as ff
 import pylab as pl
-from matplotlib import mlab
+#
 
 
 def make_WN_input(cell_params):
@@ -82,6 +82,7 @@ def return_freq_and_angle(tvec, sig):
 
 def return_freq_and_psd_welch(sig, welch_dict):
     """ Returns the frequency and power of the input signal using Welch's average method"""
+    from matplotlib import mlab
     sig = np.array(sig)
     if len(sig.shape) == 1:
         sig = np.array([sig])
