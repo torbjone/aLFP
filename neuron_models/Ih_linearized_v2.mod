@@ -62,6 +62,6 @@ INITIAL{
 	foo 	= wAlpha/(a3*a1) * exp((V_R + a2)/a3) + (V_R + a2)/b2 - 1
     wTau 	= 1/(wAlpha + wBeta)
     dwinf 	= - wBeta*wAlpha *wTau * wTau /(V_R + a2) * foo
-	m 	= 0 :mInf : SURE ABOUT THIS ONE? Not as in qa.mod
+	m 	= 0
     mu = gIhbar * dwinf *(ehcn - V_R)
 }

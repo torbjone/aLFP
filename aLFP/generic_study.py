@@ -262,7 +262,9 @@ class GenericStudy:
         if self.input_type == 'white_noise':
             input_scaling = 0.0005
             max_freq = 500
+            plt.seed(1234)
             input_array = input_scaling * (self._make_WN_input(cell, max_freq))
+            print 1000 * np.std(input_array)
         elif self.input_type == 'real_wn':
             tot_ntsteps = round((cell.tstopms - cell.tstartms)/cell.timeres_NEURON + 1)
             input_scaling = .1
@@ -307,9 +309,9 @@ class GenericStudy:
         sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_sec, mu,
                                                        self.holding_potential, distribution, tau, weight)
 
-        # if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
-        #     print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
-        #     return
+        if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
+            print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
+            return
 
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
@@ -327,12 +329,10 @@ class GenericStudy:
 
     def _make_distributed_synaptic_stimuli(self, cell, input_sec, weight=0.001, **kwargs):
 
-
-        print "USING CURRENT BASED SYNAPSE!!!!"
         # Define synapse parameters
         synapse_params = {
             'e': 0.,                   # reversal potential
-            'syntype': 'ExpSynI',       # synapse type
+            'syntype': 'ExpSyn',       # synapse type
             'tau': 2.,                # syn. time constant
             'weight': weight,            # syn. weight
             'record_current': False,
@@ -447,7 +447,7 @@ class GenericStudy:
 
 if __name__ == '__main__':
 
-    gs = GenericStudy('hay', 'distributed_synaptic_cs', conductance='generic')
+    gs = GenericStudy('hay', 'distributed_synaptic', conductance='generic')
     # gs.distribute_cellsims_MPI()
     # if len(sys.argv) == 3:
     gs._run_distributed_synaptic_simulation(float(sys.argv[1]), sys.argv[2], 'linear_increase', 'auto', 0.0001)

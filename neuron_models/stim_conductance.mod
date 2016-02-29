@@ -31,7 +31,7 @@ BREAKPOINT {
 	at_time(del)
 	at_time(del+dur)
 	if (t < del + dur && t >= del) {
-		i = amp / 10 * (v - V_R - 10)
+		i = amp / 10 * (v - V_R + 10)
 	}else{
 		i = 0
 	}
