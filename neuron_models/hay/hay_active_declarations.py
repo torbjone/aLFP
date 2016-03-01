@@ -125,6 +125,7 @@ def biophys_generic(**kwargs):
 
     total_area = _get_total_area()
     total_w_conductance = kwargs['avrg_w_bar'] * total_area
+    print "Total conductance:", total_w_conductance
     max_dist = _get_longest_distance()
     # print "Max dist: ", max_dist
 

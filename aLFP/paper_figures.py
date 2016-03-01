@@ -2205,20 +2205,21 @@ class Figure3(PaperFigures):
         if do_simulations:
 
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
-            distributions = ['linear_decrease', 'linear_increase', 'uniform']
 
-            input_idxs = [self.soma_idx, self.apic_idx]
+            distributions = ['linear_increase', 'linear_decrease', 'uniform']
+
+            input_idxs = [self.apic_idx, self.soma_idx]
             tau_ws = ['auto']
-            tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(self.mus)
+            mus = self.mus
+            tot_sims = len(input_idxs) * len(tau_ws) * len(distributions) * len(mus)
             i = 1
             for tau_w in tau_ws:
                 for distribution in distributions:
                     for input_idx in input_idxs:
-                        for mu in self.mus:
+                        for mu in mus:
                             print "%d / %d" % (i, tot_sims)
                             gs.single_neural_sim_function(mu, input_idx, distribution, tau_w)
                             i += 1
-
 
         self._initialize_figure()
         self._draw_channels_distribution()
@@ -2834,7 +2835,8 @@ class Figure6_reviewer(PaperFigures):
     def __init__(self, recalculate_LFP=False):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_6_ic_res'
+        self.w_bar_scaling_factor = 0.
+        self.figure_name = 'figure_6_ic_res_%1.1f' % self.w_bar_scaling_factor
         self.conductance = 'generic'
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
         self.timeres = 2**-4
@@ -2849,13 +2851,21 @@ class Figure6_reviewer(PaperFigures):
         self.weight = 0.0001
         self.mu = 2.0
         self.tau = 'auto'
+        do_simulations = False
+
+        if do_simulations:
+
+            gs = GenericStudy('hay', 'white_noise', conductance='generic')
+            gs.w_bar_scaling_factor = self.w_bar_scaling_factor
+            gs.single_neural_sim_function(self.mu, self.input_idx, self.distribution, self.tau_w)
 
         if recalculate_LFP:
 
-            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, str(self.input_idx), 2.0,
-                                                            self.holding_potential, self.distribution, self.tau)
-            distances = np.linspace(-2500, 2500, 100)#100)
-            heights = np.linspace(1850, -650, 50)#50)
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.1f' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
+                                                        self.holding_potential, self.distribution, self.tau, self.w_bar_scaling_factor)
+
+            distances = np.linspace(-2500, 2500, 100)
+            heights = np.linspace(1850, -650, 50)
             elec_x, elec_z = np.meshgrid(distances, heights)
             elec_x = elec_x.flatten()
             elec_z = elec_z.flatten()
@@ -2869,6 +2879,7 @@ class Figure6_reviewer(PaperFigures):
             }
             lfp_trace_positions = np.array([[200, 0], [200, 475], [200, 950], [200, 1425]])
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
+            gs.w_bar_scaling_factor = self.w_bar_scaling_factor
             cell = gs._return_cell(self.holding_potential, 'generic', 2.0, 'linear_increase', 'auto')
             cell.tstartms = 0
             cell.tstopms = 1
@@ -2911,7 +2922,6 @@ class Figure6_reviewer(PaperFigures):
         ax_dict = {'frame_on': False, 'xticks': [], 'yticks': []}
 
         self.freq_ax = self.fig.add_subplot(121, **ax_dict)
-
         self.im_ax = self.fig.add_subplot(143, aspect=1, **ax_dict)
         self.vm_ax = self.fig.add_subplot(144, aspect=1, **ax_dict)
 
@@ -2926,8 +2936,8 @@ class Figure6_reviewer(PaperFigures):
 
     def make_figure(self):
 
-        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
-                                                 self.holding_potential, self.distribution, self.tau_w)
+        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.1f' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
+                                                 self.holding_potential, self.distribution, self.tau_w, self.w_bar_scaling_factor)
         distances = np.linspace(-2500, 2500, 100)
         heights = np.linspace(1850, -650, 50)
         elec_x, elec_z = np.meshgrid(distances, heights)
@@ -3000,9 +3010,8 @@ class Figure6_reviewer(PaperFigures):
             self.im_ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=res_clr(imem_res[idx]), zorder=2)
             self.vm_ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=res_clr(vmem_res[idx]), zorder=2)
 
-
-        self.im_ax.set_title('I$_m$ resonance\nMode: %d Hz' % res_freq_im)
-        self.vm_ax.set_title('V$_m$ resonance\nMode: %d Hz' % res_freq_vm)
+        self.im_ax.set_title('I$_m$ resonance\nMode, Soma, Input: %d, %d, %d Hz' % (res_freq_im, imem_res[0], imem_res[self.input_idx]), fontsize=10)
+        self.vm_ax.set_title('V$_m$ resonance\nMode, Soma, Input: %d, %d, %d Hz' % (res_freq_vm, vmem_res[0], vmem_res[self.input_idx]), fontsize=10)
 
         # self.amp_ax.plot(xmid[self.input_idx], zmid[self.input_idx], 'y*', ms=10)
         self.freq_ax.plot([np.min(distances), np.min(distances)], [-200, 200], lw=5, c='k', clip_on=False)
@@ -3217,13 +3226,13 @@ class Figure7(PaperFigures):
 if __name__ == '__main__':
 
     # Figure1(True)
-    Figure1_conductance_based_WN(True)
+    #Figure1_conductance_based_WN(True)
     # Figure2(True)
     # Figure3(True)
     # Figure4(True)
     # Figure5(False)
     # Figure6(True)
-    # Figure6_reviewer(False)
+    Figure6_reviewer(False)
     # Figure7(do_simulations=True)
     # Figure7_sup_Hay_original()
     # Figure7_sup_Hay_generic()

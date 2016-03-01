@@ -134,6 +134,13 @@ class GenericStudy:
             neuron.load_mechanisms(join(neuron_models))
 
         if self.cell_name == 'hay':
+
+            if hasattr(self, 'w_bar_scaling_factor'):
+                print "Scaling qausi-active conductance with %1.1f" % self.w_bar_scaling_factor
+                fact = self.w_bar_scaling_factor
+            else:
+                fact = 1.
+
             sys.path.append(join(self.root_folder, 'neuron_models', 'hay'))
             from hay_active_declarations import active_declarations
             # neuron.load_mechanisms(join(neuron_models, 'hay', 'mod'))
@@ -155,7 +162,7 @@ class GenericStudy:
                                      'distribution': distribution,
                                      'tau_w': tau_w,
                                      #'total_w_conductance': 6.23843378791,# / 5,
-                                     'avrg_w_bar': 0.00005 * 2,
+                                     'avrg_w_bar': 0.00005 * 2 * fact,
                                      'hold_potential': holding_potential}]
             }
 
@@ -204,6 +211,9 @@ class GenericStudy:
         else:
             print input_idx, type(input_idx)
             raise RuntimeError("input_idx is not recognized!")
+
+        if hasattr(self, 'w_bar_scaling_factor'):
+            sim_name += '_%1.1f' % self.w_bar_scaling_factor
 
         np.save(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)), cell.tvec)
         np.save(join(self.sim_folder, 'dist_dict_%s.npy' % sim_name), dist_dict)
