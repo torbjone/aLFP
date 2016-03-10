@@ -16,6 +16,7 @@ def make_cell_uniform(Vrest=-80):
     #     for seg in sec:
     #         if nrn.ismembrane("ca_ion"):
     #             print "Cai: ", sec.name(), seg.cai, seg.ica
+    print "Making cell uniform"
     nrn.t = 0
     nrn.finitialize(Vrest)
     nrn.fcurrent()
@@ -188,7 +189,7 @@ def biophys_passive(**kwargs):
     if 'hold_potential' in kwargs:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
 
-    #print("Passive dynamics inserted.")
+    print("Passive dynamics inserted.")
 
 def biophys_Ih_linearized_frozen(**kwargs):
 
@@ -464,9 +465,17 @@ def biophys_active(**kwargs):
     for sec in nrn.axon:
         sec.g_pas = 0.0000325
 
-    if 'hold_potential' in kwargs:
+    if 'hold_potential' in kwargs and kwargs['hold_potential'] != None:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
-    #print("active ion-channels inserted.")
+    else:
+        print "NOT MAKING CELL UNIFORM !!! "
+        nrn.t = 0
+        nrn.finitialize(-80)
+        nrn.fcurrent()
+        for sec in nrn.allsec():
+            for seg in sec:
+                seg.e_pas = seg.v
+    print("active ion-channels inserted.")
 
 def biophys_reduced(**kwargs):
 
@@ -865,6 +874,8 @@ def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
     plt.subplot(212, title='Shifted', ylim=[-0.5, 3])
     plt.plot(cell.tvec, cell.vmem[input_idx, :] - cell.vmem[input_idx, 0])
 
+    plt.show()
+
 def test_frozen_currents(input_idx, holding_potential):
 
     # input_idx = 0
@@ -1039,8 +1050,8 @@ def test_ca_initiation():
     plt.show()
 
 if __name__ == '__main__':
-    test_steady_state()
-    #simulate_synaptic_input(0, -65, 'active')
+    #test_steady_state()
+    simulate_synaptic_input(852, -80, 'passive')
     # plt.savefig('Ca_initiation_testing.png')
     # test_ca_initiation()
     #plot_frozen_gh()
