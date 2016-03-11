@@ -3220,7 +3220,7 @@ class Figure6_reviewer(PaperFigures):
 
         simplify_axes(self.fig.axes)
         self.fig.savefig(join(self.figure_folder, '%s.png' % self.figure_name), dpi=150)
-        # self.fig.savefig(join(self.figure_folder, '%s.pdf' % self.figure_name), dpi=150)
+        self.fig.savefig(join(self.figure_folder, '%s.pdf' % self.figure_name), dpi=150)
         plt.close('all')
 
     def make_figure(self):
@@ -3317,17 +3317,228 @@ class Figure6_reviewer(PaperFigures):
         # cl3 = plt.colorbar(img_q, cax=cax_3, ticks=[1, 10, 20], extend='max')
         return res_freq_im, imem_res[0], imem_res[self.input_idx], res_freq_vm, vmem_res[0], vmem_res[self.input_idx], res_freq_lfp
 
+
+class Figure6_reviewer2(PaperFigures):
+    def __init__(self, w_bar_scaling_factor, recalculate_LFP=True):
+        PaperFigures.__init__(self)
+        self.cell_name = 'hay'
+        self.w_bar_scaling_factor = w_bar_scaling_factor
+        self.figure_name = 'figure_6_ic_res2_%1.1f' % self.w_bar_scaling_factor
+        self.conductance = 'generic'
+        self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
+        self.timeres = 2**-4
+        self.holding_potential = -80
+        self.soma_idx = 0
+        self.timeres_python = self.timeres
+        self.apic_idx = 605
+        self.input_idx = self.soma_idx
+        self.distribution = 'linear_decrease'
+        self.input_type = 'white_noise'
+        self.tau_w = 'auto'
+        self.weight = 0.0001
+        self.mu = 2.0
+        do_simulations = False
+
+        if do_simulations:
+
+            gs = GenericStudy('hay', 'white_noise', conductance='generic')
+            gs.w_bar_scaling_factor = self.w_bar_scaling_factor
+            gs.single_neural_sim_function(self.mu, self.input_idx, self.distribution, self.tau_w)
+
+        if recalculate_LFP:
+
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.1f' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
+                                                        self.holding_potential, self.distribution, self.tau_w, self.w_bar_scaling_factor)
+
+            distances = np.linspace(-2500, 2500, 100)
+            heights = np.linspace(1850, -650, 50)
+            elec_x, elec_z = np.meshgrid(distances, heights)
+            elec_x = elec_x.flatten()
+            elec_z = elec_z.flatten()
+            elec_y = np.zeros(len(elec_z))
+
+            electrode_parameters = {
+                    'sigma': 0.3,
+                    'x': elec_x,
+                    'y': elec_y,
+                    'z': elec_z
+            }
+            lfp_trace_positions = np.array([[200, 0], [200, 475], [200, 950], [200, 1425]])
+            gs = GenericStudy('hay', 'white_noise', conductance='generic')
+            gs.w_bar_scaling_factor = self.w_bar_scaling_factor
+            cell = gs._return_cell(self.holding_potential, self.conductance, self.mu,
+                                   self.distribution, self.tau_w)
+            cell.tstartms = 0
+            cell.tstopms = 1
+            cell.simulate(rec_imem=True)
+            cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
+            cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
+            electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
+            print "Calculating"
+            electrode.calc_lfp()
+            del cell.imem
+            del cell.tvec
+            LFP = 1000 * electrode.LFP
+            np.save(join(self.sim_folder, 'LFP_%s.npy' % sim_name), LFP)
+            del electrode
+            print "Saved LFP: ", 'LFP_%s.npy' % sim_name
+            # print "Loading LFP."
+            # LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
+            if self.input_type is 'distributed_synaptic':
+                print "Starting PSD calc"
+                freqs, LFP_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
+            else:
+                freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
+            np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
+            np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
+            print "Done recalculating LFP"
+
+        self._initialize_figure()
+        i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp = self.make_figure()
+        self.res_list = [i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp]
+        self._finitialize_figure()
+        plt.close('all')
+
+    def return_ax_coors(self, mother_ax, pos, x_shift=0):
+        ax_w = 0.12
+        ax_h = 0.06
+        xstart, ystart = self.fig.transFigure.inverted().transform(mother_ax.transData.transform(pos))
+        return [xstart + x_shift, ystart, ax_w, ax_h]
+
+    def _initialize_figure(self):
+        plt.close('all')
+        self.fig = plt.figure(figsize=[10, 4])
+        self.fig.subplots_adjust(hspace=0.5, wspace=0.4, top=0.85, bottom=0.05, left=0.03, right=0.96)
+        ax_dict = {'frame_on': False, 'xticks': [], 'yticks': []}
+
+        self.freq_ax = self.fig.add_subplot(121, **ax_dict)
+        self.im_ax = self.fig.add_subplot(143, aspect=1, **ax_dict)
+        self.vm_ax = self.fig.add_subplot(144, aspect=1, **ax_dict)
+
+        mark_subplots(self.fig.axes, xpos=0.)
+
+    def _finitialize_figure(self):
+
+        simplify_axes(self.fig.axes)
+        self.fig.savefig(join(self.figure_folder, '%s.png' % self.figure_name), dpi=150)
+        self.fig.savefig(join(self.figure_folder, '%s.pdf' % self.figure_name), dpi=150)
+        plt.close('all')
+
+    def make_figure(self):
+
+        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.1f' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
+                                                 self.holding_potential, self.distribution, self.tau_w, self.w_bar_scaling_factor)
+        distances = np.linspace(-2500, 2500, 100)
+        heights = np.linspace(1850, -650, 50)
+        elec_x, elec_z = np.meshgrid(distances, heights)
+        elec_x = elec_x.flatten()
+        elec_z = elec_z.flatten()
+        elec_y = np.zeros(len(elec_z))
+
+        electrode_parameters = {
+                'sigma': 0.3,
+                'x': elec_x,
+                'y': elec_y,
+                'z': elec_z
+        }
+
+        imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
+        freqs, imem_psd = tools.return_freq_and_psd(self.timeres_python/1000., imem)
+        imem_res = freqs[np.argmax(imem_psd[:, 1:], axis=1) + 1]
+
+        res_freq_im = stats.mode(imem_res, axis=None)[0][0]
+        print res_freq_im
+        # print imem_psd
+        # clr = lambda i: plt.cm.jet(1.0 * i / imem.shape[0])
+        # plt.close('all')
+        # for idx in range(imem_psd.shape[0])[::10]:
+        #     plt.loglog(freqs, imem_psd[idx, :], lw=1, c=clr(idx))
+        #     plt.plot(imem_res[idx], imem_psd[idx, np.argmin(np.abs(imem_res[idx] - freqs))], 'D', c=clr(idx))
+        # plt.show()
+        # return 1, 2, 3, 4, 5, 6, 5
+
+        vmem = np.load(join(self.sim_folder, 'vmem_%s.npy' % sim_name))
+        freqs, vmem_psd = tools.return_freq_and_psd(self.timeres_python/1000., vmem)
+        vmem_res = freqs[np.argmax(vmem_psd[:, 1:], axis=1) + 1]
+
+        LFP_psd = np.load(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name))
+        freqs = np.load(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name))
+        upper_idx_limit = np.argmin(np.abs(freqs - 500))
+
+        num_elec_cols = len(set(elec_x))
+        num_elec_rows = len(set(elec_z))
+        dc = np.zeros((num_elec_rows, num_elec_cols))
+
+        freq_at_max = np.zeros((num_elec_rows, num_elec_cols))
+
+        num_elec_cols = len(set(elec_x))
+        num_elec_rows = len(set(elec_z))
+        elec_idxs = np.arange(len(elec_x)).reshape(num_elec_rows, num_elec_cols)
+
+        for elec in xrange(len(elec_z)):
+            row, col = np.array(np.where(elec_idxs == elec))[:, 0]
+            dc[row, col] = LFP_psd[elec, 1]
+            freq_at_max[row, col] = freqs[1 + np.argmax(LFP_psd[elec, 1:upper_idx_limit])]
+
+        res_freq_lfp = stats.mode(freq_at_max, axis=None)[0][0]
+        res_freq_vm = stats.mode(vmem_res, axis=None)[0][0]
+
+        self.freq_ax.set_title('Frequency at max PSD\nMode: %d Hz' % res_freq_lfp)
+
+        imshow_dict = {'extent': [np.min(distances), np.max(distances), np.min(heights), np.max(heights)],
+                       'interpolation': 'nearest',
+                       'aspect': 1,
+                       #'cmap': plt.cm.#plt.cm.gist_yarg
+                       }
+
+        img_freq = self.freq_ax.imshow(freq_at_max,  vmin=0., vmax=40., cmap=plt.cm.jet, **imshow_dict)
+
+        res_clr = lambda f: plt.cm.jet((f - 0.) / 40.)
+
+        xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
+        xmid = np.load(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)))
+        xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zend = np.load(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)))
+        zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
+
+        for ax in [self.freq_ax]:
+            [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color='w', zorder=2)
+             for idx in xrange(len(xstart))]
+
+        for idx in xrange(len(xstart)):
+            self.im_ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=res_clr(imem_res[idx]), zorder=2)
+            self.vm_ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=res_clr(vmem_res[idx]), zorder=2)
+
+        self.im_ax.set_title('I$_m$ resonance\nMode, Soma, Input: %d, %d, %d Hz' % (res_freq_im, imem_res[0], imem_res[self.input_idx]), fontsize=10)
+        self.vm_ax.set_title('V$_m$ resonance\nMode, Soma, Input: %d, %d, %d Hz' % (res_freq_vm, vmem_res[0], vmem_res[self.input_idx]), fontsize=10)
+
+        # self.amp_ax.plot(xmid[self.input_idx], zmid[self.input_idx], 'y*', ms=10)
+        self.freq_ax.plot([np.min(distances), np.min(distances)], [-200, 200], lw=5, c='k', clip_on=False)
+        self.freq_ax.text(np.min(distances) + 170, 0, '500 $\mu$m')
+
+        clbar_args = {'orientation': 'vertical', 'shrink': 0.7,}
+
+        # cax_1 = self.fig.add_axes([0.45, 0.73, 0.01, 0.2])
+        cax_2 = self.fig.add_axes([0.45, 0.06, 0.01, 0.2])
+        # cax_3 = self.fig.add_axes([0.97, 0.06, 0.01, 0.2])
+
+        # cl1 = plt.colorbar(img_amp, cax=cax_1, label='Max LFP PSD')
+        cl2 = plt.colorbar(img_freq, cax=cax_2, label='Hz', extend='max', ticks=[0, 10, 20., 30., 40])
+        # cl3 = plt.colorbar(img_q, cax=cax_3, ticks=[1, 10, 20], extend='max')
+        return res_freq_im, imem_res[0], imem_res[self.input_idx], res_freq_vm, vmem_res[0], vmem_res[self.input_idx], res_freq_lfp
+
 class NewFigureResonance(PaperFigures):
     def __init__(self):
         PaperFigures.__init__(self)
-        self.fig_name = 'resonance'
+        self.fig_name = 'resonance_apic_input'
 
-        if 0:
-            ws = np.arange(31) * 0.1
+        if 1:
+            ws = np.arange(16) * 0.2
             resonances = []
             for w in ws:
-                f = Figure6_reviewer(w, False)
-                print f.res_list
+                f = Figure6_reviewer2(w, False)
+                # print f.res_list
                 resonances.append(f.res_list)
             resonances = np.array(resonances)
 
@@ -3336,18 +3547,25 @@ class NewFigureResonance(PaperFigures):
         else:
             ws = np.load(join(self.root_folder, 'ws.npy'))
             resonances = np.load(join(self.root_folder, 'resonances.npy'))
+        # sys.exit()
+        # os.system("python paper_figures.py")
 
-        line_names = ["I$_m$ mode", "I$_m$ soma", "I$_m$ input site",
+        all_line_names = ["I$_m$ mode", "I$_m$ soma", "I$_m$ input site",
                       "V$_m$ mode", "V$_m$ soma", "V$_m$ input site", "LFP mode"]
         lines = []
-        fig = plt.figure(figsize=(5, 7))
-        fig.subplots_adjust(bottom=0.3, left=0.15)
-        ax = fig.add_subplot(111, xlabel=r'$\bar g_w$ scaling', ylabel='Resonance frequency [Hz]')
-        for idx in range(len(line_names)):
-            l, = ax.plot(ws, resonances[:, idx], lw=2)
+        line_names = []
+        fig = plt.figure(figsize=(5, 5))
+        fig.subplots_adjust(bottom=0.12, left=0.15)
+        ax = fig.add_subplot(111, ylim=[0, 40], xlabel=r'$\bar g_w$ scaling', ylabel='Resonance frequency [Hz]')
+        clrs = ['c', 'k', 'm', 'y', 'gray', 'g', 'r']
+        for idx in range(len(all_line_names)):
+            if "soma" not in all_line_names[idx] and "LFP" not in all_line_names[idx]:
+                continue
+            l, = ax.plot(ws, resonances[:, idx], c=clrs[idx], lw=2)
             lines.append(l)
+            line_names.append(all_line_names[idx])
         simplify_axes(ax)
-        fig.legend(lines, line_names, frameon=False, loc='lower center', ncol=2)
+        ax.legend(lines, line_names, frameon=False, loc='lower right', ncol=1)
         plt.savefig(join(self.figure_folder, '%s.png' % self.fig_name))
         plt.savefig(join(self.figure_folder, '%s.pdf' % self.fig_name))
 
@@ -3559,7 +3777,7 @@ if __name__ == '__main__':
     # Figure6(True)
 
     # Figure6_reviewer(1.0, False)
-    NewFigureResonance()
+    # NewFigureResonance()
     # Figure7(do_simulations=True)
     # Figure7_sup_Hay_original()
-    # Figure7_sup_Hay_generic()
+    Figure7_sup_Hay_generic()

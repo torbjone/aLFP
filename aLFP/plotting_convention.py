@@ -1,4 +1,5 @@
-
+import matplotlib
+matplotlib.rc('pdf', fonttype=42)
 import pylab as plt
 from matplotlib.colors import LogNorm
 
