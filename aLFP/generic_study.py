@@ -52,7 +52,7 @@ class GenericStudy:
         self._set_electrode_specific_properties(extended_electrode)
         self._set_input_specific_properties()
         self.num_tsteps = round(self.end_t/self.timeres_python + 1)
-        self.divide_into_welch = 16.
+        self.divide_into_welch = 8.
         self.welch_dict = {'Fs': 1000 / self.timeres_python,
                            'NFFT': int(self.num_tsteps/self.divide_into_welch),
                            'noverlap': int(self.num_tsteps/self.divide_into_welch/2.),
@@ -79,8 +79,8 @@ class GenericStudy:
             self.single_neural_sim_function = self._run_distributed_synaptic_simulation
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
-            self.cut_off = 100
-            self.end_t = 2000
+            self.cut_off = 1000
+            self.end_t = 20000
             self.repeats = None
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
@@ -319,9 +319,9 @@ class GenericStudy:
         sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_sec, mu,
                                                        self.holding_potential, distribution, tau, weight)
 
-        if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
-            print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
-            return
+        # if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
+        #     print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
+        #     return
 
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)

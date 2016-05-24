@@ -110,7 +110,6 @@ class NeuralSimulations:
         neuron_models = join(self.root_folder, 'neuron_models')
         print "Initializing simulation"
         if not hasattr(neuron.h, "setdata_QA"):
-            print "Happening?"
             neuron.load_mechanisms(join(neuron_models))
         if self.cell_name == 'hay':
             sys.path.append(join(self.root_folder, 'neuron_models', 'hay'))
@@ -204,7 +203,7 @@ class NeuralSimulations:
             I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
         return I
 
-    def _make_white_noise_stimuli(self, cell, input_idx, weight=0.0005):
+    def _make_white_noise_stimuli(self, cell, input_idx, weight=0.0005, holding_potential=None):
         max_freq = 500
         plt.seed(1234)
         input_array = weight * self.make_WN_input(cell, max_freq)
@@ -213,7 +212,7 @@ class NeuralSimulations:
         # plt.close('all')
         # plt.plot(input_array)
         # plt.show()
-        # print 1000 * np.std(input_array)
+        print 1000 * np.std(input_array)
         i = 0
         syn = None
         for sec in cell.allseclist:
@@ -239,7 +238,7 @@ class NeuralSimulations:
 
         P_ex = np.random.random(tot_ntsteps)
         P_in = np.random.random(tot_ntsteps)
-        V_in = -90.
+        V_in = -81.
         V_ex = 0.
         V_R = holding_potential
         g = weight
@@ -531,46 +530,39 @@ class PaperFigures:
 
         ax.scatter(elec_x[self.elec_apic_idx], elec_z[self.elec_apic_idx], edgecolor='none', s=70, c='c')
         ax.scatter(elec_x[self.elec_soma_idx], elec_z[self.elec_soma_idx], edgecolor='none', s=70, c='c')
-        ax.arrow(elec_x[self.elec_apic_idx] + 110, elec_z[self.elec_apic_idx] - 10,
-                       arrow_dx, -2*arrow_dz, **ec_arrow_dict)
-        ax.arrow(elec_x[self.elec_soma_idx] + 110, elec_z[self.elec_soma_idx] - 10,
-                       arrow_dx, -arrow_dz, **ec_arrow_dict)
+        ax.arrow(elec_x[self.elec_apic_idx] + 30, elec_z[self.elec_apic_idx] - 10, arrow_dx, -3*arrow_dz, **ec_arrow_dict)
+        ax.arrow(elec_x[self.elec_soma_idx] + 30, elec_z[self.elec_soma_idx] - 10, arrow_dx, -arrow_dz, **ec_arrow_dict)
 
         if hasattr(self, 'elec_basal_idx'):
 
             ax.scatter(elec_x[self.elec_apic2_idx], elec_z[self.elec_apic2_idx], edgecolor='none', s=70, c='c')
             ax.scatter(elec_x[self.elec_soma2_idx], elec_z[self.elec_soma2_idx], edgecolor='none', s=70, c='c')
-            ax.arrow(elec_x[self.elec_apic2_idx] + 110, elec_z[self.elec_apic2_idx] - 10,
-                           arrow_dx, -2*arrow_dz, **ec_arrow_dict)
-            ax.arrow(elec_x[self.elec_soma2_idx] + 110, elec_z[self.elec_soma2_idx] - 10,
-                           arrow_dx, -arrow_dz, **ec_arrow_dict)
-
+            ax.arrow(elec_x[self.elec_apic2_idx] + 30, elec_z[self.elec_apic2_idx] - 10, arrow_dx, -3*arrow_dz, **ec_arrow_dict)
+            ax.arrow(elec_x[self.elec_soma2_idx] + 30, elec_z[self.elec_soma2_idx] - 10, arrow_dx, -arrow_dz, **ec_arrow_dict)
 
             ax.scatter(elec_x[self.elec_tuft_idx], elec_z[self.elec_tuft_idx], edgecolor='none', s=70, c='c')
             ax.scatter(elec_x[self.elec_basal_idx], elec_z[self.elec_basal_idx], edgecolor='none', s=70, c='c')
-            ax.arrow(elec_x[self.elec_tuft_idx] + 110, elec_z[self.elec_tuft_idx] + 10,
-                           arrow_dx, arrow_dz, **ec_arrow_dict)
-            ax.arrow(elec_x[self.elec_basal_idx] + 110, elec_z[self.elec_basal_idx] + 10,
-                           arrow_dx, +arrow_dz, **ec_arrow_dict)
+            ax.arrow(elec_x[self.elec_tuft_idx] + 30, elec_z[self.elec_tuft_idx] + 0, arrow_dx, 0, **ec_arrow_dict)
+            ax.arrow(elec_x[self.elec_basal_idx] + 30, elec_z[self.elec_basal_idx] - 50, 2*arrow_dx, -20*arrow_dz, **ec_arrow_dict)
 
             ax.scatter(elec_x[self.elec_tuft2_idx], elec_z[self.elec_tuft2_idx], edgecolor='none', s=70, c='c')
             ax.scatter(elec_x[self.elec_basal2_idx], elec_z[self.elec_basal2_idx], edgecolor='none', s=70, c='c')
-            ax.arrow(elec_x[self.elec_tuft2_idx] + 110, elec_z[self.elec_tuft2_idx] + 10, arrow_dx, arrow_dz, **ec_arrow_dict)
-            ax.arrow(elec_x[self.elec_basal2_idx] + 110, elec_z[self.elec_basal2_idx] + 10, arrow_dx, +arrow_dz, **ec_arrow_dict)
+            ax.arrow(elec_x[self.elec_tuft2_idx] + 30, elec_z[self.elec_tuft2_idx] + 0, arrow_dx, 0, **ec_arrow_dict)
+            ax.arrow(elec_x[self.elec_basal2_idx] + 30, elec_z[self.elec_basal2_idx] - 50, arrow_dx*4, -20*arrow_dz, **ec_arrow_dict)
 
         if ic_plot:
             ax.scatter(xmid[self.apic_idx], zmid[self.apic_idx], edgecolor='none', s=70, c='orange')
             ax.scatter(xmid[self.soma_idx], zmid[self.soma_idx], edgecolor='none', s=70, c='orange')
-            ax.arrow(xmid[self.apic_idx] - 110, zmid[self.apic_idx] - 10, -arrow_dx, -arrow_dz, **ic_arrow_dict)
-            ax.arrow(xmid[self.soma_idx] - 110, zmid[self.soma_idx] - 10, -arrow_dx, -arrow_dz, **ic_arrow_dict)
+            ax.arrow(xmid[self.apic_idx] - 30, zmid[self.apic_idx] - 10, -3*arrow_dx, -6*arrow_dz, **ic_arrow_dict)
+            ax.arrow(xmid[self.soma_idx] - 30, zmid[self.soma_idx] - 10, -3*arrow_dx, -arrow_dz, **ic_arrow_dict)
             
             if hasattr(self, 'basal_idx'):
                 ax.scatter(xmid[self.tuft_idx], zmid[self.tuft_idx], edgecolor='none', s=70, c='orange')
                 ax.scatter(xmid[self.basal_idx], zmid[self.basal_idx], edgecolor='none', s=70, c='orange')
-                ax.arrow(xmid[self.tuft_idx] - 110, zmid[self.tuft_idx] + 10,
-                         -arrow_dx, arrow_dz, **ic_arrow_dict)
-                ax.arrow(xmid[self.basal_idx] - 110, zmid[self.basal_idx] + 10,
-                         -arrow_dx, +arrow_dz, **ic_arrow_dict)
+                ax.arrow(xmid[self.tuft_idx] - 30, zmid[self.tuft_idx] + 0,
+                         -2*arrow_dx, 0, **ic_arrow_dict)
+                ax.arrow(xmid[self.basal_idx] - 30, zmid[self.basal_idx] - 30,
+                         -4*arrow_dx, -20*arrow_dz, **ic_arrow_dict)
 
     def _draw_simplified_morph_to_axis(self, ax, input_pos=None, grading=None):
 
@@ -626,7 +618,7 @@ class Figure1(PaperFigures):
 
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure'
+        self.figure_name = 'figure_1'
 
         self.type_name = '%s' % self.cell_name
         self.timeres_NEURON = 2**-4
@@ -1309,7 +1301,7 @@ class Figure1_conductance_based_WN(PaperFigures):
         PaperFigures.__init__(self)
 
         self.cell_name = 'hay'
-        self.figure_name = 'figure_1_conductance_based_balanced'
+        self.figure_name = 'figure_1_conductance_based_balanced_-80'
 
         self.type_name = '%s' % self.cell_name
         self.timeres_NEURON = 2**-4
@@ -2052,13 +2044,13 @@ class Figure7_sup_Hay_generic(PaperFigures):
 
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
-        self.figure_name = 'figure_7_sup_generic'
+        self.figure_name = 'figure_7_sup_generic_2'
         self.soma_idx = 0
         self.holding_potential = -80
         self.distribution = 'linear_increase'
 
         self.tau_w = 'auto'
-        self.basal_idx = 411
+        self.basal_idx = 594
         self.apic_idx = 599
         self.tuft_idx = 605
         self.input_idx = self.tuft_idx
@@ -2080,13 +2072,40 @@ class Figure7_sup_Hay_generic(PaperFigures):
         gs = GenericStudy('hay', 'white_noise', conductance='generic')
         for mu in self.mus:
             cell = gs._return_cell(self.holding_potential, 'generic', mu, self.distribution, self.tau_w)
+
+            if 0:
+                path_idxs = np.array([0, 335, 336, 337, 338, 339, 340, 341, 379, 380, 381, 411, 421,
+                                   443, 444, 445, 451, 452, 453, 454, 455, 456, 457, 511, 512, 513,
+                                        541, 542, 543, 544, 545, 546, 547, 548, 549, 591, 592, 593, 594,
+                                    595, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605])
+
+                plt.plot(cell.xmid[self.input_idx], cell.zmid[self.input_idx], 'y*', ms=20)
+                [plt.plot(cell.xmid[idx], cell.zmid[idx], marker='$%d$' % idx, ms=15) for idx in xrange(len(cell.xmid))]
+                [plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], c='r' if idx in path_idxs else 'k') for idx in xrange(len(cell.xmid))]
+                plt.show()
+
+
+                # for idx in path_idxs:
+                fig = plt.figure()
+                ax = plt.subplot(111, ylabel='Diameter [$\mu$m]', xlabel='Distance [$\mu$m]')
+                plt.plot(cell.zmid[path_idxs], cell.diam[path_idxs], lw=2, c='k')
+                plt.plot([0, cell.zmid[path_idxs][-1]], [2, 2], lw=2, c='gray')
+                simplify_axes(ax)
+                plt.savefig(join(self.figure_folder, 'dist_diameter.pdf'))
+                plt.savefig(join(self.figure_folder, 'dist_diameter.png'))
+
             cell.tstartms = 0
             cell.tstopms = 1
             cell.simulate(rec_imem=True)
             plot_idxs = [self.tuft_idx, self.apic_idx, self.basal_idx, self.soma_idx]
             elec_x = [cell.xmid[idx] + 20 for idx in plot_idxs] + [cell.xmid[idx] + 600 for idx in plot_idxs]
             elec_z = [cell.zmid[idx] for idx in plot_idxs] + [cell.zmid[idx] for idx in plot_idxs]
-            elec_y = np.zeros(len(elec_z))
+            elec_y = [cell.ymid[idx] for idx in plot_idxs] + [cell.ymid[idx] for idx in plot_idxs]
+
+            print elec_x, elec_y, elec_z
+            idxs = [self.soma_idx, self.basal_idx, self.apic_idx, self.tuft_idx]
+            print cell.xmid[idxs], cell.ymid[idxs], cell.zmid[idxs]
+            # sys.exit()
             # print elec_x, elec_z
 
             electrode_parameters = {
@@ -2191,8 +2210,8 @@ class Figure7_sup_Hay_generic(PaperFigures):
 
         self._draw_set_up_to_axis(ax_morph, input_idx, self.elec_x, self.elec_z, ic_plot=True)
 
-        ec_ax_t = self.fig.add_axes([0.55, 0.75, 0.1, 0.1], ylim=[1e-6, 1e-2], title='LFP\n[$\mu$V$^2$/Hz]', **ax_dict)
-        ec_ax_a = self.fig.add_axes([0.55, 0.55, 0.1, 0.1], ylim=[1e-6, 1e-2], **ax_dict)
+        ec_ax_t = self.fig.add_axes([0.55, 0.75, 0.1, 0.1], ylim=[1e-5, 1e-1], title='LFP\n[$\mu$V$^2$/Hz]', **ax_dict)
+        ec_ax_a = self.fig.add_axes([0.55, 0.55, 0.1, 0.1], ylim=[1e-5, 1e-1], **ax_dict)
         ec_ax_s = self.fig.add_axes([0.55, 0.15, 0.1, 0.1], ylim=[1e-7, 1e-3], **ax_dict)
         ec_ax_b = self.fig.add_axes([0.55, 0.35, 0.1, 0.1], ylim=[1e-7, 1e-3], **ax_dict)
         sig_ax_list = [ec_ax_s, ec_ax_a, ec_ax_t, ec_ax_b]
@@ -2205,20 +2224,19 @@ class Figure7_sup_Hay_generic(PaperFigures):
         sig2_ax_list = [ec_ax_s2, ec_ax_a2, ec_ax_t2, ec_ax_b2]
         [ax.grid(True) for ax in sig2_ax_list]
 
-        im_ax_t = self.fig.add_axes([0.22, 0.75, 0.1, 0.1], ylim=[1e-6, 1e-1], title='I$_m$\n[nA$^2$/Hz]', **ax_dict)
-        im_ax_a = self.fig.add_axes([0.22, 0.55, 0.1, 0.1], ylim=[1e-8, 1e-3], **ax_dict)
-        im_ax_s = self.fig.add_axes([0.22, 0.15, 0.1, 0.1], ylim=[1e-11, 1e-6], **ax_dict)
-        im_ax_b = self.fig.add_axes([0.22, 0.35, 0.1, 0.1], ylim=[1e-11, 1e-6], **ax_dict)
+        im_ax_t = self.fig.add_axes([0.22, 0.75, 0.1, 0.1], ylim=[1e-5, 1e-2], title='I$_m$\n[nA$^2$/Hz]', **ax_dict)
+        im_ax_a = self.fig.add_axes([0.22, 0.55, 0.1, 0.1], ylim=[1e-7, 1e-4], **ax_dict)
+        im_ax_b = self.fig.add_axes([0.22, 0.35, 0.1, 0.1], ylim=[1e-7, 1e-4], **ax_dict)
+        im_ax_s = self.fig.add_axes([0.22, 0.15, 0.1, 0.1], ylim=[1e-9, 1e-6], **ax_dict)
         im_ax_list = [im_ax_s, im_ax_a, im_ax_t, im_ax_b]
         [ax.grid(True) for ax in im_ax_list]
 
-        vm_ax_t = self.fig.add_axes([0.06, 0.75, 0.1, 0.1], ylim=[1e-1, 1e4], title='V$_m$\n[mV$^2$/Hz]', **ax_dict)
-        vm_ax_a = self.fig.add_axes([0.06, 0.55, 0.1, 0.1], ylim=[1e-1, 1e4], **ax_dict)
-        vm_ax_s = self.fig.add_axes([0.06, 0.15, 0.1, 0.1], ylim=[1e-5, 1e1], **ax_dict)
-        vm_ax_b = self.fig.add_axes([0.06, 0.35, 0.1, 0.1], ylim=[1e-5, 1e1], **ax_dict)
+        vm_ax_t = self.fig.add_axes([0.06, 0.75, 0.1, 0.1], ylim=[1e0, 1e4], title='V$_m$\n[mV$^2$/Hz]', **ax_dict)
+        vm_ax_a = self.fig.add_axes([0.06, 0.55, 0.1, 0.1], ylim=[1e0, 1e4], **ax_dict)
+        vm_ax_s = self.fig.add_axes([0.06, 0.15, 0.1, 0.1], ylim=[1e-5, 1e-1], **ax_dict)
+        vm_ax_b = self.fig.add_axes([0.06, 0.35, 0.1, 0.1], ylim=[1e-1, 1e3], **ax_dict)
         vm_ax_list = [vm_ax_s, vm_ax_a, vm_ax_t, vm_ax_b]
         [ax.grid(True) for ax in vm_ax_list]
-
 
         # mark_subplots(ax_morph, 'C', xpos=0.1, ypos=0.9)
 
@@ -2750,7 +2768,7 @@ class Figure4(PaperFigures):
         freqs, vmem_psd = tools.return_freq_and_psd(self.timeres / 1000., vmem)
 
         ax_dict = {'xlim': [1, 450]}
-        ax2 = self.fig.add_subplot(3, 5, numb * 5 + 3, ylim=[1e-5, 1e-2], **ax_dict)
+        ax2 = self.fig.add_subplot(3, 5, numb * 5 + 3, ylim=[1e-5, 1e1], **ax_dict)
         ax1 = self.fig.add_subplot(3, 5, numb * 5 + 4, ylim=[1e-10, 1.1e-7], **ax_dict)
         ax0 = self.fig.add_subplot(3, 5, numb * 5 + 5, ylim=[1e-6, 1e-4], **ax_dict)
 
@@ -2886,6 +2904,7 @@ class Figure6(PaperFigures):
     def __init__(self, recalculate_LFP=True):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
+        # self.w_bar_scaling_factor = 1.0
         self.figure_name = 'figure_6'
         self.conductance = 'generic'
         self.sim_folder = join(self.root_folder, 'generic_study', 'hay')
@@ -2989,7 +3008,11 @@ class Figure6(PaperFigures):
 
     def make_figure(self):
 
-        sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
+        if hasattr(self, 'w_bar_scaling_factor'):
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.1f' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
+                                                        self.holding_potential, self.distribution, self.tau, self.w_bar_scaling_factor)
+        else:
+            sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s' % (self.cell_name, self.input_type, str(self.input_idx), self.mu,
                                                  self.holding_potential, self.distribution, self.tau_w)
         distances = np.linspace(-2500, 2500, 100)
         heights = np.linspace(1850, -650, 50)
@@ -3118,7 +3141,7 @@ class Figure6(PaperFigures):
 
 
 class Figure6_reviewer(PaperFigures):
-    def __init__(self, w_bar_scaling_factor, recalculate_LFP=True):
+    def __init__(self, w_bar_scaling_factor, recalculate_LFP=True, do_simulations=True, make_figure=True):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
         self.w_bar_scaling_factor = w_bar_scaling_factor
@@ -3137,7 +3160,6 @@ class Figure6_reviewer(PaperFigures):
         self.weight = 0.0001
         self.mu = 2.0
         self.tau = 'auto'
-        do_simulations = False
 
         if do_simulations:
 
@@ -3166,7 +3188,7 @@ class Figure6_reviewer(PaperFigures):
             lfp_trace_positions = np.array([[200, 0], [200, 475], [200, 950], [200, 1425]])
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
             gs.w_bar_scaling_factor = self.w_bar_scaling_factor
-            cell = gs._return_cell(self.holding_potential, 'generic', 2.0, 'linear_increase', 'auto')
+            cell = gs._return_cell(self.holding_potential, self.conductance, self.mu, self.distribution, self.tau)
             cell.tstartms = 0
             cell.tstopms = 1
             cell.simulate(rec_imem=True)
@@ -3191,11 +3213,12 @@ class Figure6_reviewer(PaperFigures):
             np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
             np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
             print "Done recalculating LFP"
-        self._initialize_figure()
-        i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp = self.make_figure()
-        self.res_list = [i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp]
-        self._finitialize_figure()
-        plt.close('all')
+        if make_figure:
+            self._initialize_figure()
+            i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp = self.make_figure()
+            self.res_list = [i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp]
+            self._finitialize_figure()
+            plt.close('all')
 
 
     def return_ax_coors(self, mother_ax, pos, x_shift=0):
@@ -3319,7 +3342,7 @@ class Figure6_reviewer(PaperFigures):
 
 
 class Figure6_reviewer2(PaperFigures):
-    def __init__(self, w_bar_scaling_factor, recalculate_LFP=True):
+    def __init__(self, w_bar_scaling_factor, recalculate_LFP=True, do_simulations=False, make_figure=True):
         PaperFigures.__init__(self)
         self.cell_name = 'hay'
         self.w_bar_scaling_factor = w_bar_scaling_factor
@@ -3337,7 +3360,6 @@ class Figure6_reviewer2(PaperFigures):
         self.tau_w = 'auto'
         self.weight = 0.0001
         self.mu = 2.0
-        do_simulations = False
 
         if do_simulations:
 
@@ -3393,11 +3415,12 @@ class Figure6_reviewer2(PaperFigures):
             np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
             print "Done recalculating LFP"
 
-        self._initialize_figure()
-        i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp = self.make_figure()
-        self.res_list = [i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp]
-        self._finitialize_figure()
-        plt.close('all')
+        if make_figure:
+            self._initialize_figure()
+            i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp = self.make_figure()
+            self.res_list = [i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp]
+            self._finitialize_figure()
+            plt.close('all')
 
     def return_ax_coors(self, mother_ax, pos, x_shift=0):
         ax_w = 0.12
@@ -3531,24 +3554,29 @@ class Figure6_reviewer2(PaperFigures):
 class NewFigureResonance(PaperFigures):
     def __init__(self):
         PaperFigures.__init__(self)
-        self.fig_name = 'resonance_apic_input'
+        self.fig_name = 'resonance_linear_decrease_soma_input'
 
         if 1:
-            ws = np.arange(16) * 0.2
+            ws = np.arange(5) * 0.5
             resonances = []
+            resonances2 = []
             for w in ws:
-                f = Figure6_reviewer2(w, False)
+                # f = Figure6_reviewer(w, recalculate_LFP=True, do_simulations=True, make_figure=False)
+                f2 = Figure6_reviewer2(w, recalculate_LFP=False, do_simulations=False, make_figure=True)
                 # print f.res_list
-                resonances.append(f.res_list)
+                # resonances.append(f.res_list)
+                resonances.append(f2.res_list)
+            # sys.exit()
             resonances = np.array(resonances)
+            # resonances2 = np.array(resonances2)
 
             np.save(join(self.root_folder, 'ws.npy'), ws)
             np.save(join(self.root_folder, 'resonances.npy'), resonances)
+            # np.save(join(self.root_folder, 'resonances2.npy'), resonances2)
         else:
             ws = np.load(join(self.root_folder, 'ws.npy'))
             resonances = np.load(join(self.root_folder, 'resonances.npy'))
-        # sys.exit()
-        # os.system("python paper_figures.py")
+
 
         all_line_names = ["I$_m$ mode", "I$_m$ soma", "I$_m$ input site",
                       "V$_m$ mode", "V$_m$ soma", "V$_m$ input site", "LFP mode"]
@@ -3767,17 +3795,17 @@ class Figure7(PaperFigures):
 
 if __name__ == '__main__':
 
-    #Figure1(False)
+    # Figure1(True)
     # Figure1_with_gradient(False)
-    #Figure1_conductance_based_WN(False)
+    # Figure1_conductance_based_WN(False)
     # Figure2(True)
     # Figure3(True)
-    # Figure4(True)
+    # Figure4(False)
     # Figure5(False)
     # Figure6(True)
 
-    # Figure6_reviewer(1.0, False)
-    # NewFigureResonance()
+    # Figure6_reviewer(1.0, False, False)
+    NewFigureResonance()
     # Figure7(do_simulations=True)
     # Figure7_sup_Hay_original()
-    Figure7_sup_Hay_generic()
+    # Figure7_sup_Hay_generic()

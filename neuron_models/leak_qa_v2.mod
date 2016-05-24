@@ -5,7 +5,7 @@ TITLE leak + quasi-active current
 NEURON	{
 	SUFFIX QA
 	NONSPECIFIC_CURRENT i
-	RANGE g_pas, mu, g_w_bar, i, V_r, tau_w, w_inf
+	RANGE g_pas, mu, g_w_bar, i, V_r, tau_w, w_inf, gamma_R
 }
 
 UNITS	{
