@@ -158,10 +158,9 @@ class GenericStudy:
                 'custom_fun': [active_declarations],  # will execute this function
                 'custom_fun_args': [{'conductance_type': conductance_type,
                                      'mu_factor': mu,
-                                     'g_pas': 0.00005,#0.0002, # / 5,
+                                     'g_pas': 0.00005,
                                      'distribution': distribution,
                                      'tau_w': tau_w,
-                                     #'total_w_conductance': 6.23843378791,# / 5,
                                      'avrg_w_bar': 0.00005 * 2 * fact,
                                      'hold_potential': holding_potential}]
             }

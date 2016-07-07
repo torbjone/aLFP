@@ -12,11 +12,8 @@ import LFPy
 
 def make_cell_uniform(Vrest=-80):
 
-    # for sec in nrn.allsec():
-    #     for seg in sec:
-    #         if nrn.ismembrane("ca_ion"):
-    #             print "Cai: ", sec.name(), seg.cai, seg.ica
-    print "Making cell uniform"
+
+    print "Making cell uniform in resting potential"
     nrn.t = 0
     nrn.finitialize(Vrest)
     nrn.fcurrent()
@@ -40,16 +37,6 @@ def make_cell_uniform(Vrest=-80):
             if nrn.ismembrane("Ih_linearized_v2_frozen"):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
 
-    # e = []
-    # for sec in nrn.allsec():
-    #     for seg in sec:
-    #         e.append(seg.e_pas)
-            # if nrn.ismembrane("ca_ion"):
-            #     print "Cai: ", sec.name(), seg.cai, seg.ica
-    # plt.plot(e)
-    # plt.ylim([0, -100])
-    # plt.xlim([-10, 700])
-    # plt.show()
 
 def _get_longest_distance():
 
@@ -99,11 +86,8 @@ def biophys_zuchkova(**kwargs):
 
 def biophys_generic(**kwargs):
 
-    # v = kwargs['hold_potential']
     if 'auto' in kwargs['tau_w']:
-        # mAlpha = 0.001 * 6.43 * (v + 154.9)/(np.exp((v + 154.9) / 11.9) - 1.)
-        # mBeta = 0.001 * 193. * np.exp(v / 33.1)
-        tau = 50 #1/(mAlpha + mBeta)
+        tau = 50
         if '0.1' in kwargs['tau_w']:
             print "1/10th of auto"
             tau_w = tau * 0.1
@@ -161,7 +145,6 @@ def biophys_generic(**kwargs):
 
     if np.abs(cond_check - total_w_conductance) < 1e-6:
         pass
-        #print "Works", cond_check, total_w_conductance, cond_check - total_w_conductance
     else:
         raise RuntimeError("Total conductance not as expected")
 
@@ -328,76 +311,6 @@ def biophys_Ih_frozen(**kwargs):
 
     print("Single frozen Ih inserted.")
 
-def biophys_SKv3_1(**kwargs):
-
-    for sec in nrn.allsec():
-        sec.insert('pas')
-        sec.cm = 1.0
-        sec.Ra = 100.
-        sec.e_pas = -90.
-
-    for sec in nrn.soma:
-        sec.insert('SKv3_1')
-        sec.ek = -85
-        sec.g_pas = 0.0000338
-        sec.gSKv3_1bar_SKv3_1 = 0.693
-
-    for sec in nrn.apic:
-        sec.cm = 2
-        sec.insert('SKv3_1')
-        sec.ek = -85
-        sec.gSKv3_1bar_SKv3_1 = 0.000261
-        sec.g_pas = 0.0000589
-
-    for sec in nrn.dend:
-        sec.cm = 2
-        sec.g_pas = 0.0000467
-
-    for sec in nrn.axon:
-        sec.g_pas = 0.0000325
-
-    if 'hold_potential' in kwargs:
-        make_cell_uniform(Vrest=kwargs['hold_potential'])
-    print("SKv3_1 ion-channels inserted.")
-
-def biophys_SKv3_1_Ih(**kwargs):
-
-    for sec in nrn.allsec():
-        sec.insert('pas')
-        sec.cm = 1.0
-        sec.Ra = 100.
-        sec.e_pas = -90.
-
-    for sec in nrn.soma:
-        sec.insert('SKv3_1')
-        sec.insert('Ih')
-        sec.ek = -85
-        sec.gIhbar_Ih = 0.0002
-        sec.g_pas = 0.0000338
-        sec.gSKv3_1bar_SKv3_1 = 0.693
-
-    for sec in nrn.apic:
-        sec.cm = 2
-        sec.insert('Ih')
-        sec.insert('SKv3_1')
-        sec.ek = -85
-        sec.gSKv3_1bar_SKv3_1 = 0.000261
-        sec.g_pas = 0.0000589
-    nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.087, 0.0002)
-
-    for sec in nrn.dend:
-        sec.cm = 2
-        sec.insert('Ih')
-        sec.gIhbar_Ih = 0.0002
-        sec.g_pas = 0.0000467
-
-    for sec in nrn.axon:
-        sec.g_pas = 0.0000325
-
-    if 'hold_potential' in kwargs:
-        make_cell_uniform(Vrest=kwargs['hold_potential'])
-    print("Ih and SKv3_1 ion-channels inserted.")
-
 def biophys_active(**kwargs):
 
     for sec in nrn.allsec():
@@ -476,190 +389,6 @@ def biophys_active(**kwargs):
             for seg in sec:
                 seg.e_pas = seg.v
     print("active ion-channels inserted.")
-
-def biophys_reduced(**kwargs):
-
-    for sec in nrn.allsec():
-        sec.insert('pas')
-        sec.cm = 1.0
-        sec.Ra = 100.
-        sec.e_pas = -90.
-
-    for sec in nrn.soma:
-        sec.insert('Ca_LVAst')
-        # sec.insert('Ca_HVA')
-        # sec.insert('SKv3_1')
-        # sec.insert('SK_E2')
-        # sec.insert('K_Tst')
-        # sec.insert('K_Pst')
-        # sec.insert('Nap_Et2')
-        # sec.insert('NaTa_t')
-        # sec.insert('CaDynamics_E2')
-        # sec.insert('Ih')
-        # sec.ek = -85
-        # sec.ena = 50
-        # sec.gIhbar_Ih = 0.0002
-        sec.g_pas = 0.0000338
-        # sec.decay_CaDynamics_E2 = 460.0
-        # sec.gamma_CaDynamics_E2 = 0.000501
-        sec.gCa_LVAstbar_Ca_LVAst = 0.00343
-        # sec.gCa_HVAbar_Ca_HVA = 0.000992
-        # sec.gSKv3_1bar_SKv3_1 = 0.693
-        # sec.gSK_E2bar_SK_E2 = 0.0441
-        # sec.gK_Tstbar_K_Tst = 0.0812
-        # sec.gK_Pstbar_K_Pst = 0.00223
-        # sec.gNap_Et2bar_Nap_Et2 = 0.00172
-        # sec.gNaTa_tbar_NaTa_t = 2.04
-
-    for sec in nrn.apic:
-        sec.cm = 2
-        # sec.insert('Ih')
-        # sec.insert('SK_E2')
-        sec.insert('Ca_LVAst')
-        print sec.eca
-        # sec.insert('Ca_HVA')
-        # sec.insert('SKv3_1')
-        # sec.insert('NaTa_t')
-        # sec.insert('Im')
-        # sec.insert('CaDynamics_E2')
-        # sec.ek = -85
-        # sec.ena = 50
-        # sec.decay_CaDynamics_E2 = 122
-        # sec.gamma_CaDynamics_E2 = 0.000509
-        # sec.gSK_E2bar_SK_E2 = 0.0012
-        # sec.gSKv3_1bar_SKv3_1 = 0.000261
-        # sec.gNaTa_tbar_NaTa_t = 0.0213
-        # sec.gImbar_Im = 0.0000675
-        sec.g_pas = 0.0000589
-
-    # nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.087, 0.0002)
-    nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.0, 0.010, 685.0, 885.0, 0.0187)
-    # nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.0, 0.10, 685.00, 885.0, 0.000555)
-
-    for sec in nrn.dend:
-        sec.cm = 2
-        # sec.insert('Ih')
-        # sec.gIhbar_Ih = 0.0002
-        sec.g_pas = 0.0000467
-
-    for sec in nrn.axon:
-        sec.g_pas = 0.0000325
-
-    if 'hold_potential' in kwargs:
-        make_cell_uniform(Vrest=kwargs['hold_potential'])
-    print("reduced ion-channels inserted.")
-
-def biophys_regenerative(**kwargs):
-
-    for sec in nrn.allsec():
-        sec.insert('pas')
-        sec.cm = 1.0
-        sec.Ra = 100.
-        sec.e_pas = -90.
-
-    for sec in nrn.soma:
-        # sec.insert('Ca_LVAst')
-        # sec.insert('Ca_HVA')
-        sec.insert('SKv3_1')
-        # sec.insert('SK_E2')
-        # sec.insert('K_Tst')
-        # sec.insert('K_Pst')
-        sec.insert('Nap_Et2')
-        sec.insert('NaTa_t')
-        # sec.insert('CaDynamics_E2')
-        # sec.insert('Ih')
-        # sec.ek = -85
-        sec.ena = 50
-        # sec.gIhbar_Ih = 0.0002
-        sec.g_pas = 0.0000338
-        # sec.decay_CaDynamics_E2 = 460.0
-        # sec.gamma_CaDynamics_E2 = 0.000501
-        # sec.gCa_LVAstbar_Ca_LVAst = 0.00343
-        # sec.gCa_HVAbar_Ca_HVA = 0.000992
-        sec.gSKv3_1bar_SKv3_1 = 0.693
-        # sec.gSK_E2bar_SK_E2 = 0.0441
-        # sec.gK_Tstbar_K_Tst = 0.0812
-        # sec.gK_Pstbar_K_Pst = 0.00223
-        sec.gNap_Et2bar_Nap_Et2 = 0.00172
-        sec.gNaTa_tbar_NaTa_t = 2.04
-
-    for sec in nrn.apic:
-        sec.cm = 2
-        # sec.insert('Ih')
-        # sec.insert('SK_E2')
-        # sec.insert('Ca_LVAst')
-        # print sec.eca
-        # sec.insert('Ca_HVA')
-        # sec.insert('SKv3_1')
-        # sec.insert('NaTa_t')
-        # sec.insert('Im')
-        # sec.insert('CaDynamics_E2')
-        # sec.ek = -85
-        # sec.ena = 50
-        # sec.decay_CaDynamics_E2 = 122
-        # sec.gamma_CaDynamics_E2 = 0.000509
-        # sec.gSK_E2bar_SK_E2 = 0.0012
-        # sec.gSKv3_1bar_SKv3_1 = 0.000261
-        # sec.gNaTa_tbar_NaTa_t = 0.0213
-        # sec.gImbar_Im = 0.0000675
-        sec.g_pas = 0.0000589
-
-    # nrn.distribute_channels("apic", "gIhbar_Ih", 2, -0.8696, 3.6161, 0.0, 2.087, 0.0002)
-    # nrn.distribute_channels("apic", "gCa_LVAstbar_Ca_LVAst", 3, 1.0, 0.010, 685.0, 885.0, 0.0187)
-    # nrn.distribute_channels("apic", "gCa_HVAbar_Ca_HVA", 3, 1.0, 0.10, 685.00, 885.0, 0.000555)
-
-    for sec in nrn.dend:
-        sec.cm = 2
-        # sec.insert('Ih')
-        # sec.gIhbar_Ih = 0.0002
-        sec.g_pas = 0.0000467
-
-    for sec in nrn.axon:
-        sec.g_pas = 0.0000325
-
-    if 'hold_potential' in kwargs:
-        make_cell_uniform(Vrest=kwargs['hold_potential'])
-    print("Regenerative ion-channels inserted.")
-
-def biophys_K(**kwargs):
-
-    for sec in nrn.allsec():
-        sec.insert('pas')
-        sec.cm = 1.0
-        sec.Ra = 100.
-        sec.e_pas = -90.
-
-    for sec in nrn.soma:
-        sec.insert('SKv3_1')
-        # sec.insert('SK_E2')
-        # sec.insert('K_Tst')
-        # sec.insert('K_Pst')
-        sec.ek = -85
-        sec.g_pas = 0.0000338
-        sec.gSKv3_1bar_SKv3_1 = 0.693
-        # sec.gSK_E2bar_SK_E2 = 0.0441
-        # sec.gK_Tstbar_K_Tst = 0.0812
-        # sec.gK_Pstbar_K_Pst = 0.00223
-
-    for sec in nrn.apic:
-        sec.cm = 2
-        # sec.insert('SK_E2')
-        sec.insert('SKv3_1')
-        sec.ek = -85
-        # sec.gSK_E2bar_SK_E2 = 0.0012
-        sec.gSKv3_1bar_SKv3_1 = 0.000261
-        sec.g_pas = 0.0000589
-
-    for sec in nrn.dend:
-        sec.cm = 2
-        sec.g_pas = 0.0000467
-
-    for sec in nrn.axon:
-        sec.g_pas = 0.0000325
-
-    if 'hold_potential' in kwargs:
-        make_cell_uniform(Vrest=kwargs['hold_potential'])
-    print("K ion-channels inserted.")
 
 def biophys_NaP(**kwargs):
 
