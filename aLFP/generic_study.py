@@ -319,6 +319,7 @@ class GenericStudy:
         sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_sec, mu,
                                                        self.holding_potential, distribution, tau, weight)
 
+        # Sometimes we do not want to redo simulations if they are already done
         # if os.path.isfile(join(self.sim_folder, 'sig_%s.npy' % sim_name)):
         #     print "Skipping ", mu, input_sec, distribution, tau_w, weight, 'sig_%s.npy' % sim_name
         #     return
@@ -327,11 +328,8 @@ class GenericStudy:
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_sec, weight)
         print "Starting simulation ..."
-        #import ipdb; ipdb.set_trace()
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
 
-        # plt.plot(cell.tvec, cell.somav)
-        # plt.show()
 
         self.save_neural_sim_single_input_data(cell, electrode, input_sec, mu, distribution, tau_w, weight)
         neuron.h('forall delete_section()')

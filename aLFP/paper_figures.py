@@ -2507,11 +2507,8 @@ class Figure3(PaperFigures):
                        0: 'k',
                        2: 'b'}
         if do_simulations:
-
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
-
             distributions = ['linear_increase', 'linear_decrease', 'uniform']
-
             input_idxs = [self.apic_idx, self.soma_idx]
             tau_ws = ['auto']
             mus = self.mus
@@ -3799,13 +3796,13 @@ if __name__ == '__main__':
     # Figure1_with_gradient(False)
     # Figure1_conductance_based_WN(False)
     # Figure2(True)
-    # Figure3(True)
+    Figure3(True)
     # Figure4(False)
     # Figure5(False)
     # Figure6(True)
 
     # Figure6_reviewer(1.0, False, False)
-    NewFigureResonance()
+    # NewFigureResonance()
     # Figure7(do_simulations=True)
     # Figure7_sup_Hay_original()
     # Figure7_sup_Hay_generic()
