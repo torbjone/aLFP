@@ -20,21 +20,21 @@ class GenericStudy:
 
     def __init__(self, cell_name, input_type, conductance='generic', extended_electrode=True):
 
-        self.mu_name_dict = {-0.5: 'Regenerative ($\mu^* =\ -0.5$)',
-                             0: 'Passive ($\mu^* =\ 0$)',
-                             2: 'Restorative ($\mu^* =\ 2$)'}
+        self.mu_name_dict = {-0.5: 'Regenerative',
+                             0: 'Passive',
+                             2: 'Restorative'}
 
         self.cell_name = cell_name
         self.conductance = conductance
         self.input_type = input_type
         self.username = os.getenv('USER')
-        self.root_folder = join('/home', self.username, 'work', 'aLFP')
+        self.root_folder = join('..', '')  # join('/home', self.username, 'work', 'aLFP')
         if at_stallo:
             self.figure_folder = join('/global', 'work', self.username, 'aLFP', 'generic_study')
             self.sim_folder = join('/global', 'work', self.username, 'aLFP', 'generic_study', cell_name)
         else:
-            self.figure_folder = join('/home', self.username, 'work', 'aLFP', 'generic_study')
-            self.sim_folder = join('/home', self.username, 'work', 'aLFP', 'generic_study', cell_name)
+            self.figure_folder = join(self.root_folder, 'generic_study') # join('/home', self.username, 'work', 'aLFP', 'generic_study')
+            self.sim_folder = join(self.root_folder, 'generic_study', cell_name) # join('/home', self.username, 'work', 'aLFP', 'generic_study', cell_name)
         if not os.path.isdir(self.figure_folder):
             os.mkdir(self.figure_folder)
         if not os.path.isdir(self.sim_folder):
@@ -187,7 +187,7 @@ class GenericStudy:
              'g_w_bar_QA': np.zeros(cell.totnsegs),
              }
 
-        if not self.repeats is None:
+        if self.repeats is not None:
             cut_off_idx = (len(cell.tvec) - 1) / self.repeats
             cell.tvec = cell.tvec[-cut_off_idx:] - cell.tvec[-cut_off_idx]
             cell.imem = cell.imem[:, -cut_off_idx:]

@@ -463,19 +463,20 @@ class PaperFigures:
                                 'K': '-', 'reduced': '-', 'NaP_frozen': '-', 'NaP_linearized': '-',
                                   -0.5: '-', 0.0: '-', 2.0:'-'}
 
-        self.figure_folder = join('/home', os.getenv('USER'), 'work', 'aLFP', 'paper_figures')
-        self.root_folder = join('/home', os.getenv('USER'), 'work', 'aLFP')
+        self.root_folder = join('..', '')  # join('/home', os.getenv('USER'), 'work', 'aLFP')
+        self.figure_folder = join(self.root_folder, 'paper_figures')  # join('/home', os.getenv('USER'), 'work', 'aLFP', 'paper_figures')
+
         if not os.path.isdir(join(self.root_folder, 'paper_simulations')):
             os.mkdir(join(self.root_folder, 'paper_simulations'))
 
     def _draw_morph_to_axis(self, ax, input_pos, ic_comp=None, distribution=None):
 
-        xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
-        xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zend = np.load(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)))
-        xmid = np.load(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
+        xstart = np.load(join(self.sim_folder, 'xstart_%s.npy' % self.cell_name))
+        zstart = np.load(join(self.sim_folder, 'zstart_%s.npy' % self.cell_name))
+        xend = np.load(join(self.sim_folder, 'xend_%s.npy' % self.cell_name))
+        zend = np.load(join(self.sim_folder, 'zend_%s.npy' % self.cell_name))
+        xmid = np.load(join(self.sim_folder, 'xmid_%s.npy' % self.cell_name))
+        zmid = np.load(join(self.sim_folder, 'zmid_%s.npy' % self.cell_name))
 
         if type(input_pos) is int:
             ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=2, ms=10)
@@ -483,7 +484,7 @@ class PaperFigures:
             ax.plot(xmid[input_pos], zmid[input_pos], 'g.', zorder=2, ms=3)
 
         if distribution is None:
-            clr_list = ['0.5' for idx in xrange(len(xmid))]
+            clr_list = ['0.5' for _ in xrange(len(xmid))]
         elif distribution is 'linear_increase':
             color_at_pos = lambda d: plt.cm.hot(int(256./1500 * d))
             dist = np.sqrt(xmid**2 + zmid**2)
@@ -566,12 +567,12 @@ class PaperFigures:
 
     def _draw_simplified_morph_to_axis(self, ax, input_pos=None, grading=None):
 
-        xstart = np.load(join(self.sim_folder, 'xstart_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zstart = np.load(join(self.sim_folder, 'zstart_%s_%s.npy' % (self.cell_name, self.conductance)))
-        xend = np.load(join(self.sim_folder, 'xend_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zend = np.load(join(self.sim_folder, 'zend_%s_%s.npy' % (self.cell_name, self.conductance)))
-        xmid = np.load(join(self.sim_folder, 'xmid_%s_%s.npy' % (self.cell_name, self.conductance)))
-        zmid = np.load(join(self.sim_folder, 'zmid_%s_%s.npy' % (self.cell_name, self.conductance)))
+        xstart = np.load(join(self.sim_folder, 'xstart_%s.npy' % self.cell_name))
+        zstart = np.load(join(self.sim_folder, 'zstart_%s.npy' % self.cell_name))
+        xend = np.load(join(self.sim_folder, 'xend_%s.npy' % self.cell_name))
+        zend = np.load(join(self.sim_folder, 'zend_%s.npy' % self.cell_name))
+        xmid = np.load(join(self.sim_folder, 'xmid_%s.npy' % self.cell_name))
+        zmid = np.load(join(self.sim_folder, 'zmid_%s.npy' % self.cell_name))
 
         dist = np.sqrt(xmid**2 + zmid**2)
 
@@ -2494,9 +2495,9 @@ class Figure3(PaperFigures):
         self.apic_idx = 605
         self.axis_w_shift = 0.25
         self.mus = [-0.5, 0, 2]
-        self.mu_name_dict = {-0.5: 'Regenerative ($\mu^* =\ -0.5$)',
-                             0: 'Passive ($\mu^* =\ 0$)',
-                             2: 'Restorative ($\mu^* =\ 2$)'}
+        self.mu_name_dict = {-0.5: 'Regenerative',
+                             0: 'Passive',
+                             2: 'Restorative'}
         self.input_type = 'white_noise'
         self.input_idxs = [self.apic_idx, self.soma_idx]
         self.elec_idxs = [self.elec_apic_idx, self.elec_soma_idx]
