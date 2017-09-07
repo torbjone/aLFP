@@ -3,7 +3,7 @@
 The python code to reproduce all figures from a modeling study of the contribution
 of active conductances to the Local Field Potential for single cells.
 Figure numbers in paper_figures.py corresponds to figures in this paper:
-http://arxiv.org/pdf/1512.04293v1.pdf
+https://www.ncbi.nlm.nih.gov/pubmed/27079755
 
 ### How do I get set up? ###
 In all folders containing .mod files the command "nrnivmodl" (Linux and Mac) must be excuted in a terminal. This assumes
@@ -19,7 +19,7 @@ get started.
 
 ### Who do I talk to? ###
 
-TorbjÃ¸rn V Ness - torbness@gmail.com
+Torbjørn V Ness - torbness@gmail.com
 
 Michiel Remme
 
