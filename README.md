@@ -1,3 +1,5 @@
+# Warning: This code is not fully up to date with Python 3 and LFPy 2.X. If you run into problems, please raise an issue or contact the authors.#
+
 # README #
 
 The python code to reproduce all figures from a modeling study of the contribution
@@ -19,7 +21,7 @@ get started.
 
 ### Who do I talk to? ###
 
-Torbjørn V Ness - torbness@gmail.com
+TorbjÃ¸rn V Ness - torbness@gmail.com
 
 Michiel Remme
 
