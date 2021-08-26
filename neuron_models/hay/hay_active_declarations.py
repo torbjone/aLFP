@@ -5,7 +5,9 @@ import os
 from os.path import join
 import sys
 import numpy as np
-import pylab as plt
+import matplotlib
+matplotlib.use("AGG")
+import matplotlib.pyplot as plt
 import neuron
 nrn = neuron.h
 import LFPy
@@ -13,28 +15,28 @@ import LFPy
 def make_cell_uniform(Vrest=-80):
 
 
-    print "Making cell uniform in resting potential"
+    print("Making cell uniform in resting potential")
     nrn.t = 0
     nrn.finitialize(Vrest)
     nrn.fcurrent()
     for sec in nrn.allsec():
         for seg in sec:
             seg.e_pas = seg.v
-            if nrn.ismembrane("na_ion"):
+            if nrn.ismembrane("na_ion", sec=sec):
                 seg.e_pas += seg.ina/seg.g_pas
-            if nrn.ismembrane("k_ion"):
+            if nrn.ismembrane("k_ion", sec=sec):
                 seg.e_pas += seg.ik/seg.g_pas
-            if nrn.ismembrane("ca_ion"):
+            if nrn.ismembrane("ca_ion", sec=sec):
                 seg.e_pas = seg.e_pas + seg.ica/seg.g_pas
-            if nrn.ismembrane("Ih"):
+            if nrn.ismembrane("Ih", sec=sec):
                 seg.e_pas += seg.ihcn_Ih/seg.g_pas
-            if nrn.ismembrane("Ih_z"):
+            if nrn.ismembrane("Ih_z", sec=sec):
                 seg.e_pas += seg.ih_Ih_z/seg.g_pas
-            if nrn.ismembrane("Ih_frozen"):
+            if nrn.ismembrane("Ih_frozen", sec=sec):
                 seg.e_pas += seg.ihcn_Ih_frozen/seg.g_pas
-            if nrn.ismembrane("Ih_linearized_v2"):
+            if nrn.ismembrane("Ih_linearized_v2", sec=sec):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2/seg.g_pas
-            if nrn.ismembrane("Ih_linearized_v2_frozen"):
+            if nrn.ismembrane("Ih_linearized_v2_frozen", sec=sec):
                 seg.e_pas += seg.ihcn_Ih_linearized_v2_frozen/seg.g_pas
 
 
@@ -89,10 +91,10 @@ def biophys_generic(**kwargs):
     if 'auto' in kwargs['tau_w']:
         tau = 50
         if '0.1' in kwargs['tau_w']:
-            print "1/10th of auto"
+            print("1/10th of auto")
             tau_w = tau * 0.1
         elif '10' in kwargs['tau_w']:
-            print "10-fold of auto"
+            print("10-fold of auto")
             tau_w = tau * 10
         else:
             tau_w = tau
@@ -110,7 +112,7 @@ def biophys_generic(**kwargs):
 
     total_area = _get_total_area()
     total_w_conductance = kwargs['avrg_w_bar'] * total_area
-    print "Total conductance:", total_w_conductance
+    print("Total conductance:", total_w_conductance)
     max_dist = _get_longest_distance()
     # print "Max dist: ", max_dist
 
@@ -381,7 +383,7 @@ def biophys_active(**kwargs):
     if 'hold_potential' in kwargs and kwargs['hold_potential'] != None:
         make_cell_uniform(Vrest=kwargs['hold_potential'])
     else:
-        print "NOT MAKING CELL UNIFORM !!! "
+        print("NOT MAKING CELL UNIFORM !!! ")
         nrn.t = 0
         nrn.finitialize(-80)
         nrn.fcurrent()
@@ -550,14 +552,28 @@ def make_syaptic_stimuli(cell, input_idx):
         'e': 0.,                   # reversal potential
         'syntype': 'ExpSyn',       # synapse type
         'tau': 10.,                # syn. time constant
-        'weight': 0.00145,            # syn. weight
+        'weight': 0.0001,            # syn. weight
+        'record_current': True,
+    }
+    synapse = LFPy.Synapse(cell, **synapse_parameters)
+    synapse.set_spike_times(np.array([80.]))
+
+    # Define synapse parameters
+    synapse_parameters = {
+        'idx': input_idx,
+        'e': -100.,                   # reversal potential
+        'syntype': 'ExpSyn',       # synapse type
+        'tau': 10.,                # syn. time constant
+        'weight': 0.0001,            # syn. weight
         'record_current': True,
     }
     synapse = LFPy.Synapse(cell, **synapse_parameters)
     synapse.set_spike_times(np.array([5.]))
+
+
     return cell, synapse
 
-def active_declarations(**kwargs):
+def active_declarations(self, **kwargs):
     ''' set active conductances for Hay model 2011 '''
     nrn.delete_axon()
     nrn.geom_nseg()
@@ -566,7 +582,7 @@ def active_declarations(**kwargs):
 
 def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
 
-    timeres = 2**-4
+    dt = 2**-4
     cut_off = 0
     tstopms = 150
     tstartms = -cut_off
@@ -582,14 +598,14 @@ def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
         'passive': False,           # switch on passive mechs
         'nsegs_method': 'lambda_f',  # method for setting number of segments,
         'lambda_f': 100,           # segments are isopotential at this frequency
-        'timeres_NEURON': timeres,   # dt of LFP and NEURON simulation.
-        'timeres_python': 1,
-        'tstartms': tstartms,          # start time, recorders start at t=0
-        'tstopms': tstopms,
+        'dt': dt,   # dt of LFP and NEURON simulation.
+        'tstart': tstartms,          # start time, recorders start at t=0
+        'tstop': tstopms,
         'custom_code': [join(model_path, 'custom_codes.hoc')],
         'custom_fun': [active_declarations],  # will execute this function
         'custom_fun_args': [{'conductance_type': conductance_type,
-                             'hold_potential': holding_potential}],
+                             'hold_potential': holding_potential
+                             }],
     }
 
     cell = LFPy.Cell(**cell_params)
@@ -598,12 +614,12 @@ def simulate_synaptic_input(input_idx, holding_potential, conductance_type):
 
     plt.subplot(211, title='Soma', ylim=[holding_potential-1.5, holding_potential+2.5])
     plt.plot(cell.tvec, cell.vmem[0, :], label='%d %s %d mV' % (input_idx, conductance_type,
-                                                                holding_potential))
+                                                               holding_potential))
 
-    plt.subplot(212, title='Shifted', ylim=[-0.5, 3])
-    plt.plot(cell.tvec, cell.vmem[input_idx, :] - cell.vmem[input_idx, 0])
+    plt.subplot(212, title='Input sitde')
+    plt.plot(cell.tvec, cell.vmem[input_idx, :])
 
-    plt.show()
+    plt.savefig("testfig_%s.png" %  conductance_type)
 
 def test_frozen_currents(input_idx, holding_potential):
 
@@ -780,7 +796,7 @@ def test_ca_initiation():
 
 if __name__ == '__main__':
     #test_steady_state()
-    simulate_synaptic_input(852, -80, 'passive')
+    simulate_synaptic_input(852, -73, 'active')
     # plt.savefig('Ca_initiation_testing.png')
     # test_ca_initiation()
     #plot_frozen_gh()

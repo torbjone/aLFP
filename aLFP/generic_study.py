@@ -63,7 +63,7 @@ class GenericStudy:
 
     def _set_input_specific_properties(self):
         if self.input_type == 'white_noise':
-            print "white noise input"
+            print("white noise input")
             self.plot_psd = True
             self.single_neural_sim_function = self._run_single_wn_simulation
             self.timeres_NEURON = 2**-4
@@ -74,7 +74,7 @@ class GenericStudy:
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
         elif self.input_type == 'distributed_synaptic':
-            print "Distributed synaptic input"
+            print("Distributed synaptic input")
             self.plot_psd = True
             self.single_neural_sim_function = self._run_distributed_synaptic_simulation
             self.timeres_NEURON = 2**-4
@@ -85,7 +85,7 @@ class GenericStudy:
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
         elif self.input_type == 'distributed_synaptic_cs':
-            print "Distributed synaptic input with current synapses"
+            print("Distributed synaptic input with current synapses")
             self.plot_psd = True
             self.single_neural_sim_function = self._run_distributed_synaptic_simulation
             self.timeres_NEURON = 2**-4
@@ -96,7 +96,7 @@ class GenericStudy:
             self.max_freq = 500
             self.short_list_elecs = [1, 1 + 6, 1 + 6 * 2]
         elif self.input_type == 'real_wn':
-            print "REAL white noise input"
+            print("REAL white noise input")
             self.plot_psd = True
             self.timeres_NEURON = 2**-4
             self.timeres_python = 2**-4
@@ -136,7 +136,7 @@ class GenericStudy:
         if self.cell_name == 'hay':
 
             if hasattr(self, 'w_bar_scaling_factor'):
-                print "Scaling qausi-active conductance with %1.1f" % self.w_bar_scaling_factor
+                print("Scaling qausi-active conductance with %1.1f" % self.w_bar_scaling_factor)
                 fact = self.w_bar_scaling_factor
             else:
                 fact = 1.
@@ -208,7 +208,7 @@ class GenericStudy:
             sim_name = '%s_%s_%s_%1.1f_%+d_%s_%s_%1.4f' % (self.cell_name, self.input_type, input_idx, mu,
                                                         self.holding_potential, distribution, tau, weight)
         else:
-            print input_idx, type(input_idx)
+            print(input_idx, type(input_idx))
             raise RuntimeError("input_idx is not recognized!")
 
         if hasattr(self, 'w_bar_scaling_factor'):
@@ -273,7 +273,7 @@ class GenericStudy:
             max_freq = 500
             plt.seed(1234)
             input_array = input_scaling * (self._make_WN_input(cell, max_freq))
-            print 1000 * np.std(input_array)
+            print(1000 * np.std(input_array))
         elif self.input_type == 'real_wn':
             tot_ntsteps = round((cell.tstopms - cell.tstartms)/cell.timeres_NEURON + 1)
             input_scaling = .1
@@ -287,7 +287,7 @@ class GenericStudy:
         for sec in cell.allseclist:
             for seg in sec:
                 if i == input_idx:
-                    print "Input inserted in ", sec.name()
+                    print("Input inserted in ", sec.name())
                     syn = neuron.h.ISyn(seg.x, sec=sec)
                     # print "Dist: ", nrn.distance(seg.x)
                 i += 1
@@ -305,7 +305,7 @@ class GenericStudy:
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         # self._quickplot_setup(cell, electrode)
         cell, syn, noiseVec = self._make_white_noise_stimuli(cell, input_idx)
-        print "Starting simulation ..."
+        print("Starting simulation ...")
 
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
 
@@ -326,7 +326,7 @@ class GenericStudy:
         electrode = LFPy.RecExtElectrode(**self.electrode_parameters)
         cell = self._return_cell(self.holding_potential, 'generic', mu, distribution, tau_w)
         cell, syn, noiseVec = self._make_distributed_synaptic_stimuli(cell, input_sec, weight)
-        print "Starting simulation ..."
+        print("Starting simulation ...")
         cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
 
 
@@ -436,11 +436,11 @@ class GenericStudy:
             for input_sec in ['homogeneous', 'tuft', 'distal_tuft']:
                 for mu in self.mus[1:]:
                     if divmod(sim_num, SIZE)[1] == RANK:
-                        print RANK, "simulating ", weight, mu
+                        print(RANK, "simulating ", weight, mu)
                         self._run_distributed_synaptic_simulation(mu, input_sec, 'linear_increase', 'auto', weight)
                 sim_num += 1
         COMM.Barrier()
-        print RANK, "reached this point"
+        print(RANK, "reached this point")
         # plot_num = 0
         # for weight in weights:
         #     if divmod(plot_num, SIZE)[1] == RANK:

@@ -4,6 +4,9 @@ import sys
 import os
 import numpy as np
 from os.path import join
+import matplotlib
+matplotlib.use("AGG")
+import matplotlib.pyplot as plt
 from plotting_convention import *
 import tools
 import neuron
@@ -20,21 +23,21 @@ class NeuralSimulations:
         self.sim_folder = PlotClass.sim_folder
         self.cell_name = PlotClass.cell_name
         self.root_folder = PlotClass.root_folder
-        self.timeres_NEURON = PlotClass.timeres_NEURON
-        self.timeres_python = PlotClass.timeres_python
+        self.dt = PlotClass.dt
+        # self.timeres_python = PlotClass.timeres_python
         self.cut_off = PlotClass.cut_off
         self.end_t = PlotClass.end_t
         self.repeats = PlotClass.repeats if hasattr(PlotClass, 'repeats') else None
         self.stimuli = PlotClass.stimuli
-        if self.stimuli is 'white_noise':
+        if self.stimuli == 'white_noise':
             self.stimuli_function = self._make_white_noise_stimuli
-        elif self.stimuli is 'white_noise_cb':
+        elif self.stimuli == 'white_noise_cb':
             self.stimuli_function = self._make_white_noise_cb_stimuli
-        elif self.stimuli is 'white_noise_cb_balanced':
+        elif self.stimuli == 'white_noise_cb_balanced':
             self.stimuli_function = self._make_white_noise_cb_balanced_stimuli
-        elif self.stimuli is 'synaptic':
+        elif self.stimuli == 'synaptic':
             self.stimuli_function = self._make_synaptic_stimuli
-        elif self.stimuli is 'single_sinusoid':
+        elif self.stimuli == 'single_sinusoid':
             self.stimuli_function = self._make_sinusoidal_stimuli
         else:
             raise RuntimeError("Unknown stimuli")
@@ -45,19 +48,20 @@ class NeuralSimulations:
         if not os.path.isdir(self.sim_folder): os.mkdir(self.sim_folder)
         holding_potential = holding_potential if not holding_potential is None else 00
 
-        if self.stimuli is 'white_noise_cb':
+        if self.stimuli == 'white_noise_cb':
             sim_name = '%s_%d_cb_%s_%+d_%1.4f' % (self.cell_name, input_idx, conductance_type, holding_potential, weight)
         else:
             sim_name = '%s_%d_%s_%+d_%1.4f' % (self.cell_name, input_idx, conductance_type, holding_potential, weight)
 
         if not self.repeats is None:
-            cut_off_idx = (len(cell.tvec) - 1) / self.repeats
+            cut_off_idx = int((len(cell.tvec) - 1) / self.repeats)
             cell.tvec = cell.tvec[-cut_off_idx:] - cell.tvec[-cut_off_idx]
             cell.imem = cell.imem[:, -cut_off_idx:]
             cell.vmem = cell.vmem[:, -cut_off_idx:]
 
         np.save(join(self.sim_folder, 'tvec_%s.npy' % self.cell_name), cell.tvec)
-        LFP = np.dot(electrode.electrodecoeff, cell.imem)
+        M = electrode.get_transformation_matrix()
+        LFP = np.dot(M, cell.imem)
         np.save(join(self.sim_folder, 'sig_%s.npy' % sim_name), LFP)
         np.save(join(self.sim_folder, 'vmem_%s.npy' % sim_name), cell.vmem)
         np.save(join(self.sim_folder, 'imem_%s.npy' % sim_name), cell.imem)
@@ -82,16 +86,16 @@ class NeuralSimulations:
         np.save(join(self.sim_folder, 'elec_y_%s.npy' % self.cell_name), electrode.y)
         np.save(join(self.sim_folder, 'elec_z_%s.npy' % self.cell_name), electrode.z)
 
-        np.save(join(self.sim_folder, 'xstart_%s.npy' % self.cell_name), cell.xstart)
-        np.save(join(self.sim_folder, 'ystart_%s.npy' % self.cell_name), cell.ystart)
-        np.save(join(self.sim_folder, 'zstart_%s.npy' % self.cell_name), cell.zstart)
-        np.save(join(self.sim_folder, 'xend_%s.npy' % self.cell_name), cell.xend)
-        np.save(join(self.sim_folder, 'yend_%s.npy' % self.cell_name), cell.yend)
-        np.save(join(self.sim_folder, 'zend_%s.npy' % self.cell_name), cell.zend)
-        np.save(join(self.sim_folder, 'xmid_%s.npy' % self.cell_name), cell.xmid)
-        np.save(join(self.sim_folder, 'ymid_%s.npy' % self.cell_name), cell.ymid)
-        np.save(join(self.sim_folder, 'zmid_%s.npy' % self.cell_name), cell.zmid)
-        np.save(join(self.sim_folder, 'diam_%s.npy' % self.cell_name), cell.diam)
+        np.save(join(self.sim_folder, 'x_%s.npy' % self.cell_name), cell.x)
+        np.save(join(self.sim_folder, 'y_%s.npy' % self.cell_name), cell.y)
+        np.save(join(self.sim_folder, 'z_%s.npy' % self.cell_name), cell.z)
+        # np.save(join(self.sim_folder, 'xend_%s.npy' % self.cell_name), cell.xend)
+        # np.save(join(self.sim_folder, 'yend_%s.npy' % self.cell_name), cell.yend)
+        # np.save(join(self.sim_folder, 'zend_%s.npy' % self.cell_name), cell.zend)
+        # np.save(join(self.sim_folder, 'xmid_%s.npy' % self.cell_name), cell.xmid)
+        # np.save(join(self.sim_folder, 'ymid_%s.npy' % self.cell_name), cell.ymid)
+        # np.save(join(self.sim_folder, 'zmid_%s.npy' % self.cell_name), cell.zmid)
+        np.save(join(self.sim_folder, 'diam_%s.npy' % self.cell_name), cell.d)
 
     def quickplot_exp_setup(self, cell, electrode):
         plt.subplot(121, xlabel='x', ylabel='z')
@@ -108,7 +112,7 @@ class NeuralSimulations:
     def _return_cell(self, holding_potential, conductance_type):
 
         neuron_models = join(self.root_folder, 'neuron_models')
-        print "Initializing simulation"
+        print("Initializing simulation")
         if not hasattr(neuron.h, "setdata_QA"):
             neuron.load_mechanisms(join(neuron_models))
         if self.cell_name == 'hay':
@@ -123,20 +127,20 @@ class NeuralSimulations:
                 'passive': False,           # switch on passive mechs
                 'nsegs_method': 'lambda_f',  # method for setting number of segments,
                 'lambda_f': 100,           # segments are isopotential at this frequency
-                'timeres_NEURON': self.timeres_NEURON,   # dt of LFP and NEURON simulation.
-                'timeres_python': self.timeres_python,
-                'tstartms': -self.cut_off,          # start time, recorders start at t=0
-                'tstopms': self.end_t,
+                'dt': self.dt,   # dt of LFP and NEURON simulation.
+                # 'timeres_python': self.timeres_python,
+                'tstart': -self.cut_off,          # start time, recorders start at t=0
+                'tstop': self.end_t,
                 'custom_code': [join(neuron_models, 'hay', 'lfpy_version', 'custom_codes.hoc')],
                 'custom_fun': [active_declarations],  # will execute this function
                 'custom_fun_args': [{'conductance_type': conductance_type,
                                      'hold_potential': holding_potential}]
             }
 
-        elif self.cell_name is 'infinite_neurite':
+        elif self.cell_name == 'infinite_neurite':
             from infinite_neurite_active_declarations import active_declarations
             mu_1, mu_2 = np.array(conductance_type.split('_'), float)
-            print mu_1, mu_2
+            print(mu_1, mu_2)
             args = [{'mu_factor_1': mu_1, 'mu_factor_2': mu_2}]
             cell_params = {
                 'morphology': join(neuron_models, self.cell_name, 'infinite_neurite.hoc'),
@@ -144,10 +148,10 @@ class NeuralSimulations:
                 'passive': False,
                 'nsegs_method': 'lambda_f',
                 'lambda_f': 500.,
-                'timeres_NEURON': self.timeres_NEURON,   # dt of LFP and NEURON simulation.
-                'timeres_python': self.timeres_python,
-                'tstartms': -self.cut_off,          # start time, recorders start at t=0
-                'tstopms': self.end_t,
+                'dt': self.dt,   # dt of LFP and NEURON simulation.
+                # 'timeres_python': self.timeres_python,
+                'tstart': -self.cut_off,          # start time, recorders start at t=0
+                'tstop': self.end_t,
                 'custom_fun': [active_declarations],
                 'custom_fun_args': args,
             }
@@ -172,69 +176,73 @@ class NeuralSimulations:
             'y': elec_y,
             'z': elec_z
         }
-        electrode = LFPy.RecExtElectrode(**electrode_parameters)
         neuron.h('forall delete_section()')
         neuron.h.celsius = 32.
         cell = self._return_cell(holding_potential, conductance_type)
 
         if 0:
-            [plt.plot([cell.xstart[i], cell.xend[i]], [cell.zstart[i], cell.zend[i]], 'k')
-             for i in xrange(cell.totnsegs)]
-            [plt.text(cell.xmid[i], cell.zend[i], '%1.2f' % i, color='r') for i in xrange(cell.totnsegs)]
+            [plt.plot([cell.x[i, 0], cell.x[i, 1]], [cell.z[i, 0], cell.z[i, 1]], 'k')
+             for i in range(cell.totnsegs)]
+            [plt.text(cell.x[i].mean(), cell.z[i].mean(), '%1.2f' % i, color='r')
+             for i in range(cell.totnsegs)]
             plt.axis('equal')
             plt.show()
-        cell, syn, noiseVec = self.stimuli_function(cell, input_idx, weight, holding_potential)
+        cell, syn, noiseVec = self.stimuli_function(cell, input_idx,
+                                                    weight, holding_potential)
 
-        cell.simulate(rec_imem=True, rec_vmem=True, electrode=electrode)
+        cell.simulate(rec_imem=True, rec_vmem=True)
+        electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
 
         #plt.plot(cell.tvec, cell.somav)
         #plt.show()
-        print conductance_type, holding_potential, input_idx
-        print "Membrane pot mean, std:", np.mean(cell.vmem[input_idx]), np.std(cell.vmem[input_idx])
+        print(conductance_type, holding_potential, input_idx)
+        print("Membrane pot mean, std:", np.mean(cell.vmem[input_idx]),
+              np.std(cell.vmem[input_idx]))
 
-        self.save_neural_sim_data(cell, electrode, input_idx, conductance_type, holding_potential, weight)
+        self.save_neural_sim_data(cell, electrode, input_idx, conductance_type,
+                                  holding_potential, weight)
 
     def make_WN_input(self, cell, max_freq):
         """ White Noise input ala Linden 2010 is made """
-        tot_ntsteps = round((cell.tstopms - cell.tstartms) / cell.timeres_NEURON + 1)
+        tot_ntsteps = round((cell.tstop - cell.tstart) / cell.dt + 1)
         I = np.zeros(tot_ntsteps)
-        tvec = np.arange(tot_ntsteps) * cell.timeres_NEURON
-        for freq in xrange(1, max_freq + 1):
+        tvec = np.arange(tot_ntsteps) * cell.dt
+        for freq in range(1, max_freq + 1):
             I += np.sin(2 * np.pi * freq * tvec/1000. + 2*np.pi*np.random.random())
         return I
 
     def _make_white_noise_stimuli(self, cell, input_idx, weight=0.0005, holding_potential=None):
         max_freq = 500
-        plt.seed(1234)
+        np.random.seed(1234)
         input_array = weight * self.make_WN_input(cell, max_freq)
         noiseVec = neuron.h.Vector(input_array)
 
         # plt.close('all')
         # plt.plot(input_array)
         # plt.show()
-        print 1000 * np.std(input_array)
+        print(1000 * np.std(input_array))
         i = 0
         syn = None
         for sec in cell.allseclist:
             for seg in sec:
                 if i == input_idx:
-                    print "Input inserted in ", sec.name()
+                    print("Input inserted in ", sec.name())
                     syn = neuron.h.ISyn(seg.x, sec=sec)
                     # print "Dist: ", nrn.distance(seg.x)
                 i += 1
         if syn is None:
             raise RuntimeError("Wrong stimuli index")
         syn.dur = 1E9
-        syn.delay = 0 #cell.tstartms
-        noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
+        syn.delay = 0 #cell.tstart
+        noiseVec.play(syn._ref_amp, cell.dt)
         return cell, syn, noiseVec
 
     def _make_white_noise_cb_balanced_stimuli(self, cell, input_idx, weight=0.0005, holding_potential=-80):
 
-        plt.seed(1234)
-        tot_ntsteps = round((cell.tstopms - cell.tstartms) / cell.timeres_NEURON + 1)
+        np.random.seed(1234)
+        tot_ntsteps = round((cell.tstop - cell.tstart) / cell.dt + 1)
         # I = np.zeros(tot_ntsteps)
-        tvec = np.arange(tot_ntsteps) * cell.timeres_NEURON
+        tvec = np.arange(tot_ntsteps) * cell.dt
 
         P_ex = np.random.random(tot_ntsteps)
         P_in = np.random.random(tot_ntsteps)
@@ -251,10 +259,10 @@ class NeuralSimulations:
         g_in = g_in_bar * P_in
         g_ex = g_ex_bar * P_ex
 
-        print g_in_bar, g_ex_bar
+        print(g_in_bar, g_ex_bar)
 
         if 0:
-            print g_in_bar, g_ex_bar
+            print(g_in_bar, g_ex_bar)
             i_in = g_in * (V_R - V_in)
             i_ex = g_ex * (V_R - V_ex)
 
@@ -293,7 +301,7 @@ class NeuralSimulations:
         for sec in cell.allseclist:
             for seg in sec:
                 if i == input_idx:
-                    print "Conductance based Input inserted in ", sec.name()
+                    print("Conductance based Input inserted in ", sec.name())
                     syn = neuron.h.ISyn_cond_based_balanced(seg.x, sec=sec)
                     # print "Dist: ", nrn.distance(seg.x)
                 i += 1
@@ -303,35 +311,35 @@ class NeuralSimulations:
         syn.delay = 0
         syn.V_in = V_in
         syn.V_ex = V_ex
-        print "Setting balanced conductance based synapse V_in, V_ex"
-        g_in.play(syn._ref_g_in, cell.timeres_NEURON)
-        g_ex.play(syn._ref_g_ex, cell.timeres_NEURON)
+        print("Setting balanced conductance based synapse V_in, V_ex")
+        g_in.play(syn._ref_g_in, cell.dt)
+        g_ex.play(syn._ref_g_ex, cell.dt)
         return cell, syn, [g_in, g_ex]
 
     def _make_white_noise_cb_stimuli(self, cell, input_idx, weight=0.0005, holding_potential=-80):
 
         max_freq = 500
-        plt.seed(1234)
+        np.random.seed(1234)
         input_array = weight * self.make_WN_input(cell, max_freq)
         noiseVec = neuron.h.Vector(input_array)
 
-        print 1000 * np.std(input_array)
+        print(1000 * np.std(input_array))
         i = 0
         syn = None
         for sec in cell.allseclist:
             for seg in sec:
                 if i == input_idx:
-                    print "Conductance based Input inserted in ", sec.name()
+                    print("Conductance based Input inserted in ", sec.name())
                     syn = neuron.h.ISyn_cond_based(seg.x, sec=sec)
                     # print "Dist: ", nrn.distance(seg.x)
                 i += 1
         if syn is None:
             raise RuntimeError("Wrong stimuli index")
         syn.dur = 1E9
-        syn.delay = 0 #cell.tstartms
-        print "Setting conductance based synapse V_R = -80"
+        syn.delay = 0 #cell.tstart
+        print("Setting conductance based synapse V_R = -80")
         syn.V_R = holding_potential
-        noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
+        noiseVec.play(syn._ref_amp, cell.dt)
         return cell, syn, noiseVec
 
 
@@ -340,10 +348,10 @@ class NeuralSimulations:
     def _make_sinusoidal_stimuli(self, cell, input_idx):
         input_scaling = 0.001
 
-        plt.seed(1234)
-        tot_ntsteps = round((cell.tstopms - cell.tstartms)/\
-                      cell.timeres_NEURON + 1)
-        tvec = np.arange(tot_ntsteps) * cell.timeres_NEURON / 1000.
+        np.random.seed(1234)
+        tot_ntsteps = round((cell.tstop - cell.tstart)/\
+                      cell.dt + 1)
+        tvec = np.arange(tot_ntsteps) * cell.dt / 1000.
         input_array = input_scaling * np.sin(2 * np.pi * self.frequency * tvec)
         noiseVec = neuron.h.Vector(input_array)
         i = 0
@@ -351,15 +359,14 @@ class NeuralSimulations:
         for sec in cell.allseclist:
             for seg in sec:
                 if i == input_idx:
-                    print "Input i" \
-                          "nserted in ", sec.name()
+                    print("Input inserted in ", sec.name())
                     syn = neuron.h.ISyn(seg.x, sec=sec)
                 i += 1
         if syn is None:
             raise RuntimeError("Wrong stimuli index")
         syn.dur = 1E9
-        syn.delay = 0#cell.tstartms
-        noiseVec.play(syn._ref_amp, cell.timeres_NEURON)
+        syn.delay = 0#cell.tstart
+        noiseVec.play(syn._ref_amp, cell.dt)
         return cell, syn, noiseVec
 
     def _make_synaptic_stimuli(self, cell, input_idx, weight=None):
@@ -404,7 +411,7 @@ class NeuralSimulations:
         num_synapses = 1000
         cell_input_idxs = cell.get_rand_idx_area_norm(section=input_pos, nidx=num_synapses,
                                                       z_min=minpos, z_max=maxpos)
-        spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstartms, cell.tstopms)
+        spike_trains = LFPy.inputgenerators.stationary_poisson(num_synapses, 5, cell.tstart, cell.tstop)
 
         synapses = self.set_input_spiketrain(cell, cell_input_idxs, spike_trains, synapse_params)
         self.input_plot(cell, cell_input_idxs, spike_trains)
@@ -484,21 +491,21 @@ class PaperFigures:
             ax.plot(xmid[input_pos], zmid[input_pos], 'g.', zorder=2, ms=3)
 
         if distribution is None:
-            clr_list = ['0.5' for _ in xrange(len(xmid))]
-        elif distribution is 'linear_increase':
+            clr_list = ['0.5' for _ in range(len(xmid))]
+        elif distribution == 'linear_increase':
             color_at_pos = lambda d: plt.cm.hot(int(256./1500 * d))
             dist = np.sqrt(xmid**2 + zmid**2)
-            clr_list = [color_at_pos(dist[idx]) for idx in xrange(len(xmid))]
+            clr_list = [color_at_pos(dist[idx]) for idx in range(len(xmid))]
             if not ic_comp is None:
                 ax.scatter(xmid[ic_comp], zmid[ic_comp], c='orange', edgecolor='none', s=50)
-        elif distribution is 'uniform':
-            clr_list = [plt.cm.hot(int(256./2)) for idx in xrange(len(xmid))]
+        elif distribution == 'uniform':
+            clr_list = [plt.cm.hot(int(256./2)) for idx in range(len(xmid))]
             if not ic_comp is None:
                 ax.scatter(xmid[ic_comp], zmid[ic_comp], c='orange', edgecolor='none', s=50)
         else:
             raise NotImplementedError("Implement other dists to use this")
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1.5, color=clr_list[idx], zorder=0, alpha=1)
-         for idx in xrange(len(xmid))]
+         for idx in range(len(xmid))]
 
 
     def _draw_set_up_to_axis(self, ax, input_pos, elec_x, elec_z, ic_plot=True):
@@ -507,22 +514,20 @@ class PaperFigures:
             name = 'hay_generic'
         else:
             name= 'hay'
-        xstart = np.load(join(self.sim_folder, 'xstart_%s.npy' % name))
-        zstart = np.load(join(self.sim_folder, 'zstart_%s.npy' % name))
-        xend = np.load(join(self.sim_folder, 'xend_%s.npy' % name))
-        zend = np.load(join(self.sim_folder, 'zend_%s.npy' % name))
-        xmid = np.load(join(self.sim_folder, 'xmid_%s.npy' % name))
-        zmid = np.load(join(self.sim_folder, 'zmid_%s.npy' % name))
+        xstart, xend = np.load(join(self.sim_folder, 'x_%s.npy' % name)).T
+        zstart, zend = np.load(join(self.sim_folder, 'z_%s.npy' % name)).T
+        xmid = np.load(join(self.sim_folder, 'x_%s.npy' % name)).mean(axis=1)
+        zmid = np.load(join(self.sim_folder, 'z_%s.npy' % name)).mean(axis=1)
 
         # if type(input_pos) is int:
         ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=2, ms=10)
 
         if 0:
-            [ax.plot(xmid[idx], zmid[idx], marker='$%d$' % idx, ms=10) for idx in xrange(len(xmid))]
+            [ax.plot(xmid[idx], zmid[idx], marker='$%d$' % idx, ms=10) for idx in range(len(xmid))]
             plt.show()
 
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1., color='0.7', zorder=0, alpha=1)
-         for idx in xrange(len(xmid))]
+         for idx in range(len(xmid))]
 
         ec_arrow_dict = {'width': 2, 'lw': 1, 'clip_on': False, 'color': 'c', 'zorder': 0}
         ic_arrow_dict = {'width': 2, 'lw': 1, 'clip_on': False, 'color': 'orange', 'zorder': 0}
@@ -578,18 +583,18 @@ class PaperFigures:
 
         if grading in [None, 'uniform']:
             color_at_pos = lambda d: plt.cm.hot(int(256./1500 * 750))
-        elif grading is 'linear_increase':
+        elif grading == 'linear_increase':
             color_at_pos = lambda d: plt.cm.hot(int(256./1500 * d))
-        elif grading is 'linear_decrease':
+        elif grading == 'linear_decrease':
             color_at_pos = lambda d: plt.cm.hot(int(256./1500 * (np.max(dist) - d)))
         else:
             raise RuntimeError("Wrong with distribution!")
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1, zorder=0, c=color_at_pos(dist[idx]))
-             for idx in xrange(len(xstart))]
+             for idx in range(len(xstart))]
 
         if not input_pos is None:
             synapse_clr = 'g'
-            if input_pos is 'soma':
+            if input_pos == 'soma':
                 synapse_coor = [-90, 20]
                 axon_start = [-175, 50]
                 marker = (3, 0, 55)
@@ -622,7 +627,7 @@ class Figure1(PaperFigures):
         self.figure_name = 'figure_1'
 
         self.type_name = '%s' % self.cell_name
-        self.timeres_NEURON = 2**-4
+        self.dt = 2**-4
         self.timeres_python = 2**-4
         self.holding_potentials = [-80, -60]
 
@@ -643,7 +648,7 @@ class Figure1(PaperFigures):
         #             neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
         #                                                    self.elec_x, self.elec_y, self.elec_z, self.weight)
 
-        print "Doing white noise simulations for Figure 1B"
+        print("Doing white noise simulations for Figure 1B")
         self.stimuli = 'white_noise'
         self._set_white_noise_properties()
         neural_sim = NeuralSimulations(self)
@@ -734,7 +739,7 @@ class Figure1(PaperFigures):
             ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=1, ms=10)
 
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1, color='0.7', zorder=0, alpha=1)
-         for idx in xrange(len(xmid))]
+         for idx in range(len(xmid))]
 
     def _plot_EC_signal_to_ax(self, fig, ax, idx, signal, elec_x_pos, elec_z_pos, x_vec, conductance_type, input_type):
 
@@ -746,11 +751,11 @@ class Figure1(PaperFigures):
         ax_.minorticks_off()
         simplify_axes(ax_)
         ax_.patch.set_alpha(0.0)
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             ax_.plot(x_vec, signal[idx, :] - signal[idx, 0], **ec_plot_dict)
         else:
             ax_.plot(x_vec, signal[idx, :], **ec_plot_dict)
-        if input_type is 'white_noise':
+        if input_type == 'white_noise':
             ax_.grid(True)
             if conductance_type == 'passive' and idx == 8 and len(fig.axes) == 39: # Ugly hack to only get these labels once
                 # ax_.set_xticks([10, 100])
@@ -761,7 +766,7 @@ class Figure1(PaperFigures):
 
     def return_ax_coors(self, fig, mother_ax, pos, input_type):
         # Used
-        if input_type is "synaptic":
+        if input_type == "synaptic":
             ax_w = 0.1 / 3
             ax_h = 0.03
         else:
@@ -777,9 +782,9 @@ class Figure1(PaperFigures):
         LFP = 1e3*np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
 
         ax.scatter(elec_x[self.use_elec_idxs], elec_z[self.use_elec_idxs], c='cyan', s=25, edgecolor='none')
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             x_vec, y_vec = tvec, LFP
-        elif input_type is 'white_noise':
+        elif input_type == 'white_noise':
             x_vec, y_vec = tools.return_freq_and_psd(tvec, LFP)
         else:
             raise RuntimeError("Unknown figure name: %s" % self.figure_name)
@@ -939,7 +944,7 @@ class Figure1(PaperFigures):
         if 0:
             num_rows = 15
             num_cols = 7
-            for numb in xrange(len(elec_x)):
+            for numb in range(len(elec_x)):
                 ax = self.fig2.add_subplot(num_rows, num_cols, numb + 1, title='x=%d, z=%d' % (elec_x[numb], elec_z[numb]),
                                       xlim=[1e0, 5e2], ylim=[1e-5, 1e-2])
 
@@ -957,7 +962,7 @@ class Figure1(PaperFigures):
 
     def make_panel_AB(self, input_type):
 
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             ax_shift = 0
             self._set_synaptic_properties()
             ax_name = 'A'
@@ -1016,7 +1021,7 @@ class Figure1(PaperFigures):
                 self.lines.append(l)
                 self.line_names.append(self.conductance_name_dict[conductance_type])
 
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             ax1.plot([100, 300], [-300, -300], lw=2, clip_on=False, c='k')
             ax1.text(200, -350, '200 $\mu$m', va='top', ha='center', size=10)
 
@@ -1050,7 +1055,7 @@ class Figure1_with_gradient(PaperFigures):
         self.figure_name = 'figure_1_with_gradient'
 
         self.type_name = '%s' % self.cell_name
-        self.timeres_NEURON = 2**-4
+        self.dt = 2**-4
         self.timeres_python = 2**-4
         self.holding_potentials = [-80, -60]#[-80, -60]
 
@@ -1071,7 +1076,7 @@ class Figure1_with_gradient(PaperFigures):
         #             neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
         #                                                    self.elec_x, self.elec_y, self.elec_z, self.weight)
 
-        print "Doing white noise simulations for Figure 1B"
+        print("Doing white noise simulations for Figure 1B")
         self.stimuli = 'white_noise'
         self._set_white_noise_properties()
         neural_sim = NeuralSimulations(self)
@@ -1169,7 +1174,7 @@ class Figure1_with_gradient(PaperFigures):
         ec_plot_dict = {'color': self.conductance_clr[conductance_type],
                         'lw': 1,
                         'clip_on': self.clip_on}
-        if input_type is 'white_noise_gradient':
+        if input_type == 'white_noise_gradient':
             ec_plot_dict['color'] = 'g'
 
         ax_ = fig.add_axes(self.return_ax_coors(fig, ax, (elec_x_pos, elec_z_pos), input_type), **self.ec_ax_dict)
@@ -1305,7 +1310,7 @@ class Figure1_conductance_based_WN(PaperFigures):
         self.figure_name = 'figure_1_conductance_based_balanced_-80'
 
         self.type_name = '%s' % self.cell_name
-        self.timeres_NEURON = 2**-4
+        self.dt = 2**-4
         self.timeres_python = 2**-4
         self.holding_potentials = [-80, -60]
 
@@ -1327,18 +1332,18 @@ class Figure1_conductance_based_WN(PaperFigures):
         #             neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
         #                                                    self.elec_x, self.elec_y, self.elec_z, self.weight)
 
-        print "Doing white noise simulations for Figure 1B"
+        print("Doing white noise simulations for Figure 1B")
         self.stimuli = 'white_noise_cb_balanced'
         self._set_white_noise_properties()
         neural_sim = NeuralSimulations(self)
         for holding_potential in self.holding_potentials[:]:
             for input_idx in [self.soma_idx, self.apic_idx][:]:
                 for conductance_type in self.conductance_types[:]:
-                    print conductance_type, holding_potential, input_idx
+                    print(conductance_type, holding_potential, input_idx)
                     neural_sim.do_single_neural_simulation(conductance_type, holding_potential, input_idx,
                                                            self.elec_x, self.elec_y, self.elec_z, self.weight)
 
-        print "Doing conductance based white noise simulations for Figure 1C"
+        print("Doing conductance based white noise simulations for Figure 1C")
         self.stimuli = 'white_noise_cb_balanced'
         self._set_white_noise_properties()
         neural_sim = NeuralSimulations(self)
@@ -1419,7 +1424,7 @@ class Figure1_conductance_based_WN(PaperFigures):
             ax.plot(xmid[input_pos], zmid[input_pos], 'y*', zorder=1, ms=10)
 
         [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=1, color='0.7', zorder=0, alpha=1)
-         for idx in xrange(len(xmid))]
+         for idx in range(len(xmid))]
 
     def _plot_EC_signal_to_ax(self, fig, ax, idx, signal, elec_x_pos, elec_z_pos, x_vec, conductance_type, input_type):
 
@@ -1431,11 +1436,11 @@ class Figure1_conductance_based_WN(PaperFigures):
         ax_.minorticks_off()
         simplify_axes(ax_)
         ax_.patch.set_alpha(0.0)
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             ax_.plot(x_vec, signal[idx, :] - signal[idx, 0], **ec_plot_dict)
         else:
             ax_.plot(x_vec, signal[idx, :], **ec_plot_dict)
-        if input_type is 'white_noise':
+        if input_type == 'white_noise':
             ax_.grid(True)
             if conductance_type == 'passive' and idx == 8 and len(fig.axes) == 39: # Ugly hack to only get these labels once
                 # ax_.set_xticks([10, 100])
@@ -1446,7 +1451,7 @@ class Figure1_conductance_based_WN(PaperFigures):
 
     def return_ax_coors(self, fig, mother_ax, pos, input_type):
         # Used
-        if input_type is "synaptic":
+        if input_type == "synaptic":
             ax_w = 0.1 / 3
             ax_h = 0.03
         else:
@@ -1462,9 +1467,9 @@ class Figure1_conductance_based_WN(PaperFigures):
         LFP = 1e3*np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
 
         ax.scatter(elec_x[self.use_elec_idxs], elec_z[self.use_elec_idxs], c='cyan', s=25, edgecolor='none')
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             x_vec, y_vec = tvec, LFP
-        elif input_type is 'white_noise':
+        elif input_type == 'white_noise':
             x_vec, y_vec = tools.return_freq_and_psd(tvec, LFP)
         else:
             raise RuntimeError("Unknown figure name: %s" % self.figure_name)
@@ -1571,7 +1576,7 @@ class Figure1_conductance_based_WN(PaperFigures):
         if 0:
             num_rows = 15
             num_cols = 7
-            for numb in xrange(len(elec_x)):
+            for numb in range(len(elec_x)):
                 ax = self.fig2.add_subplot(num_rows, num_cols, numb + 1, title='x=%d, z=%d' % (elec_x[numb], elec_z[numb]),
                                       xlim=[1e0, 5e2], ylim=[1e-5, 1e-2])
 
@@ -1642,7 +1647,7 @@ class Figure1_conductance_based_WN(PaperFigures):
                 self.lines.append(l)
                 self.line_names.append(self.conductance_name_dict[conductance_type])
 
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             ax1.plot([100, 300], [-300, -300], lw=2, clip_on=False, c='k')
             ax1.text(200, -350, '200 $\mu$m', va='top', ha='center', size=10)
 
@@ -1682,7 +1687,7 @@ class Figure7_sup_Hay_original(PaperFigures):
         self.tuft_idx = 852
         self.input_idx = self.tuft_idx
         self.type_name = '%s' % self.cell_name
-        self.timeres_NEURON = 2**-4
+        self.dt = 2**-4
         self.timeres_python = 2**-4
         # self.holding_potentials = [-80, -60]
         self.conductance_types = ['active', 'passive', 'Ih', 'Ih_frozen']
@@ -1699,8 +1704,8 @@ class Figure7_sup_Hay_original(PaperFigures):
         ns = NeuralSimulations(self)
         for conductance_type in self.conductance_types:
             cell = ns._return_cell(self.holding_potential, conductance_type)
-            cell.tstartms = 0
-            cell.tstopms = 1
+            cell.tstart = 0
+            cell.tstop = 1
             cell.simulate(rec_imem=True)
             plot_idxs = [self.tuft_idx, self.apic_idx, self.basal_idx, self.soma_idx]
             elec_x = [cell.xmid[idx] + 20 for idx in plot_idxs] + [cell.xmid[idx] + 600 for idx in plot_idxs]
@@ -1721,7 +1726,7 @@ class Figure7_sup_Hay_original(PaperFigures):
                                   (self.cell_name, self.input_idx, conductance_type, self.holding_potential, self.weight)))
             cell.tvec = np.load(join(self.sim_folder, 'tvec_%s.npy' % (self.cell_name)))
             electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
-            print "Calculating"
+            print("Calculating")
             electrode.calc_lfp()
             del cell.imem
             del cell.tvec
@@ -1789,11 +1794,11 @@ class Figure7_sup_Hay_original(PaperFigures):
         ax_.minorticks_off()
         simplify_axes(ax_)
         ax_.patch.set_alpha(0.0)
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             ax_.plot(x_vec, signal[idx, :] - signal[idx, 0], **ec_plot_dict)
         else:
             ax_.plot(x_vec, signal[idx, :], **ec_plot_dict)
-        if input_type is 'white_noise':
+        if input_type == 'white_noise':
             ax_.grid(True)
             if conductance_type == 'passive' and idx == 8 and len(fig.axes) == 39: # Ugly hack to only get these labels once
                 # ax_.set_xticks([10, 100])
@@ -1804,7 +1809,7 @@ class Figure7_sup_Hay_original(PaperFigures):
 
     def return_ax_coors(self, fig, mother_ax, pos, input_type):
         # Used
-        if input_type is "synaptic":
+        if input_type == "synaptic":
             ax_w = 0.1 / 3
             ax_h = 0.03
         else:
@@ -1820,9 +1825,9 @@ class Figure7_sup_Hay_original(PaperFigures):
         LFP = 1e3*np.load(join(self.sim_folder, 'sig_%s.npy' % sim_name))
 
         ax.scatter(elec_x[self.use_elec_idxs], elec_z[self.use_elec_idxs], c='cyan', s=25, edgecolor='none')
-        if input_type is 'synaptic':
+        if input_type == 'synaptic':
             x_vec, y_vec = tvec, LFP
-        elif input_type is 'white_noise':
+        elif input_type == 'white_noise':
             x_vec, y_vec = tools.return_freq_and_psd(tvec, LFP)
         else:
             raise RuntimeError("Unknown figure name: %s" % self.figure_name)
@@ -1972,7 +1977,7 @@ class Figure7_sup_Hay_original(PaperFigures):
         axes[7].loglog(freqs, LFP_psd_basal2[0], **line_dict)
 
 
-        if conductance_type is 'active':
+        if conductance_type == 'active':
             for ax in axes:
                 y = ax.get_lines()[-1]._y
                 res_freq_idx = np.argmax(y[1:])
@@ -2000,7 +2005,7 @@ class Figure7_sup_Hay_original(PaperFigures):
         axes[2].loglog(freqs, imem_psd_tuft[0], **line_dict)
         axes[3].loglog(freqs, imem_psd_basal[0], **line_dict)
 
-        if conductance_type is 'active':
+        if conductance_type == 'active':
             for ax in axes:
                 y = ax.get_lines()[-1]._y
                 res_freq_idx = np.argmax(y[1:])
@@ -2028,7 +2033,7 @@ class Figure7_sup_Hay_original(PaperFigures):
         axes[2].loglog(freqs, vmem_psd_tuft[0], **line_dict)
         axes[3].loglog(freqs, vmem_psd_basal[0], **line_dict)
 
-        if conductance_type is 'active':
+        if conductance_type == 'active':
             for ax in axes:
                 y = ax.get_lines()[-1]._y
                 res_freq_idx = np.argmax(y[1:])
@@ -2056,7 +2061,7 @@ class Figure7_sup_Hay_generic(PaperFigures):
         self.tuft_idx = 605
         self.input_idx = self.tuft_idx
         self.type_name = '%s' % self.cell_name
-        self.timeres_NEURON = 2**-4
+        self.dt = 2**-4
         self.timeres_python = 2**-4
         # self.holding_potentials = [-80, -60]
         self.mus = [-0.5, 0., 2.0]
@@ -2081,7 +2086,7 @@ class Figure7_sup_Hay_generic(PaperFigures):
                                     595, 596, 597, 598, 599, 600, 601, 602, 603, 604, 605])
 
                 plt.plot(cell.xmid[self.input_idx], cell.zmid[self.input_idx], 'y*', ms=20)
-                [plt.plot(cell.xmid[idx], cell.zmid[idx], marker='$%d$' % idx, ms=15) for idx in xrange(len(cell.xmid))]
+                [plt.plot(cell.xmid[idx], cell.zmid[idx], marker='$%d$' % idx, ms=15) for idx in range(len(cell.xmid))]
                 [plt.plot([cell.xstart[idx], cell.xend[idx]], [cell.zstart[idx], cell.zend[idx]], c='r' if idx in path_idxs else 'k') for idx in xrange(len(cell.xmid))]
                 plt.show()
 
@@ -2095,17 +2100,17 @@ class Figure7_sup_Hay_generic(PaperFigures):
                 plt.savefig(join(self.figure_folder, 'dist_diameter.pdf'))
                 plt.savefig(join(self.figure_folder, 'dist_diameter.png'))
 
-            cell.tstartms = 0
-            cell.tstopms = 1
+            cell.tstart = 0
+            cell.tstop = 1
             cell.simulate(rec_imem=True)
             plot_idxs = [self.tuft_idx, self.apic_idx, self.basal_idx, self.soma_idx]
             elec_x = [cell.xmid[idx] + 20 for idx in plot_idxs] + [cell.xmid[idx] + 600 for idx in plot_idxs]
             elec_z = [cell.zmid[idx] for idx in plot_idxs] + [cell.zmid[idx] for idx in plot_idxs]
             elec_y = [cell.ymid[idx] for idx in plot_idxs] + [cell.ymid[idx] for idx in plot_idxs]
 
-            print elec_x, elec_y, elec_z
+            print(elec_x, elec_y, elec_z)
             idxs = [self.soma_idx, self.basal_idx, self.apic_idx, self.tuft_idx]
-            print cell.xmid[idxs], cell.ymid[idxs], cell.zmid[idxs]
+            print(cell.xmid[idxs], cell.ymid[idxs], cell.zmid[idxs])
             # sys.exit()
             # print elec_x, elec_z
 
@@ -2119,11 +2124,11 @@ class Figure7_sup_Hay_generic(PaperFigures):
             self.elec_y = elec_y
             self.elec_z = elec_z
             sim_name = 'hay_white_noise_%d_%1.1f_-80_%s_auto' % (self.input_idx, mu, self.distribution)
-            print sim_name
+            print(sim_name)
             cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
             cell.tvec = np.load(join(self.sim_folder, 'tvec_hay_white_noise.npy'))
             electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
-            print "Calculating"
+            print("Calculating")
             electrode.calc_lfp()
             del cell.imem
             del cell.tvec
@@ -2154,7 +2159,7 @@ class Figure7_sup_Hay_generic(PaperFigures):
 
     def return_ax_coors(self, fig, mother_ax, pos, input_type):
         # Used
-        if input_type is "synaptic":
+        if input_type == "synaptic":
             ax_w = 0.1 / 3
             ax_h = 0.03
         else:
@@ -2372,8 +2377,8 @@ class Figure2(PaperFigures):
         self.holding_potentials = [-80, -60]
         self.elec_apic_idx = 88
         self.elec_soma_idx = 18
-        self.timeres_NEURON = 2**-4
-        self.timeres_python = 2**-4
+        self.dt = 2**-4
+        # self.timeres_python = 2**-4
         self.cut_off = 0
         self.repeats = 2
         self.weight = 0.0005
@@ -2404,6 +2409,16 @@ class Figure2(PaperFigures):
         neural_sim.do_single_neural_simulation('Ih_linearized', -80, self.apic_idx,
                                                             self.elec_x, self.elec_y, self.elec_z, weight)
         neural_sim.do_single_neural_simulation('NaP_linearized', -60., self.soma_idx,
+                                                            self.elec_x, self.elec_y, self.elec_z, weight)
+
+        neural_sim.do_single_neural_simulation('passive', -80, self.apic_idx,
+                                                            self.elec_x, self.elec_y, self.elec_z, weight)
+        neural_sim.do_single_neural_simulation('passive', -60., self.soma_idx,
+                                                            self.elec_x, self.elec_y, self.elec_z, weight)
+        neural_sim.do_single_neural_simulation('Ih', -80, self.apic_idx,
+                                                            self.elec_x, self.elec_y, self.elec_z, weight)
+
+        neural_sim.do_single_neural_simulation('NaP', -60., self.soma_idx,
                                                             self.elec_x, self.elec_y, self.elec_z, weight)
 
     def make_figure(self, weight):
@@ -2465,6 +2480,7 @@ class Figure2(PaperFigures):
 
         LFP = 1000 * np.load(join(self.sim_folder, 'sig_%s_%d_%s_%+d_%1.4f.npy' %
                             (self.cell_name, input_idx, conductance_type, holding_potential, weight)))
+        print(conductance_type, np.max(np.abs(LFP)))
         freqs, LFP_psd_soma = tools.return_freq_and_psd(tvec, LFP[self.elec_soma_idx, :])
         freqs, LFP_psd_apic = tools.return_freq_and_psd(tvec, LFP[self.elec_apic_idx, :])
 
@@ -2519,7 +2535,7 @@ class Figure3(PaperFigures):
                 for distribution in distributions:
                     for input_idx in input_idxs:
                         for mu in mus:
-                            print "%d / %d" % (i, tot_sims)
+                            print("%d / %d" % (i, tot_sims))
                             gs.single_neural_sim_function(mu, input_idx, distribution, tau_w)
                             i += 1
 
@@ -2704,7 +2720,7 @@ class Figure4(PaperFigures):
                 for distribution in distributions:
                     for input_idx in input_idxs:
                         for mu in self.mus:
-                            print "%d / %d" % (i, tot_sims)
+                            print("%d / %d" % (i, tot_sims))
                             gs.single_neural_sim_function(mu, input_idx, distribution, tau_w)
                             i += 1
 
@@ -2814,7 +2830,7 @@ class Figure5(PaperFigures):
             for mu in self.mus:
                 for input_region in ['distal_tuft', 'tuft', 'homogeneous']:
                     i += 1
-                    print i, mu, input_region
+                    print(i, mu, input_region)
                     os.system("python generic_study.py %1.1f %s" % (mu, input_region))
 
         self._initialize_figure()
@@ -2939,30 +2955,30 @@ class Figure6(PaperFigures):
             lfp_trace_positions = np.array([[200, 0], [200, 475], [200, 950], [200, 1425]])
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
             cell = gs._return_cell(self.holding_potential, 'generic', 2.0, 'linear_increase', 'auto')
-            cell.tstartms = 0
-            cell.tstopms = 1
+            cell.tstart = 0
+            cell.tstop = 1
             cell.simulate(rec_imem=True)
             cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
             cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
             electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
-            print "Calculating"
+            print("Calculating")
             electrode.calc_lfp()
             del cell.imem
             del cell.tvec
             LFP = 1000 * electrode.LFP
             np.save(join(self.sim_folder, 'LFP_%s.npy' % sim_name), LFP)
             del electrode
-            print "Saved LFP: ", 'LFP_%s.npy' % sim_name
+            print("Saved LFP: ", 'LFP_%s.npy' % sim_name)
             # print "Loading LFP."
             # LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
-            if self.input_type is 'distributed_synaptic':
-                print "Starting PSD calc"
+            if self.input_type == 'distributed_synaptic':
+                print("Starting PSD calc")
                 freqs, LFP_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
             else:
                 freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
             np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
             np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
-            print "Done recalculating LFP"
+            print("Done recalculating LFP")
         self._initialize_figure()
         self.make_figure()
         self._finitialize_figure()
@@ -3187,30 +3203,30 @@ class Figure6_reviewer(PaperFigures):
             gs = GenericStudy('hay', 'white_noise', conductance='generic')
             gs.w_bar_scaling_factor = self.w_bar_scaling_factor
             cell = gs._return_cell(self.holding_potential, self.conductance, self.mu, self.distribution, self.tau)
-            cell.tstartms = 0
-            cell.tstopms = 1
+            cell.tstart = 0
+            cell.tstop = 1
             cell.simulate(rec_imem=True)
             cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
             cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
             electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
-            print "Calculating"
+            print("Calculating")
             electrode.calc_lfp()
             del cell.imem
             del cell.tvec
             LFP = 1000 * electrode.LFP
             np.save(join(self.sim_folder, 'LFP_%s.npy' % sim_name), LFP)
             del electrode
-            print "Saved LFP: ", 'LFP_%s.npy' % sim_name
+            print("Saved LFP: ", 'LFP_%s.npy' % sim_name)
             # print "Loading LFP."
             # LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
-            if self.input_type is 'distributed_synaptic':
-                print "Starting PSD calc"
+            if self.input_type == 'distributed_synaptic':
+                print("Starting PSD calc")
                 freqs, LFP_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
             else:
                 freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
             np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
             np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
-            print "Done recalculating LFP"
+            print("Done recalculating LFP")
         if make_figure:
             self._initialize_figure()
             i_mode, i_soma, i_input, v_mode, v_soma, v_input, lfp = self.make_figure()
@@ -3388,30 +3404,30 @@ class Figure6_reviewer2(PaperFigures):
             gs.w_bar_scaling_factor = self.w_bar_scaling_factor
             cell = gs._return_cell(self.holding_potential, self.conductance, self.mu,
                                    self.distribution, self.tau_w)
-            cell.tstartms = 0
-            cell.tstopms = 1
+            cell.tstart = 0
+            cell.tstop = 1
             cell.simulate(rec_imem=True)
             cell.imem = np.load(join(self.sim_folder, 'imem_%s.npy' % sim_name))
             cell.tvec = np.load(join(self.sim_folder, 'tvec_%s_%s.npy' % (self.cell_name, self.input_type)))
             electrode = LFPy.RecExtElectrode(cell, **electrode_parameters)
-            print "Calculating"
+            print("Calculating")
             electrode.calc_lfp()
             del cell.imem
             del cell.tvec
             LFP = 1000 * electrode.LFP
             np.save(join(self.sim_folder, 'LFP_%s.npy' % sim_name), LFP)
             del electrode
-            print "Saved LFP: ", 'LFP_%s.npy' % sim_name
+            print("Saved LFP: ", 'LFP_%s.npy' % sim_name)
             # print "Loading LFP."
             # LFP = np.load(join(self.sim_folder, 'LFP_%s.npy' % sim_name))
-            if self.input_type is 'distributed_synaptic':
-                print "Starting PSD calc"
+            if self.input_type == 'distributed_synaptic':
+                print("Starting PSD calc")
                 freqs, LFP_psd = tools.return_freq_and_psd_welch(LFP, self.welch_dict)
             else:
                 freqs, LFP_psd = tools.return_freq_and_psd(self.timeres_python/1000., LFP)
             np.save(join(self.sim_folder, 'LFP_psd_%s.npy' % sim_name), LFP_psd)
             np.save(join(self.sim_folder, 'LFP_freq_%s.npy' % sim_name), freqs)
-            print "Done recalculating LFP"
+            print("Done recalculating LFP")
 
         if make_figure:
             self._initialize_figure()
@@ -3468,7 +3484,7 @@ class Figure6_reviewer2(PaperFigures):
         imem_res = freqs[np.argmax(imem_psd[:, 1:], axis=1) + 1]
 
         res_freq_im = stats.mode(imem_res, axis=None)[0][0]
-        print res_freq_im
+        print(res_freq_im)
         # print imem_psd
         # clr = lambda i: plt.cm.jet(1.0 * i / imem.shape[0])
         # plt.close('all')
@@ -3496,7 +3512,7 @@ class Figure6_reviewer2(PaperFigures):
         num_elec_rows = len(set(elec_z))
         elec_idxs = np.arange(len(elec_x)).reshape(num_elec_rows, num_elec_cols)
 
-        for elec in xrange(len(elec_z)):
+        for elec in range(len(elec_z)):
             row, col = np.array(np.where(elec_idxs == elec))[:, 0]
             dc[row, col] = LFP_psd[elec, 1]
             freq_at_max[row, col] = freqs[1 + np.argmax(LFP_psd[elec, 1:upper_idx_limit])]
@@ -3525,9 +3541,9 @@ class Figure6_reviewer2(PaperFigures):
 
         for ax in [self.freq_ax]:
             [ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color='w', zorder=2)
-             for idx in xrange(len(xstart))]
+             for idx in range(len(xstart))]
 
-        for idx in xrange(len(xstart)):
+        for idx in range(len(xstart)):
             self.im_ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=res_clr(imem_res[idx]), zorder=2)
             self.vm_ax.plot([xstart[idx], xend[idx]], [zstart[idx], zend[idx]], lw=2, color=res_clr(vmem_res[idx]), zorder=2)
 
@@ -3604,7 +3620,7 @@ class Figure7(PaperFigures):
         self.figure_name = 'figure_7'
         self.sim_folder = join(self.root_folder, 'paper_simulations', 'infinite_neurite')
         self.holding_potential = -80
-        self.timeres_NEURON = 2**-4
+        self.dt = 2**-4
         self.timeres_python = 2**-4
         self.repeats = 2
         self.cut_off = 0
@@ -3796,8 +3812,8 @@ if __name__ == '__main__':
     # Figure1(True)
     # Figure1_with_gradient(False)
     # Figure1_conductance_based_WN(False)
-    # Figure2(True)
-    Figure3(True)
+    Figure2(True)
+    # Figure3(False)
     # Figure4(False)
     # Figure5(False)
     # Figure6(True)
